@@ -2,7 +2,7 @@
 ================================================================================
  파일명: css/style.css
  설명: 주식회사 텔로스 (TELOS) 공식 홈페이지 메인 스타일시트
- 버전: 1.4.0
+ 버전: 1.5.0
  작성일: 2026.04.26
  디자인 톤: 화이트 + 진한 네이비 (Tone B)
  폰트: Pretendard Variable (한글 최적화)
@@ -20,6 +20,9 @@
                           / .contact-info, .contact-item, .contact-label, 
                           / .contact-value CSS는 미사용 상태로 유지 (영향 없음)
                           / 향후 재추가 시 즉시 활용 가능하도록 보존
+   - 2026.04.26 (v1.5.0): .hero-scroll-hint에 z-index 명시 (안전장치)
+                          / HTML 구조 변경에 맞춘 위치 정상화
+                          / 더 이상 메인 카피와 겹치지 않음
 ================================================================================
 */
 
@@ -335,10 +338,18 @@ button {
 }
 
 .hero-scroll-hint {
+    /* ============================================================ */
+    /* [Hero 스크롤 안내]                                             */
+    /* HTML 구조: .hero 직속 자식 (hero-content 밖)                   */
+    /* 위치: .hero 섹션 기준 하단 중앙에 절대 배치                    */
+    /* z-index: 3 - hero-content(2)보다 위, 단 안전 마진 확보         */
+    /* 모바일에서는 미디어 쿼리로 숨김 처리                           */
+    /* ============================================================ */
     position: absolute;
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
+    z-index: 3;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -346,6 +357,8 @@ button {
     color: rgba(255, 255, 255, 0.6);
     font-size: 11px;
     letter-spacing: 0.3em;
+    /* 클릭/터치 이벤트가 뒤로 통과되도록 */
+    pointer-events: none;
 }
 
 .scroll-line {
