@@ -3,8 +3,8 @@
 ================================================================================
  파일명: index.html
  설명: 주식회사 텔로스 (TELOS Co., Ltd.) 공식 홈페이지 메인 페이지
- 버전: 1.6.0
- 작성일: 2026.05.11
+ 버전: 1.7.0
+ 작성일: 2026.05.16
  도메인: https://www.telos.it.kr
  작성자: 강윤혁
  변경이력:
@@ -26,6 +26,11 @@
                             CSS 수정 없이 3열 자동 정렬 (PC) / 2열·1열 자동 대응
                           / 메타 keywords에 'flopin, 플로핀, 예약관리' 추가
                           / 외부 링크: https://www.flopin.kr
+   - 2026.05.16 (v1.7.0): 푸터 이메일을 mailto: 링크 → 문의 모달로 변경
+                          / 이유: mailto: 클릭 시 네이버웍스 로그인 페이지로 강제 이동되어
+                            일반 방문자 이탈 발생. 모달로 주소 표시 + 복사 버튼 제공
+                          / 메타 keywords 빈 쉼표 제거 (flopin, , 예약관리 → flopin, 플로핀, 예약관리)
+                          / 모달 CSS/JS는 인라인 처리 (외부 style.css / main.js 무수정)
 ================================================================================
 -->
 <html lang="ko">
@@ -33,7 +38,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="주식회사 텔로스 (TELOS Co., Ltd.) - 기술이 사람의 시간 옆에 머무는 방식을 만듭니다. AI, SaaS, 정보통신 기반 솔루션 개발 회사">
-    <meta name="keywords" content="텔로스, TELOS, AI, SaaS, 텔로스 케어, flopin, , 예약관리, 정보통신, 헬스케어">
+    <meta name="keywords" content="텔로스, TELOS, AI, SaaS, 텔로스 케어, flopin, 플로핀, 예약관리, 정보통신, 헬스케어">
     <meta name="author" content="주식회사 텔로스">
     
     <!-- Open Graph (SNS 공유 시 미리보기) -->
@@ -53,6 +58,143 @@
     
     <!-- Favicon (추후 로고 제작 후 교체) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-weight='bold'>T</text></svg>">
+
+    <!-- ============================================================ -->
+    <!-- v1.7.0 추가: 문의 모달 전용 CSS (인라인)                      -->
+    <!-- 외부 css/style.css는 건드리지 않고 이 페이지에서만 사용       -->
+    <!-- ============================================================ -->
+    <style>
+        /* 푸터 이메일 버튼 - 기존 .footer-contact-item 링크와 동일한 외관 */
+        .footer-contact-email {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .footer-contact-email:hover {
+            text-decoration: underline;
+        }
+
+        /* 모달 백드롭 (전체 화면 오버레이) */
+        .telos-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .telos-modal.is-open {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* 모달 본체 카드 */
+        .telos-modal-card {
+            background: #ffffff;
+            border-radius: 12px;
+            max-width: 440px;
+            width: 100%;
+            padding: 32px 28px 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            transform: translateY(10px);
+            transition: transform 0.2s ease;
+        }
+        .telos-modal.is-open .telos-modal-card {
+            transform: translateY(0);
+        }
+
+        /* 닫기 버튼 (X) */
+        .telos-modal-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #888;
+            font-size: 24px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .telos-modal-close:hover {
+            background: #f4f4f4;
+            color: #222;
+        }
+
+        /* 모달 내용 */
+        .telos-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111;
+            margin: 0 0 8px;
+        }
+        .telos-modal-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin: 0 0 20px;
+        }
+
+        /* 이메일 주소 + 복사 버튼 영역 */
+        .telos-modal-email-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8f9fb;
+            border: 1px solid #e5e8ee;
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+        .telos-modal-email-text {
+            flex: 1;
+            font-size: 15px;
+            color: #222;
+            font-weight: 500;
+            word-break: break-all;
+        }
+        .telos-modal-copy-btn {
+            flex-shrink: 0;
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .telos-modal-copy-btn:hover {
+            background: #333;
+        }
+        .telos-modal-copy-btn.is-copied {
+            background: #2e7d32;
+        }
+
+        /* 안내 메시지 */
+        .telos-modal-hint {
+            font-size: 12px;
+            color: #888;
+            margin: 12px 0 0;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
 
@@ -210,7 +352,8 @@
     <!-- ============================================================ -->
     <!-- PRODUCTS: 제품 섹션                                          -->
     <!-- ------------------------------------------------------------ -->
-    <!-- v1.6.0: 3개 제품 카드 (텔로스 케어 / 크레스트 / flopin)         -->
+    <!-- v1.6.0: 3개 제품 카드 중 크레스트는 임시 비공개 (주석 처리)  -->
+    <!-- 현재 노출: 텔로스 케어 / flopin (2개)                         -->
     <!-- .products-grid는 auto-fit + minmax(320px, 1fr)로             -->
     <!-- PC 3열 / 태블릿 2열 / 모바일 1열 자동 대응 (CSS 수정 없음)   -->
     <!-- ============================================================ -->
@@ -247,33 +390,12 @@
                 </a>
                 
                 <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-                
+                <!-- 제품 2: 크레스트 (CREST) - 임시 비공개 (v1.6.0~)    -->
+                <!-- 재공개 시: 아래 START/END 마커 사이의 카드 주석 해제 -->
+                <!-- CREST_CARD_START                                     -->
+                <!-- CREST_CARD_END                                       -->
                 <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-                <!--
-                <a href="https://www.sellsignal.kr/" 
-                  class="product-card" 
-                   target="_blank" 
-                   rel="noopener noreferrer">
-                    <div class="product-content">
-                        <div class="product-tag">AI SaaS</div>
-                        <h3 class="product-name">크레스트</h3>
-                        <p class="product-name-en">CREST</p>
-                        <p class="product-desc">
-                            데이터 기반의 주식 및 암호화폐
-                            투자 의사결정을 위한
-                            SaaS 플랫폼.
-                        </p>
-                    </div>
-                    <div class="product-link">
-                        <span>자세히 보기</span>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                </a>
-                -->
-                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-                
+
                 <!-- 제품 3: flopin (AI 예약관리) — v1.6.0 신규 추가 -->
                 <a href="https://www.flopin.kr/" 
                    class="product-card" 
@@ -350,6 +472,7 @@
 
     <!-- ============================================================ -->
     <!-- FOOTER: 회사 정보 푸터 (좌우 배치 - 회사명 좌 + 연락처 우)   -->
+    <!-- v1.7.0: 이메일 mailto: 링크 → 버튼(모달 트리거)로 변경       -->
     <!-- ============================================================ -->
     <footer class="footer">
         <div class="container">
@@ -362,9 +485,13 @@
                     </div>
                     
                     <div class="footer-contact">
-                        <a href="mailto:contact@telos.it.kr" class="footer-contact-item">
+                        <!-- v1.7.0: mailto: 제거 → 버튼 클릭 시 모달 표시 -->
+                        <button type="button" 
+                                class="footer-contact-item footer-contact-email" 
+                                id="contactEmailBtn"
+                                aria-label="이메일 문의 안내 모달 열기">
                             contact@telos.it.kr
-                        </a>
+                        </button>
                         <span class="footer-contact-divider">·</span>
                         <span class="footer-contact-item">
                             세종특별자치시 마음안1로 155, 301호
@@ -382,7 +509,147 @@
         </div>
     </footer>
 
-    <!-- 메인 JavaScript -->
+    <!-- ============================================================ -->
+    <!-- v1.7.0 추가: 문의 이메일 모달                                  -->
+    <!-- mailto: 클릭 시 일부 환경(네이버웍스 등)에서 외부 메일 클라이언트가 -->
+    <!-- 강제로 호출되어 방문자가 이탈하는 문제를 차단                 -->
+    <!-- ============================================================ -->
+    <div class="telos-modal" 
+         id="contactModal" 
+         role="dialog" 
+         aria-modal="true" 
+         aria-labelledby="contactModalTitle" 
+         aria-hidden="true">
+        <div class="telos-modal-card">
+            <button type="button" 
+                    class="telos-modal-close" 
+                    id="contactModalClose" 
+                    aria-label="모달 닫기">&times;</button>
+            
+            <h3 class="telos-modal-title" id="contactModalTitle">이메일 문의</h3>
+            <p class="telos-modal-desc">
+                아래 이메일 주소로 문의해 주세요.<br>
+                사업 제휴 · 투자 · 채용 등 어떤 주제든 환영합니다.
+            </p>
+            
+            <div class="telos-modal-email-row">
+                <span class="telos-modal-email-text" id="contactModalEmail">contact@telos.it.kr</span>
+                <button type="button" 
+                        class="telos-modal-copy-btn" 
+                        id="contactModalCopyBtn">복사</button>
+            </div>
+            
+            <p class="telos-modal-hint">평일 영업시간 내 답변 드립니다.</p>
+        </div>
+    </div>
+
+    <!-- 메인 JavaScript (기존 헤더/네비 동작 등) -->
     <script src="js/main.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- v1.7.0 추가: 문의 모달 제어 스크립트 (인라인)                  -->
+    <!-- 기존 js/main.js를 건드리지 않고 이 페이지에서만 동작           -->
+    <!-- 기능: 열기 / 닫기(X, 배경, ESC) / 클립보드 복사               -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+
+        // DOM 요소 안전하게 캐싱 (요소 없으면 조용히 종료)
+        var btnOpen   = document.getElementById('contactEmailBtn');
+        var modal     = document.getElementById('contactModal');
+        var btnClose  = document.getElementById('contactModalClose');
+        var btnCopy   = document.getElementById('contactModalCopyBtn');
+        var emailEl   = document.getElementById('contactModalEmail');
+
+        if (!btnOpen || !modal || !btnClose || !btnCopy || !emailEl) {
+            return; // 안전장치: 일부 요소 누락 시 스크립트 중단
+        }
+
+        var EMAIL = 'contact@telos.it.kr';
+
+        // 모달 열기
+        function openModal() {
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden'; // 배경 스크롤 잠금
+            // 첫 포커스를 닫기 버튼으로 (접근성)
+            setTimeout(function () { btnClose.focus(); }, 50);
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            resetCopyButton();
+            btnOpen.focus(); // 트리거 버튼으로 포커스 복귀
+        }
+
+        // 복사 버튼 상태 초기화
+        function resetCopyButton() {
+            btnCopy.textContent = '복사';
+            btnCopy.classList.remove('is-copied');
+        }
+
+        // 클립보드 복사 (Clipboard API + fallback)
+        function copyEmail() {
+            // 모던 브라우저
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(EMAIL).then(function () {
+                    markCopied();
+                }).catch(function () {
+                    fallbackCopy();
+                });
+            } else {
+                fallbackCopy();
+            }
+        }
+
+        // 구형 브라우저 fallback (execCommand)
+        function fallbackCopy() {
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = EMAIL;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'absolute';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                markCopied();
+            } catch (e) {
+                btnCopy.textContent = '복사 실패';
+            }
+        }
+
+        // 복사 성공 표시 (2초 후 원복)
+        function markCopied() {
+            btnCopy.textContent = '복사됨 ✓';
+            btnCopy.classList.add('is-copied');
+            setTimeout(resetCopyButton, 2000);
+        }
+
+        // 이벤트 바인딩
+        btnOpen.addEventListener('click', openModal);
+        btnClose.addEventListener('click', closeModal);
+        btnCopy.addEventListener('click', copyEmail);
+
+        // 배경 클릭 시 닫기 (모달 카드 내부 클릭은 무시)
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // ESC 키로 닫기
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+                closeModal();
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
