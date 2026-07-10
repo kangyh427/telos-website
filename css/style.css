@@ -3,8 +3,11 @@
  파일명: css/style.css
  저장소 경로: kangyh427/telos-website/css/style.css
  설명: 텔로스 케어(TELOS Care) 전용 랜딩 스타일시트
- 버전: 2.2.0
+ 버전: 2.4.0
  작성일: 2026.07.10
+ v2.4.0 변경: 헤더 상시 흰 배경 고정(투명→흰 전환 방식 제거, 상태버그 차단)
+              / 내비·토글을 어두운 색으로 고정, 로고 반전필터 제거 + 로고 확대(30→46px, 모바일 26→38px)
+              / 푸터 글자 색 전부 순백색(#fff)화 — 어두운 배경 가독성 개선
  v2.2.0 변경: 사진 배너(.band) 및 섹션 배경(.section-bg) 추가 / 헤더 로고 이미지
               (흰↔네이비 전환) / 푸터 로고 흰색버전으로 교체(filter 제거)
  v2.1.0 변경: .kbr(의미 단위 줄바꿈 헬퍼) 추가 / .company-logo·.footer-logo-img
@@ -197,15 +200,18 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 /* ============================================================ */
 /* 4) 헤더                                                       */
 /* ============================================================ */
+/* 헤더: 처음부터 흰 배경 고정 (어두운 히어로 위에서도 네이비 로고가 항상 보이도록).
+   과거의 투명→흰색 상태 전환 방식은 상태 버그 위험이 있어 제거하고, 스크롤 시 그림자만 강화. */
 .header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background-color: rgba(255, 255, 255, 0);
+    background-color: #ffffff;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
     transition: var(--transition);
 }
 .header.scrolled {
     background-color: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(10px);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 .header-inner {
     max-width: var(--container-max); margin: 0 auto;
@@ -220,12 +226,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .logo-care { color: var(--color-care); font-weight: 800; }
 .header.scrolled .logo-text { color: var(--color-primary); }
 
-/* 헤더 로고: 이미지 1개. 히어로 위=흰색(필터), 스크롤 시=원본 네이비 */
-.logo-img { height: 30px; width: auto; display: block; filter: brightness(0) invert(1); transition: filter 0.3s ease; }
-.header.scrolled .logo-img { filter: none; }
+/* 헤더 로고: 흰 배경 위 네이비 원본 그대로 노출(색 반전 필터 제거). 크기 확대. */
+.logo-img { height: 46px; width: auto; display: block; }
 
 .nav-list { display: flex; gap: var(--space-lg); }
-.nav-list a { font-size: 15px; font-weight: 600; color: var(--color-text-white); }
+.nav-list a { font-size: 15px; font-weight: 600; color: var(--color-text); }
 .header.scrolled .nav-list a { color: var(--color-text); }
 .nav-list a:hover { color: var(--color-care); }
 
@@ -236,7 +241,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
     display: none; width: 32px; height: 32px;
     flex-direction: column; justify-content: space-between; padding: 6px 0;
 }
-.nav-toggle span { display: block; width: 100%; height: 2px; background-color: var(--color-text-white); transition: var(--transition); }
+.nav-toggle span { display: block; width: 100%; height: 2px; background-color: var(--color-primary); transition: var(--transition); }
 .header.scrolled .nav-toggle span { background-color: var(--color-primary); }
 
 /* ============================================================ */
@@ -386,25 +391,25 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 /* ============================================================ */
 /* 16) 푸터                                                      */
 /* ============================================================ */
-.footer { background-color: var(--color-primary-dark); color: rgba(255, 255, 255, 0.65); padding: var(--space-xl) 0 var(--space-lg); }
+.footer { background-color: var(--color-primary-dark); color: #ffffff; padding: var(--space-xl) 0 var(--space-lg); }
 .footer-inner { max-width: 1100px; margin: 0 auto; }
 .footer-main { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-lg); padding-bottom: var(--space-lg); margin-bottom: var(--space-lg); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
 .footer-brand { text-align: left; }
 .footer-logo { font-size: 24px; font-weight: 800; letter-spacing: 0.03em; color: var(--color-text-white); margin-bottom: var(--space-xs); }
 /* 로고 이미지: 흰색 버전(logo_white.png) 사용 → 반전 filter 불필요 */
 .footer-logo-img { width: 150px; height: auto; margin-bottom: var(--space-sm); }
-.footer-company { font-size: 14px; color: rgba(255, 255, 255, 0.55); margin-bottom: 10px; }
-.footer-bizinfo { font-size: 13px; color: rgba(255, 255, 255, 0.45); line-height: 1.8; }
+.footer-company { font-size: 14px; color: #ffffff; margin-bottom: 10px; }
+.footer-bizinfo { font-size: 13px; color: #ffffff; line-height: 1.8; }
 
 .footer-links-wrap { text-align: right; }
 .footer-links { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-xs); font-size: 14px; margin-bottom: 12px; }
-.footer-links a, .footer-linkbtn { color: rgba(255, 255, 255, 0.75); font-size: 14px; transition: var(--transition); }
+.footer-links a, .footer-linkbtn { color: #ffffff; font-size: 14px; transition: var(--transition); }
 .footer-links a:hover, .footer-linkbtn:hover { color: #fff; text-decoration: underline; }
-.footer-contact-divider { color: rgba(255, 255, 255, 0.3); user-select: none; }
-.footer-ip { font-size: 12px; color: rgba(255, 255, 255, 0.4); line-height: 1.7; }
+.footer-contact-divider { color: #ffffff; user-select: none; }
+.footer-ip { font-size: 12px; color: #ffffff; line-height: 1.7; }
 
 .footer-bottom { text-align: center; }
-.footer-copyright { font-size: 13px; color: rgba(255, 255, 255, 0.4); letter-spacing: 0.02em; }
+.footer-copyright { font-size: 13px; color: #ffffff; letter-spacing: 0.02em; }
 
 /* ============================================================ */
 /* 17) 문의 모달 (index 인라인 → 통합)                           */
@@ -464,7 +469,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 
     .header-inner { padding: 14px var(--container-padding); }
     .header-cta { display: none; }   /* 모바일은 하단 CTA로 유도 */
-    .logo-img { height: 26px; }
+    .logo-img { height: 38px; }
 
     .nav {
         position: fixed; top: 0; right: -100%; width: 82%; max-width: 320px; height: 100vh;
