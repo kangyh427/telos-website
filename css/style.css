@@ -220,11 +220,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .logo-care { color: var(--color-care); font-weight: 800; }
 .header.scrolled .logo-text { color: var(--color-primary); }
 
-/* 헤더 로고 이미지: 히어로 위=흰색 / 스크롤 시=네이비 자동 전환 */
-.logo-img { height: 30px; width: auto; display: block; }
-.logo-img-black { display: none; }
-.header.scrolled .logo-img-white { display: none; }
-.header.scrolled .logo-img-black { display: block; }
+/* 헤더 로고: 이미지 1개. 히어로 위=흰색(필터), 스크롤 시=원본 네이비 */
+.logo-img { height: 30px; width: auto; display: block; filter: brightness(0) invert(1); transition: filter 0.3s ease; }
+.header.scrolled .logo-img { filter: none; }
 
 .nav-list { display: flex; gap: var(--space-lg); }
 .nav-list a { font-size: 15px; font-weight: 600; color: var(--color-text-white); }
@@ -447,7 +445,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .band-overlay-warm { background: linear-gradient(180deg, rgba(8, 26, 52, 0.58) 0%, rgba(6, 22, 40, 0.68) 100%); }
 .band .container { position: relative; z-index: 2; }
 .band-title { font-size: clamp(24px, 3.4vw, 38px); font-weight: 800; line-height: 1.4; letter-spacing: -0.02em; margin-bottom: 12px; }
-.band-desc { font-size: clamp(16px, 2vw, 19px); color: rgba(255, 255, 255, 0.88); line-height: 1.75; max-width: 640px; margin: 0 auto; }
+.band-desc { font-size: clamp(15px, 1.9vw, 18px); color: rgba(255, 255, 255, 0.88); line-height: 1.75; max-width: 780px; margin: 0 auto; }
 
 /* ============================================================ */
 /* 19) 반응형                                                    */
