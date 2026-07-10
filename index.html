@@ -4,11 +4,17 @@
  파일명: index.html
  저장소 경로: kangyh427/telos-website/index.html  (로컬 C:\TELOS\telos-website\index.html)
  설명: 텔로스 케어(TELOS Care) 전용 랜딩 페이지 — 독거 어르신 정서케어 서비스
- 버전: 2.2.0
+ 버전: 2.4.0
  작성일: 2026.07.10
  도메인: https://www.telos.it.kr
  작성자: 강윤혁
  변경이력:
+   - 2026.07.10 (v2.4.0): 로고 정리 — 이미지에 인쇄돼 있던 "주식회사 텔로스" 글자를
+                          잘라낸 TELOS-only 로고로 교체(logo.png=네이비/logo_white.png=흰색).
+                          / 헤더·회사소개 로고를 존재하지 않던 logo_black.png → logo.png 로 교체(깨진 이미지 해결)
+                          / 회사소개 섹션의 "COMPANY" 라벨 및 "주식회사 텔로스" 제목 삭제
+                          / 로고 비율(4.635:1)에 맞춰 각 img width·height 재지정(왜곡 방지)
+                          / (CSS 연동) 헤더 상시 흰 배경 고정 + 로고 확대 + 푸터 글자 순백색화
    - ~ v1.7.0 : 주식회사 텔로스 회사 소개형 사이트 (about/business/products/notice)
    - 2026.07.10 (v2.3.0): 헤더 로고 이미지 1개로 통일(중복 노출 버그 제거)
                           + 필터로 색 전환(히어로=흰색/스크롤=네이비)
@@ -67,7 +73,7 @@
     <header class="header" id="header">
         <div class="header-inner">
             <a href="#hero" class="logo" aria-label="텔로스 케어 홈">
-                <img src="images/logo_black.png" alt="주식회사 텔로스 TELOS" class="logo-img" width="132" height="54">
+                <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="logo-img" width="213" height="46">
             </a>
 
             <nav class="nav" id="nav" aria-label="주요 메뉴">
@@ -534,13 +540,8 @@
     <!-- ============================================================ -->
     <section class="section company" id="company">
         <div class="container">
-            <div class="section-header">
-                <span class="section-label">COMPANY</span>
-                <h2 class="section-title">주식회사 텔로스</h2>
-            </div>
-
             <div class="company-content reveal">
-                <img src="images/logo_black.png" alt="주식회사 텔로스 TELOS" class="company-logo" width="260" height="107">
+                <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="company-logo" width="240" height="52">
                 <p class="company-lead">
                     텔로스(TELOS)는 &lsquo;궁극의 목적&rsquo;을 뜻합니다.<br>
                     우리는 노년의 존엄, 그리고 사람을 다시 사회와 잇는 일을
@@ -604,7 +605,7 @@
             <div class="footer-inner">
                 <div class="footer-main">
                     <div class="footer-brand">
-                        <img src="images/logo_white.png" alt="주식회사 텔로스 TELOS" class="footer-logo-img" width="150" height="62">
+                        <img src="images/logo_white.png" alt="주식회사 텔로스 TELOS" class="footer-logo-img" width="170" height="37">
                         <p class="footer-company">주식회사 텔로스 / TELOS Co., Ltd.</p>
                         <p class="footer-bizinfo">
                             대표 강윤혁 · 사업자등록번호 555-81-03578<br>
