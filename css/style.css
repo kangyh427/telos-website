@@ -3,8 +3,10 @@
  파일명: css/style.css
  저장소 경로: kangyh427/telos-website/css/style.css
  설명: 텔로스 케어(TELOS Care) 전용 랜딩 스타일시트
- 버전: 2.1.0
+ 버전: 2.2.0
  작성일: 2026.07.10
+ v2.2.0 변경: 사진 배너(.band) 및 섹션 배경(.section-bg) 추가 / 헤더 로고 이미지
+              (흰↔네이비 전환) / 푸터 로고 흰색버전으로 교체(filter 제거)
  v2.1.0 변경: .kbr(의미 단위 줄바꿈 헬퍼) 추가 / .company-logo·.footer-logo-img
               로고 이미지 스타일 추가(푸터는 흰색 반전 filter)
  디자인 톤: 화이트/밝은 배경 + 진한 네이비 베이스 + 케어 그린(teal) 액센트
@@ -218,6 +220,12 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .logo-care { color: var(--color-care); font-weight: 800; }
 .header.scrolled .logo-text { color: var(--color-primary); }
 
+/* 헤더 로고 이미지: 히어로 위=흰색 / 스크롤 시=네이비 자동 전환 */
+.logo-img { height: 30px; width: auto; display: block; }
+.logo-img-black { display: none; }
+.header.scrolled .logo-img-white { display: none; }
+.header.scrolled .logo-img-black { display: block; }
+
 .nav-list { display: flex; gap: var(--space-lg); }
 .nav-list a { font-size: 15px; font-weight: 600; color: var(--color-text-white); }
 .header.scrolled .nav-list a { color: var(--color-text); }
@@ -298,7 +306,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 /* ============================================================ */
 /* 9) 경쟁 대비 (다크 섹션)                                      */
 /* ============================================================ */
-.compare { background: var(--color-primary); }
+.compare { position: relative; background: var(--color-primary); }
+.compare .container { position: relative; z-index: 2; }
+.compare-tint { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(10, 31, 68, 0.88), rgba(5, 15, 36, 0.93)); }
 .compare-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); }
 .compare-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--radius); padding: var(--space-lg) var(--space-md); }
 .compare-type { display: inline-block; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: var(--space-md); letter-spacing: 0.02em; }
@@ -383,8 +393,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .footer-main { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-lg); padding-bottom: var(--space-lg); margin-bottom: var(--space-lg); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
 .footer-brand { text-align: left; }
 .footer-logo { font-size: 24px; font-weight: 800; letter-spacing: 0.03em; color: var(--color-text-white); margin-bottom: var(--space-xs); }
-/* 로고 이미지(네이비)를 어두운 푸터 위에서 흰색으로 반전 표시 */
-.footer-logo-img { width: 150px; height: auto; margin-bottom: var(--space-sm); filter: brightness(0) invert(1); }
+/* 로고 이미지: 흰색 버전(logo_white.png) 사용 → 반전 filter 불필요 */
+.footer-logo-img { width: 150px; height: auto; margin-bottom: var(--space-sm); }
 .footer-company { font-size: 14px; color: rgba(255, 255, 255, 0.55); margin-bottom: 10px; }
 .footer-bizinfo { font-size: 13px; color: rgba(255, 255, 255, 0.45); line-height: 1.8; }
 
@@ -423,6 +433,23 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .reveal.is-visible { opacity: 1; transform: none; }
 
 /* ============================================================ */
+/* 18-1) 사진 배너(.band) · 섹션 배경(.section-bg)               */
+/* ------------------------------------------------------------ */
+/* .band : 어두운 오버레이 + 흰 글씨의 풀블리드 사진 구간         */
+/* .section-bg : 특정 섹션 뒤에 까는 배경 이미지 레이어           */
+/* ============================================================ */
+.section-bg { position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
+
+.band { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; color: #fff; overflow: hidden; padding: var(--space-2xl) 0; }
+.band-bg { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
+.band-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6, 22, 40, 0.76) 0%, rgba(9, 40, 55, 0.74) 100%); }
+/* 인물 사진용: 표정이 보이도록 조금 더 옅은 오버레이 */
+.band-overlay-warm { background: linear-gradient(180deg, rgba(8, 26, 52, 0.58) 0%, rgba(6, 22, 40, 0.68) 100%); }
+.band .container { position: relative; z-index: 2; }
+.band-title { font-size: clamp(24px, 3.4vw, 38px); font-weight: 800; line-height: 1.4; letter-spacing: -0.02em; margin-bottom: 12px; }
+.band-desc { font-size: clamp(16px, 2vw, 19px); color: rgba(255, 255, 255, 0.88); line-height: 1.75; max-width: 640px; margin: 0 auto; }
+
+/* ============================================================ */
 /* 19) 반응형                                                    */
 /* ============================================================ */
 @media (max-width: 1024px) {
@@ -439,6 +466,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 
     .header-inner { padding: 14px var(--container-padding); }
     .header-cta { display: none; }   /* 모바일은 하단 CTA로 유도 */
+    .logo-img { height: 26px; }
 
     .nav {
         position: fixed; top: 0; right: -100%; width: 82%; max-width: 320px; height: 100vh;
