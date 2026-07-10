@@ -4,16 +4,18 @@
  파일명: index.html
  저장소 경로: kangyh427/telos-website/index.html  (로컬 C:\TELOS\telos-website\index.html)
  설명: 텔로스 케어(TELOS Care) 전용 랜딩 페이지 — 독거 어르신 정서케어 서비스
- 버전: 2.1.0
+ 버전: 2.2.0
  작성일: 2026.07.10
  도메인: https://www.telos.it.kr
  작성자: 강윤혁
  변경이력:
    - ~ v1.7.0 : 주식회사 텔로스 회사 소개형 사이트 (about/business/products/notice)
-   - 2026.07.10 (v2.1.0): 소개 문단 '의미 단위 줄바꿈'(.kbr) 적용 → 구 중간 끊김 방지
-                          / 사이트 카피 내 em dash(—) 제거(사내 표기 원칙 준수)
-                          / 텔로스 로고 이미지(images/logo.png) 추가: 회사소개 섹션·푸터
-                          / (푸터는 네이비 로고를 흰색 반전 filter로 표시)
+   - 2026.07.10 (v2.2.0): 헤더에 로고 이미지 추가(logo_white/logo_black 전환)
+                          / 본문 사진 배너 3곳 추가: friends.jpg.jpg(사회 재연결)·
+                            products-bg.jpg(간편 도입)·about-bg.jpg(회사 철학)
+                          / 비교 섹션 배경에 business-bg.jpg 적용(네이비 틴트)
+                          / 회사소개 로고 logo_black, 푸터 로고 logo_white 로 경로 정정
+                          / 흰 여백이 많던 구간을 사진으로 분절해 시각적 리듬 확보
    - 2026.07.10 (v2.0.0): 텔로스 케어 전용 랜딩으로 전면 개편
                           / 회사 일반 섹션(사업영역/제품목록/공고) 제거
                           / flopin·CREST 카드 및 외부 링크 제거
@@ -62,7 +64,8 @@
     <header class="header" id="header">
         <div class="header-inner">
             <a href="#hero" class="logo" aria-label="텔로스 케어 홈">
-                <span class="logo-text">TELOS <b class="logo-care">Care</b></span>
+                <img src="images/logo_white.png" alt="주식회사 텔로스 TELOS" class="logo-img logo-img-white" width="132" height="54">
+                <img src="images/logo_black.png" alt="주식회사 텔로스 TELOS" class="logo-img logo-img-black" width="132" height="54">
             </a>
 
             <nav class="nav" id="nav" aria-label="주요 메뉴">
@@ -208,6 +211,21 @@
     <!-- ============================================================ -->
     <!-- ④ 특장점: 핵심 기능 카드 4개                                 -->
     <!-- ============================================================ -->
+    <!-- ============================================================ -->
+    <!-- [사진 배너 A] 사회 재연결 (friends.jpg.jpg)                  -->
+    <!-- ============================================================ -->
+    <section class="band" aria-label="사회 재연결">
+        <div class="band-bg" style="background-image: url('images/friends.jpg.jpg');"></div>
+        <div class="band-overlay band-overlay-warm"></div>
+        <div class="container">
+            <h2 class="band-title">외로움을 넘어, 다시 함께</h2>
+            <p class="band-desc">
+                말벗에서 멈추지 않습니다. 어르신을 이웃과 지역사회로 다시 이어,
+                일상에 사람의 온기를 더합니다.
+            </p>
+        </div>
+    </section>
+
     <section class="section features" id="features">
         <div class="container">
             <div class="section-header">
@@ -267,6 +285,8 @@
     <!-- ⑤ 경쟁 대비 차별 (형태별 한계 → 우리 강점, 실명 미기재)     -->
     <!-- ============================================================ -->
     <section class="section compare" id="compare">
+        <div class="section-bg" style="background-image: url('images/business-bg.jpg');"></div>
+        <div class="compare-tint"></div>
         <div class="container">
             <div class="section-header">
                 <span class="section-label section-label-light">HOW WE DIFFER</span>
@@ -341,6 +361,21 @@
     <!-- ============================================================ -->
     <!-- ⑦ 신뢰·실증: 특허·상표·자문·실증 (성함/기관명 미기재)       -->
     <!-- ============================================================ -->
+    <!-- ============================================================ -->
+    <!-- [사진 배너 B] 간편 도입 (products-bg.jpg)                    -->
+    <!-- ============================================================ -->
+    <section class="band" aria-label="간편한 도입">
+        <div class="band-bg" style="background-image: url('images/products-bg.jpg');"></div>
+        <div class="band-overlay"></div>
+        <div class="container">
+            <h2 class="band-title">전용 기기 없이, 앱 하나로</h2>
+            <p class="band-desc">
+                복잡한 장비도, 어려운 설정도 필요 없습니다.
+                익숙한 방식으로 오늘 바로 시작할 수 있습니다.
+            </p>
+        </div>
+    </section>
+
     <section class="section trust" id="trust">
         <div class="container">
             <div class="section-header">
@@ -428,6 +463,21 @@
     <!-- ============================================================ -->
     <!-- ⑨ FAQ: 프라이버시·설치·정확도 등 우려 해소                  -->
     <!-- ============================================================ -->
+    <!-- ============================================================ -->
+    <!-- [사진 배너 C] 회사 철학 (about-bg.jpg)                       -->
+    <!-- ============================================================ -->
+    <section class="band" aria-label="텔로스의 철학">
+        <div class="band-bg" style="background-image: url('images/about-bg.jpg');"></div>
+        <div class="band-overlay"></div>
+        <div class="container">
+            <h2 class="band-title">기술이 곁에 머무는 방식을 고민합니다</h2>
+            <p class="band-desc">
+                빠름을 넘어, 사람의 시간 옆에 의미 있게 자리하는 기술.
+                그것이 텔로스가 케어를 만드는 이유입니다.
+            </p>
+        </div>
+    </section>
+
     <section class="section faq" id="faq">
         <div class="container container-narrow">
             <div class="section-header">
@@ -488,7 +538,7 @@
             </div>
 
             <div class="company-content reveal">
-                <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="company-logo" width="260" height="107">
+                <img src="images/logo_black.png" alt="주식회사 텔로스 TELOS" class="company-logo" width="260" height="107">
                 <p class="company-lead">
                     텔로스(TELOS)는 &lsquo;궁극의 목적&rsquo;을 뜻합니다.<br>
                     우리는 노년의 존엄, 그리고 사람을 다시 사회와 잇는 일을
@@ -552,7 +602,7 @@
             <div class="footer-inner">
                 <div class="footer-main">
                     <div class="footer-brand">
-                        <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="footer-logo-img" width="150" height="62">
+                        <img src="images/logo_white.png" alt="주식회사 텔로스 TELOS" class="footer-logo-img" width="150" height="62">
                         <p class="footer-company">주식회사 텔로스 / TELOS Co., Ltd.</p>
                         <p class="footer-bizinfo">
                             대표 강윤혁 · 사업자등록번호 555-81-03578<br>
