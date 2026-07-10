@@ -4,12 +4,16 @@
  파일명: index.html
  저장소 경로: kangyh427/telos-website/index.html  (로컬 C:\TELOS\telos-website\index.html)
  설명: 텔로스 케어(TELOS Care) 전용 랜딩 페이지 — 독거 어르신 정서케어 서비스
- 버전: 2.0.0
+ 버전: 2.1.0
  작성일: 2026.07.10
  도메인: https://www.telos.it.kr
  작성자: 강윤혁
  변경이력:
    - ~ v1.7.0 : 주식회사 텔로스 회사 소개형 사이트 (about/business/products/notice)
+   - 2026.07.10 (v2.1.0): 소개 문단 '의미 단위 줄바꿈'(.kbr) 적용 → 구 중간 끊김 방지
+                          / 사이트 카피 내 em dash(—) 제거(사내 표기 원칙 준수)
+                          / 텔로스 로고 이미지(images/logo.png) 추가: 회사소개 섹션·푸터
+                          / (푸터는 네이비 로고를 흰색 반전 filter로 표시)
    - 2026.07.10 (v2.0.0): 텔로스 케어 전용 랜딩으로 전면 개편
                           / 회사 일반 섹션(사업영역/제품목록/공고) 제거
                           / flopin·CREST 카드 및 외부 링크 제거
@@ -27,7 +31,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="텔로스 케어(TELOS Care) — 호출어 없이 먼저 말을 건네는 24시간 온디바이스 AI 말벗. 독거 어르신의 정서를 살피고, 다시 사회와 잇습니다. 주식회사 텔로스.">
+    <meta name="description" content="텔로스 케어(TELOS Care): 호출어 없이 먼저 말을 건네는 24시간 온디바이스 AI 말벗. 독거 어르신의 정서를 살피고, 다시 사회와 잇습니다. 주식회사 텔로스.">
     <meta name="keywords" content="텔로스 케어, TELOS Care, 텔로스, AI 말벗, 독거노인, 노인 돌봄, 정서케어, 선제 발화, 온디바이스 AI, 안부 리포트, 복지관, 지자체 돌봄">
     <meta name="author" content="주식회사 텔로스">
 
@@ -98,7 +102,8 @@
                 다시 세상과 잇습니다
             </h1>
             <p class="hero-subtitle">
-                호출어 없이, 24시간 곁을 지키는 온디바이스 AI 말벗 — 텔로스 케어
+                <span class="kbr">호출어 없이, 24시간 곁을 지키는</span>
+                <span class="kbr">온디바이스 AI 말벗, 텔로스 케어</span>
             </p>
             <div class="hero-actions">
                 <button type="button" class="btn btn-primary js-contact-open" data-contact-topic="b2g">
@@ -165,10 +170,12 @@
                 <span class="section-label">THE SOLUTION</span>
                 <h2 class="section-title">기다리지 않고,<br>AI가 먼저 말을 건넵니다</h2>
                 <p class="section-lead">
-                    텔로스 케어는 혼자 지내는 어르신 곁에서, 호출어 없이도 주변의 소리
-                    — 한숨, 오랜 침묵, 생활음 — 를 단말에서 살펴 AI가 먼저 안부를
-                    건네는 <b>선제 발화(Proactive Dialogue)</b> 서비스입니다.
-                    단순한 말벗을 넘어, 어르신을 다시 지역사회로 잇는 것을 목표로 합니다.
+                    <span class="kbr">텔로스 케어는 혼자 지내는 어르신 곁에서,</span>
+                    <span class="kbr">호출어 없이도 주변의 소리(한숨·오랜 침묵·생활음)를</span>
+                    <span class="kbr">단말에서 살펴 AI가 먼저 안부를 건네는</span>
+                    <span class="kbr"><b>선제 발화(Proactive Dialogue)</b> 서비스입니다.</span>
+                    <span class="kbr">단순한 말벗을 넘어,</span>
+                    <span class="kbr">어르신을 다시 지역사회로 잇는 것을 목표로 합니다.</span>
                 </p>
             </div>
 
@@ -481,6 +488,7 @@
             </div>
 
             <div class="company-content reveal">
+                <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="company-logo" width="260" height="107">
                 <p class="company-lead">
                     텔로스(TELOS)는 &lsquo;궁극의 목적&rsquo;을 뜻합니다.<br>
                     우리는 노년의 존엄, 그리고 사람을 다시 사회와 잇는 일을
@@ -544,7 +552,7 @@
             <div class="footer-inner">
                 <div class="footer-main">
                     <div class="footer-brand">
-                        <div class="footer-logo">TELOS <b class="logo-care">Care</b></div>
+                        <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="footer-logo-img" width="150" height="62">
                         <p class="footer-company">주식회사 텔로스 / TELOS Co., Ltd.</p>
                         <p class="footer-bizinfo">
                             대표 강윤혁 · 사업자등록번호 555-81-03578<br>
