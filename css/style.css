@@ -3,8 +3,10 @@
  파일명: css/style.css
  저장소 경로: kangyh427/telos-website/css/style.css
  설명: 텔로스 케어(TELOS Care) 전용 랜딩 스타일시트
- 버전: 2.0.0
+ 버전: 2.1.0
  작성일: 2026.07.10
+ v2.1.0 변경: .kbr(의미 단위 줄바꿈 헬퍼) 추가 / .company-logo·.footer-logo-img
+              로고 이미지 스타일 추가(푸터는 흰색 반전 filter)
  디자인 톤: 화이트/밝은 배경 + 진한 네이비 베이스 + 케어 그린(teal) 액센트
  폰트: Pretendard Variable (한글 최적화)
  변경이력:
@@ -152,6 +154,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
     line-height: 1.85;
 }
 .section-lead b { color: var(--color-care-dark); font-weight: 700; }
+
+/* 의미 단위 줄바꿈 헬퍼: 구(句)를 inline-block 덩어리로 묶어           */
+/* → 구와 구 사이에서만 개행되고, 구 내부는 끊기지 않음(반응형 안전).  */
+/* 화면이 너무 좁으면 구 내부도 어절(공백) 단위로만 접힘(overflow 방지) */
+.kbr { display: inline-block; }
 
 /* ============================================================ */
 /* 3) 버튼 (공용 컴포넌트)                                       */
@@ -349,6 +356,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 /* ============================================================ */
 /* 14) 회사 소개                                                 */
 /* ============================================================ */
+.company-logo { width: 240px; max-width: 68%; height: auto; margin: 0 auto var(--space-lg); }
 .company-content { max-width: 820px; margin: 0 auto; text-align: center; }
 .company-lead { font-size: clamp(18px, 2.4vw, 24px); font-weight: 600; color: var(--color-primary); line-height: 1.7; margin-bottom: var(--space-xl); }
 .company-meta { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-lg); }
@@ -375,6 +383,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .footer-main { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-lg); padding-bottom: var(--space-lg); margin-bottom: var(--space-lg); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
 .footer-brand { text-align: left; }
 .footer-logo { font-size: 24px; font-weight: 800; letter-spacing: 0.03em; color: var(--color-text-white); margin-bottom: var(--space-xs); }
+/* 로고 이미지(네이비)를 어두운 푸터 위에서 흰색으로 반전 표시 */
+.footer-logo-img { width: 150px; height: auto; margin-bottom: var(--space-sm); filter: brightness(0) invert(1); }
 .footer-company { font-size: 14px; color: rgba(255, 255, 255, 0.55); margin-bottom: 10px; }
 .footer-bizinfo { font-size: 13px; color: rgba(255, 255, 255, 0.45); line-height: 1.8; }
 
