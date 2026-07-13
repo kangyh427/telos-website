@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+ 파일명: notice.html
+ 저장소 경로: kangyh427/telos-website/notice.html  (로컬 C:\TELOS\telos-website\notice.html)
+ 설명: 주식회사 텔로스 전자공고(공고사항 게재) 페이지
+       — 법인 정관/등기부상 공고방법이 "회사 인터넷 홈페이지(telos.it.kr) 게재"로
+         지정되어 있어, 상법상 전자공고를 게시할 상시 지면을 마련함.
+ 버전: 1.0.0
+ 작성일: 2026.07.13
+ 설계 원칙:
+   - index.html 과 동일한 헤더/푸터/디자인 토큰 재사용(일관성)
+   - 공고 데이터는 <article class="notice-item"> 단위로 추가/삭제(유지보수 용이)
+   - 신규 공고 게재 시: 아래 "공고 아이템 템플릿" 주석을 복사해 목록 최상단에 삽입
+   - 스타일은 css/notice.css 로 분리(기존 style.css 무수정 → 회귀 위험 0)
+ 참고:
+   - 전자공고는 상법 제289조·제449조의2 등에 근거. 재무제표 공고, 자본금 감소·
+     합병 등 채권자 이의 공고가 필요할 때 본 페이지에 게재.
+   - 공고는 게재 후 일정 기간(사안별 법정 기간) 이상 계속 게시해야 함 → 삭제 주의.
+================================================================================
+-->
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="주식회사 텔로스 전자공고 페이지. 회사 정관에 따라 공고사항을 회사 인터넷 홈페이지에 게재합니다.">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="주식회사 텔로스">
+
+    <meta property="og:title" content="공고 | 주식회사 텔로스">
+    <meta property="og:description" content="주식회사 텔로스의 전자공고 페이지입니다.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.telos.it.kr/notice.html">
+
+    <title>공고 | 주식회사 텔로스 (TELOS)</title>
+
+    <link rel="stylesheet" as="style" crossorigin
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/notice.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-weight='bold'>T</text></svg>">
+</head>
+<body>
+
+    <!-- ============================================================ -->
+    <!-- HEADER: index.html 과 동일 구조(로고 클릭 시 홈으로)          -->
+    <!-- ============================================================ -->
+    <header class="header header--solid" id="header">
+        <div class="header-inner">
+            <a href="index.html#hero" class="logo" aria-label="텔로스 케어 홈">
+                <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="logo-img" width="213" height="46">
+            </a>
+            <nav class="nav" id="nav" aria-label="주요 메뉴">
+                <ul class="nav-list">
+                    <li><a href="index.html#solution">서비스 소개</a></li>
+                    <li><a href="index.html#features">특장점</a></li>
+                    <li><a href="index.html#audience">대상별 안내</a></li>
+                    <li><a href="index.html#process">도입 안내</a></li>
+                    <li><a href="index.html#faq">자주 묻는 질문</a></li>
+                    <li><a href="index.html#company">회사 소개</a></li>
+                </ul>
+            </nav>
+            <a href="index.html#contact" class="btn btn-primary btn-sm header-cta">문의하기</a>
+            <button class="nav-toggle" id="navToggle" aria-label="메뉴 열기" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- 공고 본문                                                    -->
+    <!-- ============================================================ -->
+    <main class="notice-main">
+        <div class="container">
+
+            <!-- 페이지 헤더 -->
+            <div class="notice-head">
+                <span class="section-label">NOTICE</span>
+                <h1 class="notice-page-title">공고</h1>
+                <p class="notice-page-lead">
+                    주식회사 텔로스는 회사 정관에 따라 공고사항을
+                    회사 인터넷 홈페이지(www.telos.it.kr)에 게재합니다.
+                </p>
+            </div>
+
+            <!-- 공고 목록 -->
+            <section class="notice-list" aria-label="공고 목록">
+
+                <!-- ========================================================== -->
+                <!-- [공고 아이템 템플릿] 신규 공고 게재 시 아래 블록을 복사해     -->
+                <!-- 이 목록 최상단(가장 위)에 붙여넣고 내용만 교체하세요.        -->
+                <!--
+                <article class="notice-item">
+                    <div class="notice-item-meta">
+                        <span class="notice-badge">재무제표</span>
+                        <time class="notice-date" datetime="2027-03-31">2027. 03. 31.</time>
+                    </div>
+                    <h2 class="notice-item-title">제1기 재무제표 공고</h2>
+                    <div class="notice-item-body">
+                        <p>상법 제449조의2에 따라 제1기(2026.4.29 ~ 2026.12.31) 재무제표를
+                           다음과 같이 공고합니다.</p>
+                        <p>… 대차대조표 / 손익계산서 요약 …</p>
+                    </div>
+                </article>
+                -->
+                <!-- ========================================================== -->
+
+                <!-- 현재 등록된 공고가 없을 때 표시되는 안내 (공고 게재 시 이 블록 삭제) -->
+                <div class="notice-empty">
+                    <div class="notice-empty-icon" aria-hidden="true">📋</div>
+                    <p class="notice-empty-title">현재 게재된 공고가 없습니다.</p>
+                    <p class="notice-empty-desc">
+                        새로운 공고가 등록되면 이 페이지에 게재됩니다.
+                    </p>
+                </div>
+
+            </section>
+
+            <!-- 공고방법 안내(법적 고지) -->
+            <aside class="notice-legal" aria-label="공고방법 안내">
+                <h2 class="notice-legal-title">공고방법 안내</h2>
+                <p>
+                    본 회사의 공고는 회사의 인터넷 홈페이지(www.telos.it.kr)에 게재합니다.
+                    다만 전산장애 또는 그 밖의 부득이한 사유로 회사의 인터넷 홈페이지에
+                    공고를 할 수 없는 때에는 대전광역시에서 발행되는 일간 충청투데이에
+                    게재합니다.
+                </p>
+                <p class="notice-legal-sub">
+                    문의: <a href="mailto:contact@telos.it.kr">contact@telos.it.kr</a>
+                </p>
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- ============================================================ -->
+    <!-- FOOTER: index.html 과 동일                                   -->
+    <!-- ============================================================ -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-inner">
+                <div class="footer-main">
+                    <div class="footer-brand">
+                        <img src="images/logo_white.png" alt="주식회사 텔로스 TELOS" class="footer-logo-img" width="170" height="37">
+                        <p class="footer-company">주식회사 텔로스 / TELOS Co., Ltd.</p>
+                        <p class="footer-bizinfo">
+                            대표 강윤혁 · 사업자등록번호 555-81-03578<br>
+                            세종특별자치시 마음안1로 139
+                        </p>
+                    </div>
+                    <div class="footer-links-wrap">
+                        <nav class="footer-links" aria-label="법적 고지">
+                            <a href="privacy.html">개인정보처리방침</a>
+                            <span class="footer-contact-divider">·</span>
+                            <a href="terms.html">이용약관</a>
+                            <span class="footer-contact-divider">·</span>
+                            <a href="notice.html">공고</a>
+                            <span class="footer-contact-divider">·</span>
+                            <a href="index.html#contact" class="footer-linkbtn">문의하기</a>
+                        </nav>
+                        <p class="footer-ip">
+                            선제 발화 관련 특허 출원(10-2025-0185553) ·
+                            상표 &lsquo;텔로스 TELOS&rsquo; 출원(40-2026-0084603)
+                        </p>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p class="footer-copyright">
+                        &copy; 2026 TELOS Co., Ltd. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 모바일 네비 토글만 필요 → main.js 재사용(공고 페이지엔 모달 없음, 방어적 종료됨) -->
+    <script src="js/main.js"></script>
+</body>
+</html>
