@@ -1,0 +1,158 @@
+/*
+================================================================================
+ 파일명: css/notice.css
+ 저장소 경로: kangyh427/telos-website/css/notice.css
+ 설명: 전자공고 페이지(notice.html) 전용 스타일
+       — 기존 style.css 의 디자인 토큰(:root 변수)을 그대로 상속받아 사용.
+       — style.css 를 수정하지 않으므로 랜딩 페이지에 영향 없음(회귀 위험 0).
+ 버전: 1.0.0
+ 작성일: 2026.07.13
+================================================================================
+*/
+
+/* 헤더를 항상 흰 배경으로 고정(공고 페이지는 히어로가 없으므로) */
+.header--solid {
+    background: var(--color-white);
+    border-bottom: 1px solid #e7ecef;
+}
+
+/* ---- 본문 레이아웃 ---- */
+.notice-main {
+    padding: 140px 0 100px;      /* 상단 고정 헤더 높이만큼 여유 */
+    min-height: 70vh;
+    background: var(--color-bg-light);
+}
+
+/* ---- 페이지 헤더 ---- */
+.notice-head {
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto 48px;
+}
+.notice-page-title {
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 800;
+    color: var(--color-primary);
+    margin: 10px 0 14px;
+    letter-spacing: -0.02em;
+}
+.notice-page-lead {
+    font-size: 1.02rem;
+    line-height: 1.7;
+    color: var(--color-text-light);
+}
+
+/* ---- 공고 목록 ---- */
+.notice-list {
+    max-width: 820px;
+    margin: 0 auto 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 개별 공고 아이템 */
+.notice-item {
+    background: var(--color-white);
+    border: 1px solid #e4e9ec;
+    border-radius: 14px;
+    padding: 26px 28px;
+    box-shadow: 0 2px 10px rgba(10, 31, 68, 0.04);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.notice-item:hover {
+    box-shadow: 0 6px 20px rgba(10, 31, 68, 0.08);
+    transform: translateY(-2px);
+}
+.notice-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.notice-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-care-dark);
+    background: var(--color-care-light);
+    padding: 4px 12px;
+    border-radius: 999px;
+}
+.notice-date {
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+}
+.notice-item-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+}
+.notice-item-body {
+    font-size: 0.98rem;
+    line-height: 1.7;
+    color: var(--color-text-light);
+}
+.notice-item-body p { margin-bottom: 8px; }
+
+/* ---- 공고 없음(빈 상태) ---- */
+.notice-empty {
+    background: var(--color-white);
+    border: 1px dashed #cfd8dd;
+    border-radius: 14px;
+    padding: 56px 28px;
+    text-align: center;
+}
+.notice-empty-icon {
+    font-size: 2.4rem;
+    margin-bottom: 14px;
+    opacity: 0.7;
+}
+.notice-empty-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+.notice-empty-desc {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+}
+
+/* ---- 공고방법 안내(법적 고지) ---- */
+.notice-legal {
+    max-width: 820px;
+    margin: 0 auto;
+    background: #f0f4f5;
+    border-left: 4px solid var(--color-primary);
+    border-radius: 8px;
+    padding: 22px 26px;
+}
+.notice-legal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 10px;
+}
+.notice-legal p {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: var(--color-text-light);
+}
+.notice-legal-sub {
+    margin-top: 10px;
+}
+.notice-legal-sub a {
+    color: var(--color-care-dark);
+    font-weight: 600;
+    text-decoration: none;
+}
+.notice-legal-sub a:hover { text-decoration: underline; }
+
+/* ---- 반응형 ---- */
+@media (max-width: 640px) {
+    .notice-main { padding: 110px 0 70px; }
+    .notice-item { padding: 20px 20px; }
+    .notice-empty { padding: 44px 20px; }
+}
