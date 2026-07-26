@@ -5,21 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>텔로스 케어 · 관리자 콘솔</title>
+<!-- ============================================================================
+  텔로스 케어 · 관리자 콘솔 (정적 1장 · 외부 라이브러리 0 · SVG 자체 생성)
+  정본: naoncare-edge/console/admin_console.html
+  배치: telos-website/admin/index.html  →  https://www.telos.it.kr/admin
+  수정: 2026-07-26 (S497 — 공유 토큰 폐지 → 로그인 + 관리자 허용목록, 대표 지시)
+
+  ★이 파일에는 비밀이 없다.
+    · 박혀 있는 것은 Supabase 공개(anon) 키뿐 — 브라우저 노출을 전제로 만들어진 키이고,
+      이것만으로는 아무 데이터도 못 읽는다(표는 전부 RLS default-deny, 집계는 Edge Function
+      이 로그인+관리자 확인 후에만 내준다).
+    · 로그인 세션은 sessionStorage 에만 둔다 — 탭을 닫으면 사라진다(공용 PC 안전).
+  ★접근 통제: Supabase Auth 로그인 → 서버가 이메일을 console_admin 허용목록과 대조.
+    로그인해도 목록에 없으면 403 → "권한 없음" 화면(데이터 0바이트).
+============================================================================ -->
 <style>
-  :root{--teal:#17857A;--teal-bg:#E8F4F2;--ink:#1a2b32;--sub:#5b7078;--line:#dbe6e4;
+  :root{--teal:#17857A;--ink:#1a2b32;--sub:#5b7078;--line:#dbe6e4;
         --bg:#f4f8f7;--card:#ffffff;--amber:#b45309;--red:#b91c1c;--good:#0e7490;}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
   header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 24px;
-         display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+         display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5;flex-wrap:wrap}
   header h1{font-size:18px;color:var(--teal)}
   .live{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub)}
   .dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}
   .dot.on{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.18)}
   .spacer{flex:1}
+  .who{font-size:12.5px;color:var(--sub)}
   button{border:1px solid var(--line);background:var(--card);border-radius:8px;
          padding:7px 14px;font-size:13px;cursor:pointer;color:var(--ink)}
+  button:hover{background:#f0f6f5}
   button.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+  button.danger{color:var(--red);border-color:#f0d5d5}
   main{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
@@ -38,25 +55,38 @@
   .muted{color:var(--sub)}
   .tablewrap{overflow-x:auto}
   svg{display:block;width:100%}
-  /* 로그인 */
-  #login{max-width:400px;margin:12vh auto;background:var(--card);border:1px solid var(--line);
+  input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  #login{max-width:420px;margin:10vh auto;background:var(--card);border:1px solid var(--line);
          border-radius:14px;padding:30px}
-  #login h2{color:var(--teal);font-size:18px;margin-bottom:6px}
-  #login p{font-size:13px;color:var(--sub);margin-bottom:16px}
-  #login input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;
-               font-size:14px;margin-bottom:12px}
-  #login button{width:100%;padding:11px}
-  #loginErr{color:var(--red);font-size:13px;margin-bottom:10px;display:none}
+  #login h2{color:var(--teal);font-size:19px;margin-bottom:6px}
+  #login p{font-size:13px;color:var(--sub);margin-bottom:18px}
+  #login input{width:100%;margin-bottom:10px}
+  #login button{width:100%;padding:12px;margin-bottom:8px}
+  .social{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+  .social button{font-weight:600}
+  .btn-google{background:#fff;border:1px solid #d5dbdb;color:#1f2937}
+  .btn-kakao{background:#FEE500;border-color:#FEE500;color:#191600}
+  .divider{display:flex;align-items:center;gap:10px;color:var(--sub);font-size:12px;margin:14px 0}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+  #loginErr{color:var(--red);font-size:13px;margin-bottom:12px;display:none;line-height:1.5}
   #app{display:none}
 </style>
 </head>
 <body>
+
 <div id="login">
   <h2>텔로스 케어 관리자 콘솔</h2>
-  <p>콘솔 토큰을 입력하세요. 토큰은 이 컴퓨터의 현재 탭에만 잠시 보관되고, 탭을 닫으면 사라집니다.</p>
-  <div id="loginErr">토큰이 올바르지 않습니다.</div>
-  <input id="tokenInput" type="password" placeholder="콘솔 토큰" autocomplete="off">
-  <button class="primary" id="loginBtn">접속</button>
+  <p>회사 계정으로 로그인하세요. 관리자로 등록된 분만 열람할 수 있습니다.</p>
+  <div id="loginErr"></div>
+  <div class="social">
+    <button class="btn-google" id="googleBtn">구글 계정으로 로그인</button>
+    <button class="btn-kakao" id="kakaoBtn">카카오 계정으로 로그인</button>
+  </div>
+  <div class="divider">또는 이메일로</div>
+  <input id="emailInput" type="email" placeholder="이메일" autocomplete="username">
+  <input id="pwInput" type="password" placeholder="비밀번호" autocomplete="current-password">
+  <button class="primary" id="loginBtn">로그인</button>
 </div>
 
 <div id="app">
@@ -64,8 +94,9 @@
   <h1>텔로스 케어 · 관리자 콘솔</h1>
   <span class="live"><span class="dot" id="liveDot"></span><span id="liveText">연결 중…</span></span>
   <span class="spacer"></span>
+  <span class="who" id="whoText"></span>
   <button id="refreshBtn">지금 새로고침</button>
-  <button id="logoutBtn">잠금</button>
+  <button id="logoutBtn">로그아웃</button>
 </header>
 <main>
   <div class="cards" id="statCards"></div>
@@ -93,18 +124,38 @@
     <div class="desc">참여 어르신 전체의 주 단위 합계/평균입니다.</div>
     <div class="tablewrap"><table id="companyTable"></table></div>
   </section>
+
+  <section>
+    <h2>관리자 관리</h2>
+    <div class="desc">
+      여기 등록된 이메일 계정만 이 콘솔을 열 수 있습니다. 아직 가입하지 않은 사람도 미리 등록해 둘 수 있어요
+      (나중에 같은 이메일로 로그인하면 바로 들어옵니다).
+      본인은 지울 수 없고, 마지막 한 명도 지울 수 없습니다(아무도 못 들어가는 사고 방지).
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <input id="newAdminEmail" type="email" placeholder="추가할 이메일" style="flex:1;min-width:220px">
+      <input id="newAdminNote" type="text" placeholder="메모 (예: 운영팀 김OO)" style="flex:1;min-width:180px">
+      <button class="primary" id="addAdminBtn">관리자 추가</button>
+    </div>
+    <div id="adminMsg" style="font-size:13px;margin-bottom:10px"></div>
+    <div class="tablewrap"><table id="adminTable"></table></div>
+  </section>
 </main>
 </div>
 
 <script>
 (function(){
   "use strict";
-  var DASH = "https://xeerqdsedmafbqbgqooi.supabase.co/functions/v1/get-effect-dashboard";
+  var SUPA = "https://xeerqdsedmafbqbgqooi.supabase.co";
+  // 공개(anon) 키 — 브라우저 노출 전제. 이것만으로는 아무 데이터도 못 읽는다.
+  var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZXJxZHNlZG1hZmJxYmdxb29pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjYzMjksImV4cCI6MjA5MTkwMjMyOX0.Qg91BDcIkfmAt_5TGG5Cro401OXAyW1-Hu9BEObsZks";
+  var DASH = SUPA + "/functions/v1/get-effect-dashboard";
   var POLL_MS = 60000;
   var timer = null;
 
-  function tok(){ return sessionStorage.getItem("console_token") || ""; }
   function el(id){ return document.getElementById(id); }
+  function sess(){ try { return JSON.parse(sessionStorage.getItem("telos_session") || "null"); } catch(e){ return null; } }
+  function setSess(s){ if (s) sessionStorage.setItem("telos_session", JSON.stringify(s)); else sessionStorage.removeItem("telos_session"); }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
   function fmt(v, unit){ return (v === null || v === undefined) ? '<span class="muted">측정 중</span>'
@@ -112,10 +163,12 @@
   function fmtSigned(v){ if (v === null || v === undefined) return '<span class="muted">측정 중</span>';
     var n = Math.round(Number(v));
     return n >= 0 ? '<span class="pos">+' + n + '</span>' : '<span class="neg">' + n + '</span>'; }
+  function fmtPlain(v){ return (v === null || v === undefined) ? "측정 중" : String(Math.round(Number(v))); }
 
-  function showLogin(bad){
+  function showLogin(msg){
     el("login").style.display = "block"; el("app").style.display = "none";
-    el("loginErr").style.display = bad ? "block" : "none";
+    var e = el("loginErr");
+    if (msg) { e.innerHTML = msg; e.style.display = "block"; } else { e.style.display = "none"; }
     if (timer) { clearInterval(timer); timer = null; }
   }
   function showApp(){
@@ -123,61 +176,200 @@
     if (!timer) timer = setInterval(load, POLL_MS);
   }
 
-  function load(){
-    fetch(DASH, { method: "POST", headers: { "x-console-token": tok() } })
+  function authFetch(path, body){
+    return fetch(SUPA + "/auth/v1/" + path, {
+      method: "POST",
+      headers: { "apikey": ANON, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, body: j }; }); });
+  }
+
+  function loginWithPassword(){
+    var email = el("emailInput").value.trim();
+    var pw = el("pwInput").value;
+    if (!email || !pw) { showLogin("이메일과 비밀번호를 입력해 주세요."); return; }
+    authFetch("token?grant_type=password", { email: email, password: pw })
       .then(function(r){
-        if (r.status === 401) { sessionStorage.removeItem("console_token"); showLogin(true); throw new Error("unauthorized"); }
+        if (!r.ok || !r.body.access_token) {
+          showLogin("로그인하지 못했습니다. 이메일·비밀번호를 확인해 주세요.<br>" +
+                    "<span style='color:#5b7078'>구글·카카오로 가입한 계정은 위의 소셜 버튼을 쓰세요(비밀번호가 없습니다).</span>");
+          return;
+        }
+        setSess({ access_token: r.body.access_token, refresh_token: r.body.refresh_token });
+        load();
+      })
+      .catch(function(){ showLogin("네트워크 오류입니다. 잠시 후 다시 시도해 주세요."); });
+  }
+
+  function socialLogin(provider){
+    // 로그인 후 이 페이지로 복귀. Supabase Redirect URLs 에 이 주소가 등록돼 있어야 한다.
+    var back = location.origin + location.pathname;
+    location.href = SUPA + "/auth/v1/authorize?provider=" + provider +
+                    "&redirect_to=" + encodeURIComponent(back);
+  }
+
+  // 소셜 로그인은 #access_token=... 조각으로 돌아온다 → 세션 저장 후 주소창 청소.
+  function captureHashSession(){
+    if (!location.hash || location.hash.indexOf("access_token") < 0) return false;
+    var p = new URLSearchParams(location.hash.slice(1));
+    var at = p.get("access_token");
+    if (!at) return false;
+    setSess({ access_token: at, refresh_token: p.get("refresh_token") });
+    history.replaceState(null, "", location.pathname);
+    return true;
+  }
+
+  function refreshSession(){
+    var s = sess();
+    if (!s || !s.refresh_token) return Promise.resolve(false);
+    return authFetch("token?grant_type=refresh_token", { refresh_token: s.refresh_token })
+      .then(function(r){
+        if (!r.ok || !r.body.access_token) return false;
+        setSess({ access_token: r.body.access_token, refresh_token: r.body.refresh_token });
+        return true;
+      })
+      .catch(function(){ return false; });
+  }
+
+  function apiFetch(url, opts, retried){
+    var s = sess();
+    if (!s) return Promise.reject(new Error("no_session"));
+    var o = {};
+    for (var k in (opts || {})) o[k] = opts[k];
+    o.headers = { "apikey": ANON, "Authorization": "Bearer " + s.access_token };
+    for (var h in ((opts || {}).headers || {})) o.headers[h] = opts.headers[h];
+    return fetch(url, o).then(function(r){
+      // 액세스 토큰은 한 시간이면 만료 → 조용히 갱신하고 한 번만 재시도.
+      if (r.status === 401 && !retried) {
+        return refreshSession().then(function(ok){
+          if (!ok) throw new Error("session_expired");
+          return apiFetch(url, opts, true);
+        });
+      }
+      return r;
+    });
+  }
+
+  function load(){
+    apiFetch(DASH, { method: "POST" })
+      .then(function(r){
+        if (r.status === 403) {
+          return r.json().then(function(j){
+            setSess(null);
+            showLogin("이 계정(" + esc(j.email || "") + ")은 관리자로 등록되어 있지 않습니다.<br>" +
+                      "<span style='color:#5b7078'>관리자에게 등록을 요청하세요.</span>");
+            throw new Error("not_admin");
+          });
+        }
         if (!r.ok) throw new Error("http " + r.status);
         return r.json();
       })
-      .then(function(d){ showApp(); render(d);
+      .then(function(d){
+        showApp();
+        el("whoText").textContent = d.viewer || "";
+        render(d); loadAdmins();
         el("liveDot").className = "dot on";
         el("liveText").textContent = "실측 연결됨 · " + new Date().toLocaleTimeString("ko-KR") + " (60초마다 자동)";
       })
       .catch(function(e){
-        if (String(e.message) === "unauthorized") return;
+        var m = String(e.message || "");
+        if (m === "not_admin") return;
+        if (m === "session_expired" || m === "no_session") {
+          setSess(null); showLogin("로그인 시간이 만료됐습니다. 다시 로그인해 주세요."); return;
+        }
         el("liveDot").className = "dot";
         el("liveText").textContent = "연결 실패 — 다음 주기에 재시도";
       });
   }
 
+  function rpc(name, args){
+    return apiFetch(SUPA + "/rest/v1/rpc/" + name, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args || {}),
+    }).then(function(r){
+      return r.text().then(function(t){
+        var j = null; try { j = t ? JSON.parse(t) : null; } catch(e) {}
+        return { ok: r.ok, body: j, raw: t };
+      });
+    });
+  }
+
+  function friendlyRpcError(r){
+    var msg = (r.body && (r.body.message || r.body.hint)) || r.raw || "";
+    if (msg.indexOf("INVALID_EMAIL") >= 0) return "이메일 형식이 올바르지 않습니다.";
+    if (msg.indexOf("CANNOT_REMOVE_SELF") >= 0) return "본인은 지울 수 없습니다.";
+    if (msg.indexOf("CANNOT_REMOVE_LAST_ADMIN") >= 0) return "마지막 관리자는 지울 수 없습니다.";
+    if (msg.indexOf("NOT_CONSOLE_ADMIN") >= 0) return "권한이 없습니다.";
+    return "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  function adminMsg(text, ok){
+    var e = el("adminMsg");
+    e.textContent = text;
+    e.style.color = ok ? "#0e7490" : "#b91c1c";
+    setTimeout(function(){ if (e.textContent === text) e.textContent = ""; }, 6000);
+  }
+
+  function loadAdmins(){
+    rpc("console_list_admins").then(function(r){
+      if (!r.ok || !Array.isArray(r.body)) {
+        el("adminTable").innerHTML = '<tr><td class="muted">관리자 목록을 불러오지 못했습니다</td></tr>';
+        return;
+      }
+      var me = (el("whoText").textContent || "").toLowerCase();
+      var rows = r.body.map(function(a){
+        var isMe = String(a.email).toLowerCase() === me;
+        var btn = isMe ? '<span class="muted">본인</span>'
+                       : '<button class="danger" data-remove="' + esc(a.email) + '">삭제</button>';
+        return "<tr><td>" + esc(a.email) + "</td><td>" + esc(a.note || "") + "</td><td>" +
+               esc(String(a.created_at || "").slice(0, 10)) + "</td><td>" + btn + "</td></tr>";
+      }).join("");
+      el("adminTable").innerHTML =
+        "<tr><th>이메일</th><th>메모</th><th>등록일</th><th></th></tr>" + rows;
+      Array.prototype.forEach.call(el("adminTable").querySelectorAll("[data-remove]"), function(b){
+        b.addEventListener("click", function(){
+          var email = b.getAttribute("data-remove");
+          if (!confirm(email + " 님의 관리자 권한을 지울까요?")) return;
+          rpc("console_remove_admin", { p_email: email }).then(function(r2){
+            adminMsg(r2.ok ? "삭제했습니다." : friendlyRpcError(r2), r2.ok);
+            loadAdmins();
+          });
+        });
+      });
+    });
+  }
+
   function render(d){
     var roster = {};
     (d.roster || []).forEach(function(r){ roster[r.id] = { alias: r.alias || "어르신", region: r.region || "" }; });
-    var name = function(id){ var r = roster[id]; return r ? (r.alias + (r.region ? " · " + r.region : "")) : id.slice(0,8); };
+    var name = function(id){ var r = roster[id]; return r ? (r.alias + (r.region ? " · " + r.region : "")) : String(id).slice(0,8); };
 
-    // ── 요약 카드 ──
     var obv = d.weekly_obv || [];
     var latestByElder = {};
     obv.forEach(function(w){ var p = latestByElder[w.elderly_id];
       if (!p || w.week_index > p.week_index) latestByElder[w.elderly_id] = w; });
-    var latest = Object.values(latestByElder);
+    var latest = Object.keys(latestByElder).map(function(k){ return latestByElder[k]; });
     var withObv = latest.filter(function(w){ return w.connection_obv !== null; });
     var avgObv = withObv.length ? withObv.reduce(function(a,w){ return a + Number(w.connection_obv); }, 0) / withObv.length : null;
-    var elderCount = Object.keys(roster).length;
-    var reporting = Object.keys(latestByElder).length;
     var comp = d.company || [];
     var lastWeek = comp.length ? comp[comp.length-1] : null;
 
     el("statCards").innerHTML =
-      card("등록 어르신", elderCount + "명", "elderly 가명 기준") +
-      card("주간 지표 보고", reporting + "명", "connection_weekly 유입 기기") +
-      card("연결 추세 평균 (OBV)", avgObv === null ? "측정 중" : (avgObv >= 0 ? "+" : "") + Math.round(avgObv), "산출 가능 " + withObv.length + "명 평균 · 0=기준") +
-      card("이번 주 관계망 접촉(전체)", lastWeek ? fmtPlain(lastWeek.total_relational_contact_min) + "분" : "측정 중", lastWeek ? "주 시작 " + lastWeek.week_start : "");
+      card("등록 어르신", Object.keys(roster).length + "명", "elderly 가명 기준") +
+      card("주간 지표 보고", Object.keys(latestByElder).length + "명", "connection_weekly 유입 기기") +
+      card("연결 추세 평균 (OBV)", avgObv === null ? "측정 중" : (avgObv >= 0 ? "+" : "") + Math.round(avgObv),
+           "산출 가능 " + withObv.length + "명 평균 · 0=기준") +
+      card("이번 주 관계망 접촉(전체)", lastWeek ? fmtPlain(lastWeek.total_relational_contact_min) + "분" : "측정 중",
+           lastWeek ? "주 시작 " + lastWeek.week_start : "");
 
-    // ── OBV 라인 차트 ──
     el("obvChart").innerHTML = obvSvg(obv, name);
-
-    // ── 일 단위 접촉 바 차트 ──
     el("dailyChart").innerHTML = dailySvg(d.daily || []);
 
-    // ── 어르신별 최신 주 테이블 ──
-    var ew = d.elderly || [];
     var latestEff = {};
-    ew.forEach(function(r){ var p = latestEff[r.elderly_id];
+    (d.elderly || []).forEach(function(r){ var p = latestEff[r.elderly_id];
       if (!p || r.week_start > p.week_start) latestEff[r.elderly_id] = r; });
-    var rows = Object.values(latestEff).map(function(r){
-      var w = latestByElder[r.elderly_id];
+    var rows = Object.keys(latestEff).map(function(k){
+      var r = latestEff[k], w = latestByElder[r.elderly_id];
       return "<tr><td>" + esc(name(r.elderly_id)) + "</td><td>" + esc(r.week_start) + "</td><td>" +
         fmt(r.days_reported, "일") + "</td><td>" + fmt(r.relational_contact_min, "분") + "</td><td>" +
         fmt(r.usage_minutes, "분") + "</td><td>" + fmt(r.travel_distance_m, "m") + "</td><td>" +
@@ -187,7 +379,6 @@
       "<tr><th>어르신</th><th>주 시작</th><th>보고일</th><th>관계망 접촉</th><th>사용시간</th><th>이동거리</th><th>기분평균</th><th>연결 추세</th></tr>" +
       (rows || '<tr><td colspan="8" class="muted">아직 데이터가 없습니다</td></tr>');
 
-    // ── 회사 주간 테이블 ──
     var crow = comp.map(function(r){
       return "<tr><td>" + esc(r.week_start) + "</td><td>" + fmt(r.elderly_count, "명") + "</td><td>" +
         fmt(r.total_relational_contact_min, "분") + "</td><td>" + fmt(r.total_usage_minutes, "분") + "</td><td>" +
@@ -198,16 +389,13 @@
       (crow || '<tr><td colspan="6" class="muted">아직 데이터가 없습니다</td></tr>');
   }
 
-  function fmtPlain(v){ return (v === null || v === undefined) ? "측정 중" : String(Math.round(Number(v))); }
   function card(k, v, s){ return '<div class="card"><div class="k">' + esc(k) + '</div><div class="v">' +
     v + '</div><div class="s">' + esc(s) + "</div></div>"; }
 
-  // 주차 OBV 멀티 라인(SVG 자체 생성 — 외부 라이브러리 없음)
   function obvSvg(obv, name){
     if (!obv.length) return '<div class="muted" style="font-size:13px">아직 주차 데이터가 없습니다</div>';
     var series = {};
     obv.forEach(function(w){ (series[w.elderly_id] = series[w.elderly_id] || []).push(w); });
-    var ids = Object.keys(series);
     var maxWeek = 1, maxAbs = 10;
     obv.forEach(function(w){ if (w.week_index > maxWeek) maxWeek = w.week_index;
       if (w.connection_obv !== null && Math.abs(w.connection_obv) > maxAbs) maxAbs = Math.abs(w.connection_obv); });
@@ -220,7 +408,7 @@
     out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0</text>';
     out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
     out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
-    ids.forEach(function(id, i){
+    Object.keys(series).forEach(function(id, i){
       var pts = series[id].filter(function(w){ return w.connection_obv !== null; });
       if (!pts.length) return;
       var c = colors[i % colors.length];
@@ -234,11 +422,9 @@
     for (var wi = 1; wi <= maxWeek; wi++) {
       out += '<text x="' + x(wi) + '" y="' + (H - 8) + '" font-size="11" fill="#5b7078" text-anchor="middle">' + wi + "주차</text>";
     }
-    out += "</svg>";
-    return out;
+    return out + "</svg>";
   }
 
-  // 최근 14일 접촉 바(어르신 합산 — 콘솔은 코호트 시야, 개인 상세는 표에서)
   function dailySvg(daily){
     if (!daily.length) return '<div class="muted" style="font-size:13px">최근 14일 데이터가 없습니다</div>';
     var byDate = {};
@@ -256,29 +442,34 @@
     var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
     out += '<text x="4" y="' + (T + 10) + '" font-size="11" fill="#5b7078">' + maxV + "분</text>";
     dates.forEach(function(k, i){
-      var v = byDate[k];
-      var x0 = L + i * bw;
+      var v = byDate[k], x0 = L + i * bw;
       out += '<rect x="' + (x0 + bw * 0.12) + '" y="' + y(v.media) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(v.media)) + '" fill="#c9e2de"/>';
       out += '<rect x="' + (x0 + bw * 0.52) + '" y="' + y(v.rel) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(v.rel)) + '" fill="#17857A"/>';
       if (i % 2 === 0) out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' + esc(k.slice(5)) + "</text>";
     });
     out += "</svg>";
-    out += '<div style="font-size:12px;color:#5b7078;margin-top:6px">■ 진한 색 = 대면+통화 · ■ 연한 색 = 미디어(TV 등) 노출</div>';
-    return out;
+    return out + '<div style="font-size:12px;color:#5b7078;margin-top:6px">■ 진한 색 = 대면+통화 · ■ 연한 색 = 미디어(TV 등) 노출</div>';
   }
 
-  // ── 이벤트 ──
-  el("loginBtn").addEventListener("click", function(){
-    var v = el("tokenInput").value.trim();
-    if (!v) return;
-    sessionStorage.setItem("console_token", v);
-    load();
-  });
-  el("tokenInput").addEventListener("keydown", function(e){ if (e.key === "Enter") el("loginBtn").click(); });
+  el("loginBtn").addEventListener("click", loginWithPassword);
+  el("pwInput").addEventListener("keydown", function(e){ if (e.key === "Enter") loginWithPassword(); });
+  el("googleBtn").addEventListener("click", function(){ socialLogin("google"); });
+  el("kakaoBtn").addEventListener("click", function(){ socialLogin("kakao"); });
   el("refreshBtn").addEventListener("click", load);
-  el("logoutBtn").addEventListener("click", function(){ sessionStorage.removeItem("console_token"); showLogin(false); });
+  el("logoutBtn").addEventListener("click", function(){ setSess(null); showLogin(null); });
+  el("addAdminBtn").addEventListener("click", function(){
+    var email = el("newAdminEmail").value.trim();
+    if (!email) { adminMsg("이메일을 입력해 주세요.", false); return; }
+    rpc("console_add_admin", { p_email: email, p_note: el("newAdminNote").value.trim() })
+      .then(function(r){
+        if (r.ok) { el("newAdminEmail").value = ""; el("newAdminNote").value = ""; adminMsg("추가했습니다.", true); }
+        else adminMsg(friendlyRpcError(r), false);
+        loadAdmins();
+      });
+  });
 
-  if (tok()) load(); else showLogin(false);
+  captureHashSession();
+  if (sess()) load(); else showLogin(null);
 })();
 </script>
 </body>
