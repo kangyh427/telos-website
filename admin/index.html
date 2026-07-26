@@ -9,54 +9,76 @@
   텔로스 케어 · 관리자 콘솔 (정적 1장 · 외부 라이브러리 0 · SVG 자체 생성)
   정본: naoncare-edge/console/admin_console.html
   배치: telos-website/admin/index.html  →  https://www.telos.it.kr/admin
-  수정: 2026-07-26 (S497 — 공유 토큰 폐지 → 로그인 + 관리자 허용목록, 대표 지시)
+  수정: 2026-07-27 (S497 — ★정보구조 재설계: 개요 → 목록 → 상세 드릴다운, 대표 지적)
 
-  ★이 파일에는 비밀이 없다.
-    · 박혀 있는 것은 Supabase 공개(anon) 키뿐 — 브라우저 노출을 전제로 만들어진 키이고,
-      이것만으로는 아무 데이터도 못 읽는다(표는 전부 RLS default-deny, 집계는 Edge Function
-      이 로그인+관리자 확인 후에만 내준다).
-    · 로그인 세션은 sessionStorage 에만 둔다 — 탭을 닫으면 사라진다(공용 PC 안전).
-  ★접근 통제: Supabase Auth 로그인 → 서버가 이메일을 console_admin 허용목록과 대조.
-    로그인해도 목록에 없으면 403 → "권한 없음" 화면(데이터 0바이트).
+  ★이 콘솔이 답하려는 질문(한 줄): "우리 서비스가 어르신 한 분 한 분의 사회적 연결을
+    늘리고 있는가?" — 그래서 화면은 ①회사 전체 ②어르신 목록 ③개인 상세 3층으로만 간다.
+
+  ★재설계 이유(대표 지적, 전부 타당했다):
+    · 회사 숫자와 개인 숫자가 한 화면에 섞여 "뭘 나타내는지 모르겠다"
+    · 차트에 ★누구 것인지 표시가 없었다★(14일 접촉=전원 합계인데 아무 표시 없음)
+    · 어디도 클릭해 들어갈 수 없어 개인 추적이 불가능했다
+    · "연결 추세 평균 -50" = ★서로 다른 사람의 변화율을 섞은 무의미한 숫자★ → 제거하고
+      분포(오름/유지/내림/측정중 인원수)로 대체. 평균 한 개는 아무에게도 답을 주지 않는다.
+
+  ★두 가지 "주차"가 다르다(섞으면 안 되어 화면에 명시한다):
+    · 어르신 주차 = 그 어르신 ★등록일 기준★ 1주차·2주차…(connection_weekly)
+    · 회사 주차   = 달력 주(월요일 시작, effect_company_weekly)
+
+  ★보안: 로그인(Supabase Auth) + console_admin 이메일 허용목록. 이 파일에 비밀 없음
+    (박힌 것은 브라우저 노출 전제인 공개 anon 키뿐 — 그것만으로는 아무 데이터도 못 읽는다).
 ============================================================================ -->
 <style>
-  :root{--teal:#17857A;--ink:#1a2b32;--sub:#5b7078;--line:#dbe6e4;
+  :root{--teal:#17857A;--teal-soft:#e6f2f0;--ink:#1a2b32;--sub:#5b7078;--line:#dbe6e4;
         --bg:#f4f8f7;--card:#ffffff;--amber:#b45309;--red:#b91c1c;--good:#0e7490;}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
-  header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 24px;
+  body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 24px;
          display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5;flex-wrap:wrap}
-  header h1{font-size:18px;color:var(--teal)}
+  header h1{font-size:17px;color:var(--teal);cursor:pointer}
   .live{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub)}
   .dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}
   .dot.on{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.18)}
   .spacer{flex:1}
   .who{font-size:12.5px;color:var(--sub)}
   button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-         padding:7px 14px;font-size:13px;cursor:pointer;color:var(--ink)}
+         padding:7px 14px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
   button:hover{background:#f0f6f5}
   button.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+  button.primary:hover{background:#136d64}
   button.danger{color:var(--red);border-color:#f0d5d5}
-  main{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px}
+  button.link{border:none;background:none;color:var(--teal);padding:0;text-decoration:underline;font-size:13px}
+  main{max-width:1120px;margin:0 auto;padding:20px 20px 60px}
+  .crumb{font-size:13px;color:var(--sub);margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .purpose{background:var(--teal-soft);border:1px solid #cfe6e2;border-radius:10px;
+           padding:12px 16px;font-size:13.5px;color:#14625b;margin-bottom:18px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
   .card .k{font-size:12.5px;color:var(--sub);margin-bottom:6px}
-  .card .v{font-size:26px;font-weight:700}
+  .card .v{font-size:25px;font-weight:700}
   .card .s{font-size:12px;color:var(--sub);margin-top:4px}
   section{background:var(--card);border:1px solid var(--line);border-radius:12px;
-          padding:18px;margin-bottom:20px}
-  section h2{font-size:14.5px;margin-bottom:4px}
-  section .desc{font-size:12.5px;color:var(--sub);margin-bottom:12px}
+          padding:18px;margin-bottom:18px}
+  section h2{font-size:15px;margin-bottom:3px}
+  section .desc{font-size:12.5px;color:var(--sub);margin-bottom:14px}
+  .whose{display:inline-block;background:var(--teal-soft);color:#14625b;border-radius:6px;
+         padding:2px 8px;font-size:12px;font-weight:600;margin-left:6px;vertical-align:middle}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
   th{color:var(--sub);font-weight:600;font-size:12px}
+  tr.clickable{cursor:pointer}
+  tr.clickable:hover td{background:#f2f8f7}
   .pos{color:var(--good);font-weight:600}.neg{color:var(--amber);font-weight:600}
   .muted{color:var(--sub)}
+  .warn{color:var(--amber);font-weight:600}
   .tablewrap{overflow-x:auto}
   svg{display:block;width:100%}
-  input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin-top:8px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .note{font-size:12px;color:var(--sub);margin-top:10px;line-height:1.6}
   #login{max-width:420px;margin:10vh auto;background:var(--card);border:1px solid var(--line);
          border-radius:14px;padding:30px}
   #login h2{color:var(--teal);font-size:19px;margin-bottom:6px}
@@ -91,56 +113,14 @@
 
 <div id="app">
 <header>
-  <h1>텔로스 케어 · 관리자 콘솔</h1>
+  <h1 id="homeBtn">텔로스 케어 · 관리자 콘솔</h1>
   <span class="live"><span class="dot" id="liveDot"></span><span id="liveText">연결 중…</span></span>
   <span class="spacer"></span>
   <span class="who" id="whoText"></span>
   <button id="refreshBtn">지금 새로고침</button>
   <button id="logoutBtn">로그아웃</button>
 </header>
-<main>
-  <div class="cards" id="statCards"></div>
-
-  <section>
-    <h2>주차 연결 추세 (OBV)</h2>
-    <div class="desc">등록 1주차를 기준점(0)으로, 직전 주 대비 변화를 누적한 선입니다. 절대 점수가 아니라 그 어르신 자신과의 비교입니다.</div>
-    <div id="obvChart"></div>
-  </section>
-
-  <section>
-    <h2>최근 14일 · 일 단위 관계망 접촉</h2>
-    <div class="desc">대면+통화(진한 색)와 미디어 노출(연한 색), 분 단위. 빈 날은 미측정입니다(0이 아님).</div>
-    <div id="dailyChart"></div>
-  </section>
-
-  <section>
-    <h2>어르신별 최신 주간 요약</h2>
-    <div class="desc">가명·동네 기준(실명 없음). 비어 있는 칸은 "측정 중"입니다 — 0으로 읽지 마세요.</div>
-    <div class="tablewrap"><table id="elderlyTable"></table></div>
-  </section>
-
-  <section>
-    <h2>회사 전체 · 주간 집계</h2>
-    <div class="desc">참여 어르신 전체의 주 단위 합계/평균입니다.</div>
-    <div class="tablewrap"><table id="companyTable"></table></div>
-  </section>
-
-  <section>
-    <h2>관리자 관리</h2>
-    <div class="desc">
-      여기 등록된 이메일 계정만 이 콘솔을 열 수 있습니다. 아직 가입하지 않은 사람도 미리 등록해 둘 수 있어요
-      (나중에 같은 이메일로 로그인하면 바로 들어옵니다).
-      본인은 지울 수 없고, 마지막 한 명도 지울 수 없습니다(아무도 못 들어가는 사고 방지).
-    </div>
-    <div class="row" style="margin-bottom:12px">
-      <input id="newAdminEmail" type="email" placeholder="추가할 이메일" style="flex:1;min-width:220px">
-      <input id="newAdminNote" type="text" placeholder="메모 (예: 운영팀 김OO)" style="flex:1;min-width:180px">
-      <button class="primary" id="addAdminBtn">관리자 추가</button>
-    </div>
-    <div id="adminMsg" style="font-size:13px;margin-bottom:10px"></div>
-    <div class="tablewrap"><table id="adminTable"></table></div>
-  </section>
-</main>
+<main id="view"></main>
 </div>
 
 <script>
@@ -152,19 +132,25 @@
   var DASH = SUPA + "/functions/v1/get-effect-dashboard";
   var POLL_MS = 60000;
   var timer = null;
+  var DATA = null;                 // 마지막으로 받아온 전체 데이터
+  var route = { view: "overview" };// {view:'overview'|'elder'|'week', id, weekStart}
+  var COLORS = ["#17857A", "#b45309", "#2563eb", "#7c3aed", "#db2777", "#0e7490", "#65a30d"];
 
   function el(id){ return document.getElementById(id); }
   function sess(){ try { return JSON.parse(sessionStorage.getItem("telos_session") || "null"); } catch(e){ return null; } }
   function setSess(s){ if (s) sessionStorage.setItem("telos_session", JSON.stringify(s)); else sessionStorage.removeItem("telos_session"); }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-  function fmt(v, unit){ return (v === null || v === undefined) ? '<span class="muted">측정 중</span>'
-    : esc(Math.round(Number(v)*10)/10) + (unit || ""); }
-  function fmtSigned(v){ if (v === null || v === undefined) return '<span class="muted">측정 중</span>';
-    var n = Math.round(Number(v));
-    return n >= 0 ? '<span class="pos">+' + n + '</span>' : '<span class="neg">' + n + '</span>'; }
-  function fmtPlain(v){ return (v === null || v === undefined) ? "측정 중" : String(Math.round(Number(v))); }
+  function num(v){ return (v === null || v === undefined || v === "") ? null : Number(v); }
+  function fmt(v, unit){ var n = num(v); return n === null ? '<span class="muted">측정 중</span>'
+    : esc(Math.round(n*10)/10) + (unit || ""); }
+  function fmtSigned(v){ var n = num(v); if (n === null) return '<span class="muted">측정 중</span>';
+    var r = Math.round(n);
+    return r > 0 ? '<span class="pos">+' + r + '</span>'
+         : r < 0 ? '<span class="neg">' + r + '</span>'
+                 : '<span class="muted">0 (변화 없음)</span>'; }
 
+  // ── 로그인 ───────────────────────────────────────────────────────────
   function showLogin(msg){
     el("login").style.display = "block"; el("app").style.display = "none";
     var e = el("loginErr");
@@ -175,40 +161,29 @@
     el("login").style.display = "none"; el("app").style.display = "block";
     if (!timer) timer = setInterval(load, POLL_MS);
   }
-
   function authFetch(path, body){
     return fetch(SUPA + "/auth/v1/" + path, {
-      method: "POST",
-      headers: { "apikey": ANON, "Content-Type": "application/json" },
+      method: "POST", headers: { "apikey": ANON, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, body: j }; }); });
   }
-
   function loginWithPassword(){
-    var email = el("emailInput").value.trim();
-    var pw = el("pwInput").value;
+    var email = el("emailInput").value.trim(), pw = el("pwInput").value;
     if (!email || !pw) { showLogin("이메일과 비밀번호를 입력해 주세요."); return; }
-    authFetch("token?grant_type=password", { email: email, password: pw })
-      .then(function(r){
-        if (!r.ok || !r.body.access_token) {
-          showLogin("로그인하지 못했습니다. 이메일·비밀번호를 확인해 주세요.<br>" +
-                    "<span style='color:#5b7078'>구글·카카오로 가입한 계정은 위의 소셜 버튼을 쓰세요(비밀번호가 없습니다).</span>");
-          return;
-        }
-        setSess({ access_token: r.body.access_token, refresh_token: r.body.refresh_token });
-        load();
-      })
-      .catch(function(){ showLogin("네트워크 오류입니다. 잠시 후 다시 시도해 주세요."); });
+    authFetch("token?grant_type=password", { email: email, password: pw }).then(function(r){
+      if (!r.ok || !r.body.access_token) {
+        showLogin("로그인하지 못했습니다. 이메일·비밀번호를 확인해 주세요.<br>" +
+                  "<span style='color:#5b7078'>구글·카카오로 가입한 계정은 위의 소셜 버튼을 쓰세요(비밀번호가 없습니다).</span>");
+        return;
+      }
+      setSess({ access_token: r.body.access_token, refresh_token: r.body.refresh_token });
+      load();
+    }).catch(function(){ showLogin("네트워크 오류입니다. 잠시 후 다시 시도해 주세요."); });
   }
-
   function socialLogin(provider){
-    // 로그인 후 이 페이지로 복귀. Supabase Redirect URLs 에 이 주소가 등록돼 있어야 한다.
     var back = location.origin + location.pathname;
-    location.href = SUPA + "/auth/v1/authorize?provider=" + provider +
-                    "&redirect_to=" + encodeURIComponent(back);
+    location.href = SUPA + "/auth/v1/authorize?provider=" + provider + "&redirect_to=" + encodeURIComponent(back);
   }
-
-  // 소셜 로그인은 #access_token=... 조각으로 돌아온다 → 세션 저장 후 주소창 청소.
   function captureHashSession(){
     if (!location.hash || location.hash.indexOf("access_token") < 0) return false;
     var p = new URLSearchParams(location.hash.slice(1));
@@ -218,7 +193,6 @@
     history.replaceState(null, "", location.pathname);
     return true;
   }
-
   function refreshSession(){
     var s = sess();
     if (!s || !s.refresh_token) return Promise.resolve(false);
@@ -227,19 +201,15 @@
         if (!r.ok || !r.body.access_token) return false;
         setSess({ access_token: r.body.access_token, refresh_token: r.body.refresh_token });
         return true;
-      })
-      .catch(function(){ return false; });
+      }).catch(function(){ return false; });
   }
-
   function apiFetch(url, opts, retried){
     var s = sess();
     if (!s) return Promise.reject(new Error("no_session"));
-    var o = {};
-    for (var k in (opts || {})) o[k] = opts[k];
+    var o = {}; for (var k in (opts || {})) o[k] = opts[k];
     o.headers = { "apikey": ANON, "Authorization": "Bearer " + s.access_token };
     for (var h in ((opts || {}).headers || {})) o.headers[h] = opts.headers[h];
     return fetch(url, o).then(function(r){
-      // 액세스 토큰은 한 시간이면 만료 → 조용히 갱신하고 한 번만 재시도.
       if (r.status === 401 && !retried) {
         return refreshSession().then(function(ok){
           if (!ok) throw new Error("session_expired");
@@ -247,6 +217,17 @@
         });
       }
       return r;
+    });
+  }
+  function rpc(name, args){
+    return apiFetch(SUPA + "/rest/v1/rpc/" + name, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args || {}),
+    }).then(function(r){
+      return r.text().then(function(t){
+        var j = null; try { j = t ? JSON.parse(t) : null; } catch(e) {}
+        return { ok: r.ok, body: j, raw: t };
+      });
     });
   }
 
@@ -265,11 +246,11 @@
         return r.json();
       })
       .then(function(d){
-        showApp();
+        DATA = d; showApp();
         el("whoText").textContent = d.viewer || "";
-        render(d); loadAdmins();
         el("liveDot").className = "dot on";
         el("liveText").textContent = "실측 연결됨 · " + new Date().toLocaleTimeString("ko-KR") + " (60초마다 자동)";
+        renderRoute();
       })
       .catch(function(e){
         var m = String(e.message || "");
@@ -282,19 +263,391 @@
       });
   }
 
-  function rpc(name, args){
-    return apiFetch(SUPA + "/rest/v1/rpc/" + name, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(args || {}),
-    }).then(function(r){
-      return r.text().then(function(t){
-        var j = null; try { j = t ? JSON.parse(t) : null; } catch(e) {}
-        return { ok: r.ok, body: j, raw: t };
-      });
+  // ── 데이터 헬퍼 ──────────────────────────────────────────────────────
+  function roster(){
+    var m = {};
+    (DATA.roster || []).forEach(function(r){ m[r.id] = { id: r.id, alias: r.alias || "이름 없음", region: r.region || "" }; });
+    return m;
+  }
+  function label(id){
+    var r = roster()[id];
+    return r ? (r.alias + (r.region ? " · " + r.region : "")) : String(id).slice(0, 8);
+  }
+  function weeksOf(id){
+    return (DATA.weekly_obv || []).filter(function(w){ return w.elderly_id === id; })
+      .sort(function(a,b){ return a.week_index - b.week_index; });
+  }
+  function latestWeek(id){
+    var ws = weeksOf(id);
+    return ws.length ? ws[ws.length - 1] : null;
+  }
+  function dailyOf(id){
+    return (DATA.daily || []).filter(function(r){ return r.elderly_id === id; })
+      .sort(function(a,b){ return a.metric_date < b.metric_date ? -1 : 1; });
+  }
+  function effectOf(id){
+    return (DATA.elderly || []).filter(function(r){ return r.elderly_id === id; })
+      .sort(function(a,b){ return a.week_start < b.week_start ? -1 : 1; });
+  }
+  function trendBucket(w){
+    if (!w || w.connection_obv === null || w.connection_obv === undefined) return "unknown";
+    var n = Number(w.connection_obv);
+    return n > 0 ? "up" : (n < 0 ? "down" : "flat");
+  }
+
+  // ── 라우팅 ───────────────────────────────────────────────────────────
+  function go(r){ route = r; renderRoute(); window.scrollTo(0, 0); }
+  function renderRoute(){
+    if (!DATA) return;
+    if (route.view === "elder") renderElder(route.id);
+    else if (route.view === "week") renderWeek(route.weekStart);
+    else renderOverview();
+  }
+  function crumb(parts){
+    var html = '<div class="crumb">';
+    parts.forEach(function(p, i){
+      if (i) html += "<span>›</span>";
+      html += p.go ? '<button class="link" data-go=\'' + esc(JSON.stringify(p.go)) + '\'>' + esc(p.t) + "</button>"
+                   : "<span>" + esc(p.t) + "</span>";
+    });
+    return html + "</div>";
+  }
+  function bindGo(){
+    Array.prototype.forEach.call(el("view").querySelectorAll("[data-go]"), function(b){
+      b.addEventListener("click", function(){ go(JSON.parse(b.getAttribute("data-go"))); });
     });
   }
 
+  // ── 화면 1: 개요 ─────────────────────────────────────────────────────
+  function renderOverview(){
+    var rs = roster(), ids = Object.keys(rs);
+    var buckets = { up: 0, flat: 0, down: 0, unknown: 0 };
+    ids.forEach(function(id){ buckets[trendBucket(latestWeek(id))]++; });
+    var reporting = ids.filter(function(id){ return dailyOf(id).length > 0; }).length;
+
+    var html = "";
+    html += '<div class="purpose">이 콘솔이 답하는 질문: <b>“우리 서비스가 어르신 한 분 한 분의 사회적 연결을 늘리고 있는가?”</b><br>' +
+            '아래 목록에서 어르신을 누르면 그분 한 명의 상세로 들어갑니다. 회사 집계 표의 주차를 누르면 그 주의 어르신별 내역이 나옵니다.</div>';
+
+    html += '<div class="cards">' +
+      cardHtml("등록 어르신", ids.length + "명", "가명 기준") +
+      cardHtml("데이터 들어오는 기기", reporting + "명", (ids.length - reporting) + "명은 유입 없음") +
+      cardHtml("이번 주 추세", buckets.up + " ↑ / " + buckets.flat + " → / " + buckets.down + " ↓",
+               "측정 중 " + buckets.unknown + "명 · 각자 지난주 대비") +
+      cardHtml("최근 데이터", latestDataDate() || "없음", "가장 최근 유입일") +
+      "</div>";
+
+    // 어르신 목록(클릭 가능)
+    html += "<section><h2>어르신 목록</h2>" +
+      '<div class="desc">한 줄 = 한 분. 누르면 그분의 추세·일별 기록 상세로 들어갑니다. 가명·동네만 표시합니다(실명 없음).</div>' +
+      '<div class="tablewrap"><table><tr><th>어르신</th><th>최근 주차</th><th>그 주 기록</th>' +
+      "<th>관계망 접촉</th><th>이번 주 추세</th><th>비교된 축</th><th>마지막 데이터</th><th>상태</th></tr>";
+    ids.sort(function(a,b){ return rs[a].alias.localeCompare(rs[b].alias); }).forEach(function(id){
+      var w = latestWeek(id), ds = dailyOf(id);
+      var last = ds.length ? ds[ds.length - 1].metric_date : null;
+      var status = ds.length === 0
+        ? '<span class="warn">데이터 없음</span>'
+        : (w ? '<span class="muted">정상</span>' : '<span class="warn">주차 미산출</span>');
+      html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: id })) + "'>" +
+        "<td><b>" + esc(rs[id].alias) + "</b>" + (rs[id].region ? ' <span class="muted">· ' + esc(rs[id].region) + "</span>" : "") + "</td>" +
+        "<td>" + (w ? w.week_index + "주차" : '<span class="muted">—</span>') + "</td>" +
+        "<td>" + (w ? w.observed_days + "일" : '<span class="muted">—</span>') + "</td>" +
+        "<td>" + (w ? fmt(w.relational_min_avg, "분/일") : '<span class="muted">—</span>') + "</td>" +
+        "<td>" + (w ? fmtSigned(w.connection_obv) : '<span class="muted">측정 중</span>') + "</td>" +
+        "<td>" + (w ? (w.valid_axis_count || 0) + "/3" : '<span class="muted">—</span>') + "</td>" +
+        "<td>" + (last ? esc(last) : '<span class="muted">—</span>') + "</td>" +
+        "<td>" + status + "</td></tr>";
+    });
+    html += "</table></div>" +
+      '<div class="note">★<b>“비교된 축”</b>이 3분의 1이면 그 추세는 <b>한 가지 축(예: 관계망 접촉)만</b> 보고 나온 숫자입니다 — ' +
+      '나머지 축은 아직 지난주 값이 없어 비교하지 못했다는 뜻이라, 숫자를 그만큼 얇게 읽어야 합니다.<br>' +
+      '★주차는 <b>그 어르신의 등록일 기준</b>입니다(사람마다 시작일이 다릅니다).</div></section>';
+
+    // 전원 추세 그래프 — 누구 선인지 범례로 명시
+    html += "<section><h2>어르신별 주차 연결 추세 (OBV)" + '<span class="whose">선 1개 = 어르신 1명</span></h2>' +
+      '<div class="desc">각자 등록 1주차를 0으로 두고, <b>직전 주 대비 변화</b>를 누적한 선입니다. 절대 점수가 아니라 그 어르신 자신과의 비교예요.</div>' +
+      obvSvg(ids.map(function(id){ return { id: id, rows: weeksOf(id) }; })) + "</section>";
+
+    // 회사 집계(주차 클릭 가능)
+    html += "<section><h2>회사 전체 · 주간 집계" + '<span class="whose">달력 주(월요일 시작)</span></h2>' +
+      '<div class="desc">참여 어르신 <b>전원의 합계</b>입니다. 주차를 누르면 그 주에 각 어르신이 어땠는지 볼 수 있어요.</div>' +
+      '<div class="tablewrap"><table><tr><th>주 시작</th><th>어르신</th><th>관계망 접촉 합</th>' +
+      "<th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th></tr>";
+    var comp = (DATA.company || []).slice().reverse();
+    if (!comp.length) html += '<tr><td colspan="6" class="muted">아직 데이터가 없습니다</td></tr>';
+    comp.forEach(function(r){
+      html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "week", weekStart: r.week_start })) + "'>" +
+        "<td><b>" + esc(r.week_start) + "</b></td><td>" + fmt(r.elderly_count, "명") + "</td><td>" +
+        fmt(r.total_relational_contact_min, "분") + "</td><td>" + fmt(r.total_usage_minutes, "분") + "</td><td>" +
+        fmt(r.total_conversation_sessions, "회") + "</td><td>" + fmt(r.total_travel_distance_m, "m") + "</td></tr>";
+    });
+    html += "</table></div></section>";
+
+    html += adminSection();
+    el("view").innerHTML = html;
+    bindGo(); bindAdmin();
+  }
+
+  function latestDataDate(){
+    var all = (DATA.daily || []).map(function(r){ return r.metric_date; }).sort();
+    return all.length ? all[all.length - 1] : null;
+  }
+  function cardHtml(k, v, s){
+    return '<div class="card"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) +
+           '</div><div class="s">' + esc(s) + "</div></div>";
+  }
+
+  // ── 화면 2: 어르신 상세 ──────────────────────────────────────────────
+  function renderElder(id){
+    var rs = roster(), me = rs[id];
+    if (!me) { go({ view: "overview" }); return; }
+    var ws = weeksOf(id), ds = dailyOf(id), eff = effectOf(id);
+    var w = ws.length ? ws[ws.length - 1] : null;
+
+    var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: me.alias }]);
+    html += "<h2 style='font-size:20px;margin-bottom:2px'>" + esc(me.alias) +
+            (me.region ? ' <span class="muted" style="font-size:14px">· ' + esc(me.region) + "</span>" : "") + "</h2>";
+    html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">가명·동네만 표시합니다. 실명·전화번호·대화 원문·정확한 위치는 이 콘솔에 오지 않습니다.</div>';
+
+    html += '<div class="cards">' +
+      cardHtml("이번 주 추세", w && w.connection_obv !== null ? (Number(w.connection_obv) > 0 ? "+" : "") + Math.round(Number(w.connection_obv)) : "측정 중",
+               w ? w.week_index + "주차 · 비교된 축 " + (w.valid_axis_count || 0) + "/3" : "주차 미산출") +
+      cardHtml("그 주 기록", w ? w.observed_days + "일" : "—", "기록일이 적으면 얇은 근거") +
+      cardHtml("관계망 접촉", w ? (num(w.relational_min_avg) === null ? "측정 중" : Math.round(num(w.relational_min_avg) * 10) / 10 + "분/일") : "—", "대면+통화 하루 평균") +
+      cardHtml("최근 데이터", ds.length ? ds[ds.length - 1].metric_date : "없음", ds.length + "일치 유입") +
+      "</div>";
+
+    if (!ds.length) {
+      html += '<section><h2 class="warn">데이터가 들어오지 않고 있습니다</h2>' +
+        '<div class="desc">이 어르신은 등록돼 있으나 기기에서 지표가 한 건도 올라오지 않았습니다. 기기 전원·인터넷·앱 동의 상태를 확인해 보세요.</div></section>';
+    }
+
+    // 이 사람만의 OBV
+    html += "<section><h2>주차 연결 추세" + '<span class="whose">' + esc(me.alias) + " 한 분</span></h2>" +
+      '<div class="desc">등록 1주차를 0으로 둔 누적선입니다. 축별로 나눠 그려서 <b>무엇이 오르고 내렸는지</b> 보이게 했습니다.</div>' +
+      elderAxisSvg(ws) + "</section>";
+
+    // 이 사람만의 주차 표
+    html += "<section><h2>주차별 상세" + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
+      '<div class="desc">각 축의 하루 평균과, 직전 주 대비 변화율입니다. “—”는 비교할 지난주 값이 없었다는 뜻입니다.</div>' +
+      '<div class="tablewrap"><table><tr><th>주차</th><th>기간</th><th>기록일</th>' +
+      "<th>관계망(분/일)</th><th>변화</th><th>대화(분/일)</th><th>변화</th><th>이동(m/일)</th><th>변화</th><th>누적 추세</th></tr>";
+    if (!ws.length) html += '<tr><td colspan="10" class="muted">아직 주차 데이터가 없습니다</td></tr>';
+    ws.slice().reverse().forEach(function(r){
+      html += "<tr><td><b>" + r.week_index + "주차</b></td><td>" + esc(r.week_start) + "</td><td>" + r.observed_days + "일</td>" +
+        "<td>" + fmt(r.relational_min_avg) + "</td><td>" + pct(r.relational_delta_pct) + "</td>" +
+        "<td>" + fmt(r.conversation_min_avg) + "</td><td>" + pct(r.conversation_delta_pct) + "</td>" +
+        "<td>" + fmt(r.mobility_m_avg) + "</td><td>" + pct(r.mobility_delta_pct) + "</td>" +
+        "<td>" + fmtSigned(r.connection_obv) + "</td></tr>";
+    });
+    html += "</table></div></section>";
+
+    // 이 사람만의 일별
+    html += "<section><h2>최근 14일 · 일별 기록" + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
+      '<div class="desc">진한 색 = 대면+통화(관계망), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님).</div>' +
+      dailySvg(ds) +
+      '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th><th>미디어</th>' +
+      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>기분평균</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="9" class="muted">기록 없음</td></tr>';
+    ds.slice().reverse().forEach(function(r){
+      html += "<tr><td>" + esc(r.metric_date) + "</td><td>" + fmt(r.face_to_face_minutes, "분") + "</td><td>" +
+        fmt(r.phone_call_minutes, "분") + "</td><td>" + fmt(r.media_minutes, "분") + "</td><td>" +
+        fmt(r.elder_utterance_minutes, "분") + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
+        fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.away_from_home_minutes, "분") + "</td><td>" +
+        fmt(r.mood_score_avg) + "</td></tr>";
+    });
+    html += "</table></div>" +
+      '<div class="note">★“측정 중”은 <b>0이 아니라 못 쟀다</b>는 뜻입니다. 특히 <b>어르신 발화</b>는 목소리 주인 판별(화자귀속)이 되어야 채워지며, 현재 개선 작업 중이라 비어 있는 날이 많습니다.</div></section>';
+
+    // 달력 주 기준 요약(effect_weekly) — 축이 다르므로 분리해 표시
+    if (eff.length) {
+      html += "<section><h2>달력 주 기준 요약" + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
+        '<div class="desc">위의 “주차”는 등록일 기준이고, 이 표는 <b>달력 주(월요일 시작)</b> 기준입니다. 회사 집계와 맞춰 볼 때 쓰세요.</div>' +
+        '<div class="tablewrap"><table><tr><th>주 시작</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
+        "<th>사용시간</th><th>대화 세션</th><th>이동거리</th><th>기분평균</th></tr>";
+      eff.slice().reverse().forEach(function(r){
+        html += "<tr><td>" + esc(r.week_start) + "</td><td>" + fmt(r.days_reported, "일") + "</td><td>" +
+          fmt(r.relational_contact_min, "분") + "</td><td>" + fmt(r.media_min, "분") + "</td><td>" +
+          fmt(r.usage_minutes, "분") + "</td><td>" + fmt(r.conversation_sessions, "회") + "</td><td>" +
+          fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.mood_avg) + "</td></tr>";
+      });
+      html += "</table></div></section>";
+    }
+
+    el("view").innerHTML = html;
+    bindGo();
+  }
+
+  function pct(v){
+    var n = num(v);
+    if (n === null) return '<span class="muted">—</span>';
+    var r = Math.round(n);
+    return r > 0 ? '<span class="pos">+' + r + "%</span>"
+         : r < 0 ? '<span class="neg">' + r + "%</span>"
+                 : '<span class="muted">0%</span>';
+  }
+
+  // ── 화면 3: 주차 상세 ────────────────────────────────────────────────
+  function renderWeek(weekStart){
+    var rs = roster();
+    var rows = (DATA.elderly || []).filter(function(r){ return r.week_start === weekStart; });
+    var comp = (DATA.company || []).filter(function(r){ return r.week_start === weekStart; })[0];
+
+    var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: weekStart + " 주" }]);
+    html += "<h2 style='font-size:20px;margin-bottom:2px'>" + esc(weekStart) + " 주 상세</h2>" +
+      '<div class="muted" style="font-size:12.5px;margin-bottom:16px">달력 주(월요일 시작) 기준. 이 주에 지표가 올라온 어르신만 나옵니다.</div>';
+
+    if (comp) {
+      html += '<div class="cards">' +
+        cardHtml("어르신", fmtPlainNum(comp.elderly_count) + "명", "이 주에 기록이 있던 분") +
+        cardHtml("관계망 접촉 합", fmtPlainNum(comp.total_relational_contact_min) + "분", "대면+통화 전원 합계") +
+        cardHtml("사용시간 합", fmtPlainNum(comp.total_usage_minutes) + "분", "전원 합계") +
+        cardHtml("이동거리 합", fmtPlainNum(comp.total_travel_distance_m) + "m", "전원 합계") +
+        "</div>";
+    }
+
+    html += "<section><h2>어르신별 내역" + '<span class="whose">' + esc(weekStart) + " 주</span></h2>" +
+      '<div class="desc">한 줄을 누르면 그 어르신의 전체 상세로 들어갑니다.</div>' +
+      '<div class="tablewrap"><table><tr><th>어르신</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
+      "<th>사용시간</th><th>대화 세션</th><th>이동거리</th><th>기분평균</th></tr>";
+    if (!rows.length) html += '<tr><td colspan="8" class="muted">이 주에는 기록이 없습니다</td></tr>';
+    rows.forEach(function(r){
+      var m = rs[r.elderly_id];
+      html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.elderly_id })) + "'>" +
+        "<td><b>" + esc(m ? m.alias : String(r.elderly_id).slice(0,8)) + "</b>" +
+        (m && m.region ? ' <span class="muted">· ' + esc(m.region) + "</span>" : "") + "</td>" +
+        "<td>" + fmt(r.days_reported, "일") + "</td><td>" + fmt(r.relational_contact_min, "분") + "</td><td>" +
+        fmt(r.media_min, "분") + "</td><td>" + fmt(r.usage_minutes, "분") + "</td><td>" +
+        fmt(r.conversation_sessions, "회") + "</td><td>" + fmt(r.travel_distance_m, "m") + "</td><td>" +
+        fmt(r.mood_avg) + "</td></tr>";
+    });
+    html += "</table></div></section>";
+
+    el("view").innerHTML = html;
+    bindGo();
+  }
+  function fmtPlainNum(v){ var n = num(v); return n === null ? "측정 중" : String(Math.round(n)); }
+
+  // ── 차트 ─────────────────────────────────────────────────────────────
+  // 전원 OBV — 선마다 색 + ★범례★(누구 선인지 반드시 보이게)
+  function obvSvg(series){
+    var drawn = series.filter(function(s){
+      return s.rows.some(function(w){ return w.connection_obv !== null && w.connection_obv !== undefined; });
+    });
+    if (!drawn.length) return '<div class="muted" style="font-size:13px">아직 그릴 추세가 없습니다 — 두 번째 주가 지나야 첫 비교가 생깁니다.</div>';
+    var maxWeek = 1, maxAbs = 10;
+    drawn.forEach(function(s){ s.rows.forEach(function(w){
+      if (w.week_index > maxWeek) maxWeek = w.week_index;
+      var v = num(w.connection_obv);
+      if (v !== null && Math.abs(v) > maxAbs) maxAbs = Math.abs(v);
+    }); });
+    var W = 1000, H = 250, L = 50, R = 20, T = 16, B = 34;
+    var x = function(wi){ return maxWeek === 1 ? (L + W - R) / 2 : L + (wi - 1) * (W - L - R) / (maxWeek - 1); };
+    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
+    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
+    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) + '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
+    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0 (기준)</text>';
+    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
+    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
+    drawn.forEach(function(s, i){
+      var pts = s.rows.filter(function(w){ return num(w.connection_obv) !== null; });
+      var c = COLORS[i % COLORS.length];
+      var dstr = pts.map(function(w, j){ return (j ? "L" : "M") + x(w.week_index) + " " + y(num(w.connection_obv)); }).join(" ");
+      if (pts.length > 1) out += '<path d="' + dstr + '" fill="none" stroke="' + c + '" stroke-width="2.5"/>';
+      pts.forEach(function(w){ out += '<circle cx="' + x(w.week_index) + '" cy="' + y(num(w.connection_obv)) + '" r="4" fill="' + c + '"/>'; });
+    });
+    for (var wi = 1; wi <= maxWeek; wi++) {
+      out += '<text x="' + x(wi) + '" y="' + (H - 10) + '" font-size="11.5" fill="#5b7078" text-anchor="middle">' + wi + "주차</text>";
+    }
+    out += "</svg>";
+    out += '<div class="legend">' + drawn.map(function(s, i){
+      return '<span><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(label(s.id)) + "</span>";
+    }).join("") + "</div>";
+    return out;
+  }
+
+  // 한 사람의 축별 OBV(무엇이 오르고 내렸는지)
+  function elderAxisSvg(ws){
+    var axes = [
+      { key: "relational_obv", name: "관계망(대면+통화)", c: COLORS[0] },
+      { key: "conversation_obv", name: "대화", c: COLORS[1] },
+      { key: "mobility_obv", name: "이동", c: COLORS[2] },
+      { key: "connection_obv", name: "종합", c: "#111827" },
+    ];
+    var any = ws.some(function(w){ return axes.some(function(a){ return num(w[a.key]) !== null; }); });
+    if (!any) return '<div class="muted" style="font-size:13px">아직 그릴 추세가 없습니다 — 두 번째 주가 지나야 첫 비교가 생깁니다.</div>';
+    var maxWeek = 1, maxAbs = 10;
+    ws.forEach(function(w){
+      if (w.week_index > maxWeek) maxWeek = w.week_index;
+      axes.forEach(function(a){ var v = num(w[a.key]); if (v !== null && Math.abs(v) > maxAbs) maxAbs = Math.abs(v); });
+    });
+    var W = 1000, H = 250, L = 50, R = 20, T = 16, B = 34;
+    var x = function(wi){ return maxWeek === 1 ? (L + W - R) / 2 : L + (wi - 1) * (W - L - R) / (maxWeek - 1); };
+    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
+    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
+    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) + '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
+    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0 (기준)</text>';
+    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
+    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
+    axes.forEach(function(a){
+      var pts = ws.filter(function(w){ return num(w[a.key]) !== null; });
+      if (!pts.length) return;
+      var dstr = pts.map(function(w, j){ return (j ? "L" : "M") + x(w.week_index) + " " + y(num(w[a.key])); }).join(" ");
+      var wide = a.key === "connection_obv";
+      if (pts.length > 1) out += '<path d="' + dstr + '" fill="none" stroke="' + a.c + '" stroke-width="' + (wide ? 3 : 2) + '"' +
+        (wide ? "" : ' stroke-dasharray="5 3"') + "/>";
+      pts.forEach(function(w){ out += '<circle cx="' + x(w.week_index) + '" cy="' + y(num(w[a.key])) + '" r="' + (wide ? 4.5 : 3.5) + '" fill="' + a.c + '"/>'; });
+    });
+    for (var wi = 1; wi <= maxWeek; wi++) {
+      out += '<text x="' + x(wi) + '" y="' + (H - 10) + '" font-size="11.5" fill="#5b7078" text-anchor="middle">' + wi + "주차</text>";
+    }
+    out += "</svg>";
+    out += '<div class="legend">' + axes.map(function(a){
+      return '<span><i style="background:' + a.c + '"></i>' + esc(a.name) + "</span>";
+    }).join("") + '<span class="muted">점선 = 축별 · 굵은 선 = 종합</span></div>';
+    return out;
+  }
+
+  // 한 사람의 일별 막대
+  function dailySvg(ds){
+    if (!ds.length) return '<div class="muted" style="font-size:13px">최근 14일 기록이 없습니다</div>';
+    var maxV = 10;
+    ds.forEach(function(r){
+      var rel = (num(r.face_to_face_minutes) || 0) + (num(r.phone_call_minutes) || 0);
+      var med = num(r.media_minutes) || 0;
+      if (Math.max(rel, med) > maxV) maxV = Math.max(rel, med);
+    });
+    var W = 1000, H = 210, L = 46, R = 10, T = 12, B = 30;
+    var bw = (W - L - R) / ds.length;
+    var y = function(v){ return T + (1 - v / maxV) * (H - T - B); };
+    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
+    out += '<text x="4" y="' + (T + 10) + '" font-size="11" fill="#5b7078">' + Math.round(maxV) + "분</text>";
+    ds.forEach(function(r, i){
+      var rel = (num(r.face_to_face_minutes) || 0) + (num(r.phone_call_minutes) || 0);
+      var med = num(r.media_minutes) || 0;
+      var x0 = L + i * bw;
+      out += '<rect x="' + (x0 + bw * 0.12) + '" y="' + y(med) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(med)) + '" fill="#c9e2de"/>';
+      out += '<rect x="' + (x0 + bw * 0.52) + '" y="' + y(rel) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(rel)) + '" fill="#17857A"/>';
+      out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' + esc(String(r.metric_date).slice(5)) + "</text>";
+    });
+    out += "</svg>";
+    out += '<div class="legend"><span><i style="background:#17857A"></i>대면+통화</span>' +
+           '<span><i style="background:#c9e2de"></i>미디어(TV 등) 노출</span></div>';
+    return out;
+  }
+
+  // ── 관리자 관리 ──────────────────────────────────────────────────────
+  function adminSection(){
+    return "<section><h2>관리자 관리</h2>" +
+      '<div class="desc">여기 등록된 이메일 계정만 이 콘솔을 열 수 있습니다. 아직 가입하지 않은 사람도 미리 등록해 둘 수 있어요' +
+      "(나중에 같은 이메일로 로그인하면 바로 들어옵니다). 본인은 지울 수 없고, 마지막 한 명도 지울 수 없습니다.</div>" +
+      '<div class="row" style="margin-bottom:12px">' +
+      '<input id="newAdminEmail" type="email" placeholder="추가할 이메일" style="flex:1;min-width:220px">' +
+      '<input id="newAdminNote" type="text" placeholder="메모 (예: 운영팀 김OO)" style="flex:1;min-width:180px">' +
+      '<button class="primary" id="addAdminBtn">관리자 추가</button></div>' +
+      '<div id="adminMsg" style="font-size:13px;margin-bottom:10px"></div>' +
+      '<div class="tablewrap"><table id="adminTable"></table></div></section>';
+  }
   function friendlyRpcError(r){
     var msg = (r.body && (r.body.message || r.body.hint)) || r.raw || "";
     if (msg.indexOf("INVALID_EMAIL") >= 0) return "이메일 형식이 올바르지 않습니다.";
@@ -304,29 +657,36 @@
     return "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
   function adminMsg(text, ok){
-    var e = el("adminMsg");
-    e.textContent = text;
-    e.style.color = ok ? "#0e7490" : "#b91c1c";
+    var e = el("adminMsg"); if (!e) return;
+    e.textContent = text; e.style.color = ok ? "#0e7490" : "#b91c1c";
     setTimeout(function(){ if (e.textContent === text) e.textContent = ""; }, 6000);
   }
-
+  function bindAdmin(){
+    var add = el("addAdminBtn"); if (!add) return;
+    add.addEventListener("click", function(){
+      var email = el("newAdminEmail").value.trim();
+      if (!email) { adminMsg("이메일을 입력해 주세요.", false); return; }
+      rpc("console_add_admin", { p_email: email, p_note: el("newAdminNote").value.trim() }).then(function(r){
+        if (r.ok) { el("newAdminEmail").value = ""; el("newAdminNote").value = ""; adminMsg("추가했습니다.", true); }
+        else adminMsg(friendlyRpcError(r), false);
+        loadAdmins();
+      });
+    });
+    loadAdmins();
+  }
   function loadAdmins(){
+    var t = el("adminTable"); if (!t) return;
     rpc("console_list_admins").then(function(r){
-      if (!r.ok || !Array.isArray(r.body)) {
-        el("adminTable").innerHTML = '<tr><td class="muted">관리자 목록을 불러오지 못했습니다</td></tr>';
-        return;
-      }
+      if (!r.ok || !Array.isArray(r.body)) { t.innerHTML = '<tr><td class="muted">관리자 목록을 불러오지 못했습니다</td></tr>'; return; }
       var me = (el("whoText").textContent || "").toLowerCase();
-      var rows = r.body.map(function(a){
+      t.innerHTML = "<tr><th>이메일</th><th>메모</th><th>등록일</th><th></th></tr>" + r.body.map(function(a){
         var isMe = String(a.email).toLowerCase() === me;
         var btn = isMe ? '<span class="muted">본인</span>'
                        : '<button class="danger" data-remove="' + esc(a.email) + '">삭제</button>';
         return "<tr><td>" + esc(a.email) + "</td><td>" + esc(a.note || "") + "</td><td>" +
                esc(String(a.created_at || "").slice(0, 10)) + "</td><td>" + btn + "</td></tr>";
       }).join("");
-      el("adminTable").innerHTML =
-        "<tr><th>이메일</th><th>메모</th><th>등록일</th><th></th></tr>" + rows;
-      Array.prototype.forEach.call(el("adminTable").querySelectorAll("[data-remove]"), function(b){
+      Array.prototype.forEach.call(t.querySelectorAll("[data-remove]"), function(b){
         b.addEventListener("click", function(){
           var email = b.getAttribute("data-remove");
           if (!confirm(email + " 님의 관리자 권한을 지울까요?")) return;
@@ -339,134 +699,14 @@
     });
   }
 
-  function render(d){
-    var roster = {};
-    (d.roster || []).forEach(function(r){ roster[r.id] = { alias: r.alias || "어르신", region: r.region || "" }; });
-    var name = function(id){ var r = roster[id]; return r ? (r.alias + (r.region ? " · " + r.region : "")) : String(id).slice(0,8); };
-
-    var obv = d.weekly_obv || [];
-    var latestByElder = {};
-    obv.forEach(function(w){ var p = latestByElder[w.elderly_id];
-      if (!p || w.week_index > p.week_index) latestByElder[w.elderly_id] = w; });
-    var latest = Object.keys(latestByElder).map(function(k){ return latestByElder[k]; });
-    var withObv = latest.filter(function(w){ return w.connection_obv !== null; });
-    var avgObv = withObv.length ? withObv.reduce(function(a,w){ return a + Number(w.connection_obv); }, 0) / withObv.length : null;
-    var comp = d.company || [];
-    var lastWeek = comp.length ? comp[comp.length-1] : null;
-
-    el("statCards").innerHTML =
-      card("등록 어르신", Object.keys(roster).length + "명", "elderly 가명 기준") +
-      card("주간 지표 보고", Object.keys(latestByElder).length + "명", "connection_weekly 유입 기기") +
-      card("연결 추세 평균 (OBV)", avgObv === null ? "측정 중" : (avgObv >= 0 ? "+" : "") + Math.round(avgObv),
-           "산출 가능 " + withObv.length + "명 평균 · 0=기준") +
-      card("이번 주 관계망 접촉(전체)", lastWeek ? fmtPlain(lastWeek.total_relational_contact_min) + "분" : "측정 중",
-           lastWeek ? "주 시작 " + lastWeek.week_start : "");
-
-    el("obvChart").innerHTML = obvSvg(obv, name);
-    el("dailyChart").innerHTML = dailySvg(d.daily || []);
-
-    var latestEff = {};
-    (d.elderly || []).forEach(function(r){ var p = latestEff[r.elderly_id];
-      if (!p || r.week_start > p.week_start) latestEff[r.elderly_id] = r; });
-    var rows = Object.keys(latestEff).map(function(k){
-      var r = latestEff[k], w = latestByElder[r.elderly_id];
-      return "<tr><td>" + esc(name(r.elderly_id)) + "</td><td>" + esc(r.week_start) + "</td><td>" +
-        fmt(r.days_reported, "일") + "</td><td>" + fmt(r.relational_contact_min, "분") + "</td><td>" +
-        fmt(r.usage_minutes, "분") + "</td><td>" + fmt(r.travel_distance_m, "m") + "</td><td>" +
-        fmt(r.mood_avg) + "</td><td>" + (w ? fmtSigned(w.connection_obv) : '<span class="muted">측정 중</span>') + "</td></tr>";
-    }).join("");
-    el("elderlyTable").innerHTML =
-      "<tr><th>어르신</th><th>주 시작</th><th>보고일</th><th>관계망 접촉</th><th>사용시간</th><th>이동거리</th><th>기분평균</th><th>연결 추세</th></tr>" +
-      (rows || '<tr><td colspan="8" class="muted">아직 데이터가 없습니다</td></tr>');
-
-    var crow = comp.map(function(r){
-      return "<tr><td>" + esc(r.week_start) + "</td><td>" + fmt(r.elderly_count, "명") + "</td><td>" +
-        fmt(r.total_relational_contact_min, "분") + "</td><td>" + fmt(r.total_usage_minutes, "분") + "</td><td>" +
-        fmt(r.total_conversation_sessions, "회") + "</td><td>" + fmt(r.total_travel_distance_m, "m") + "</td></tr>";
-    }).join("");
-    el("companyTable").innerHTML =
-      "<tr><th>주 시작</th><th>어르신</th><th>관계망 접촉 합</th><th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th></tr>" +
-      (crow || '<tr><td colspan="6" class="muted">아직 데이터가 없습니다</td></tr>');
-  }
-
-  function card(k, v, s){ return '<div class="card"><div class="k">' + esc(k) + '</div><div class="v">' +
-    v + '</div><div class="s">' + esc(s) + "</div></div>"; }
-
-  function obvSvg(obv, name){
-    if (!obv.length) return '<div class="muted" style="font-size:13px">아직 주차 데이터가 없습니다</div>';
-    var series = {};
-    obv.forEach(function(w){ (series[w.elderly_id] = series[w.elderly_id] || []).push(w); });
-    var maxWeek = 1, maxAbs = 10;
-    obv.forEach(function(w){ if (w.week_index > maxWeek) maxWeek = w.week_index;
-      if (w.connection_obv !== null && Math.abs(w.connection_obv) > maxAbs) maxAbs = Math.abs(w.connection_obv); });
-    var W = 1000, H = 260, L = 46, R = 12, T = 14, B = 30;
-    var x = function(wi){ return maxWeek === 1 ? L : L + (wi - 1) * (W - L - R) / (maxWeek - 1); };
-    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
-    var colors = ["#17857A", "#b45309", "#2563eb", "#7c3aed", "#db2777", "#0e7490"];
-    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
-    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) + '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
-    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0</text>';
-    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
-    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
-    Object.keys(series).forEach(function(id, i){
-      var pts = series[id].filter(function(w){ return w.connection_obv !== null; });
-      if (!pts.length) return;
-      var c = colors[i % colors.length];
-      var dstr = pts.map(function(w, j){ return (j ? "L" : "M") + x(w.week_index) + " " + y(Number(w.connection_obv)); }).join(" ");
-      out += '<path d="' + dstr + '" fill="none" stroke="' + c + '" stroke-width="2.5"/>';
-      pts.forEach(function(w){ out += '<circle cx="' + x(w.week_index) + '" cy="' + y(Number(w.connection_obv)) + '" r="3.5" fill="' + c + '"/>'; });
-      var last = pts[pts.length - 1];
-      out += '<text x="' + Math.min(x(last.week_index) + 8, W - 150) + '" y="' + (y(Number(last.connection_obv)) - 6) +
-             '" font-size="11.5" fill="' + c + '">' + esc(name(last.elderly_id)) + "</text>";
-    });
-    for (var wi = 1; wi <= maxWeek; wi++) {
-      out += '<text x="' + x(wi) + '" y="' + (H - 8) + '" font-size="11" fill="#5b7078" text-anchor="middle">' + wi + "주차</text>";
-    }
-    return out + "</svg>";
-  }
-
-  function dailySvg(daily){
-    if (!daily.length) return '<div class="muted" style="font-size:13px">최근 14일 데이터가 없습니다</div>';
-    var byDate = {};
-    daily.forEach(function(r){
-      var d = byDate[r.metric_date] = byDate[r.metric_date] || { rel: 0, media: 0 };
-      d.rel += (Number(r.face_to_face_minutes) || 0) + (Number(r.phone_call_minutes) || 0);
-      d.media += Number(r.media_minutes) || 0;
-    });
-    var dates = Object.keys(byDate).sort();
-    var maxV = 10;
-    dates.forEach(function(k){ var v = Math.max(byDate[k].rel, byDate[k].media); if (v > maxV) maxV = v; });
-    var W = 1000, H = 220, L = 40, R = 10, T = 10, B = 30;
-    var bw = (W - L - R) / dates.length;
-    var y = function(v){ return T + (1 - v / maxV) * (H - T - B); };
-    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
-    out += '<text x="4" y="' + (T + 10) + '" font-size="11" fill="#5b7078">' + maxV + "분</text>";
-    dates.forEach(function(k, i){
-      var v = byDate[k], x0 = L + i * bw;
-      out += '<rect x="' + (x0 + bw * 0.12) + '" y="' + y(v.media) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(v.media)) + '" fill="#c9e2de"/>';
-      out += '<rect x="' + (x0 + bw * 0.52) + '" y="' + y(v.rel) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(v.rel)) + '" fill="#17857A"/>';
-      if (i % 2 === 0) out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' + esc(k.slice(5)) + "</text>";
-    });
-    out += "</svg>";
-    return out + '<div style="font-size:12px;color:#5b7078;margin-top:6px">■ 진한 색 = 대면+통화 · ■ 연한 색 = 미디어(TV 등) 노출</div>';
-  }
-
+  // ── 이벤트 ───────────────────────────────────────────────────────────
   el("loginBtn").addEventListener("click", loginWithPassword);
   el("pwInput").addEventListener("keydown", function(e){ if (e.key === "Enter") loginWithPassword(); });
   el("googleBtn").addEventListener("click", function(){ socialLogin("google"); });
   el("kakaoBtn").addEventListener("click", function(){ socialLogin("kakao"); });
   el("refreshBtn").addEventListener("click", load);
+  el("homeBtn").addEventListener("click", function(){ go({ view: "overview" }); });
   el("logoutBtn").addEventListener("click", function(){ setSess(null); showLogin(null); });
-  el("addAdminBtn").addEventListener("click", function(){
-    var email = el("newAdminEmail").value.trim();
-    if (!email) { adminMsg("이메일을 입력해 주세요.", false); return; }
-    rpc("console_add_admin", { p_email: email, p_note: el("newAdminNote").value.trim() })
-      .then(function(r){
-        if (r.ok) { el("newAdminEmail").value = ""; el("newAdminNote").value = ""; adminMsg("추가했습니다.", true); }
-        else adminMsg(friendlyRpcError(r), false);
-        loadAdmins();
-      });
-  });
 
   captureHashSession();
   if (sess()) load(); else showLogin(null);
