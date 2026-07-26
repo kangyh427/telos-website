@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>텔로스 케어 · 관리자 콘솔</title>
+<style>
+  :root{--teal:#17857A;--teal-bg:#E8F4F2;--ink:#1a2b32;--sub:#5b7078;--line:#dbe6e4;
+        --bg:#f4f8f7;--card:#ffffff;--amber:#b45309;--red:#b91c1c;--good:#0e7490;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 24px;
+         display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+  header h1{font-size:18px;color:var(--teal)}
+  .live{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}
+  .dot.on{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.18)}
+  .spacer{flex:1}
+  button{border:1px solid var(--line);background:var(--card);border-radius:8px;
+         padding:7px 14px;font-size:13px;cursor:pointer;color:var(--ink)}
+  button.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+  main{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card .k{font-size:12.5px;color:var(--sub);margin-bottom:6px}
+  .card .v{font-size:26px;font-weight:700}
+  .card .s{font-size:12px;color:var(--sub);margin-top:4px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+          padding:18px;margin-bottom:20px}
+  section h2{font-size:14.5px;margin-bottom:4px}
+  section .desc{font-size:12.5px;color:var(--sub);margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--sub);font-weight:600;font-size:12px}
+  .pos{color:var(--good);font-weight:600}.neg{color:var(--amber);font-weight:600}
+  .muted{color:var(--sub)}
+  .tablewrap{overflow-x:auto}
+  svg{display:block;width:100%}
+  /* 로그인 */
+  #login{max-width:400px;margin:12vh auto;background:var(--card);border:1px solid var(--line);
+         border-radius:14px;padding:30px}
+  #login h2{color:var(--teal);font-size:18px;margin-bottom:6px}
+  #login p{font-size:13px;color:var(--sub);margin-bottom:16px}
+  #login input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;
+               font-size:14px;margin-bottom:12px}
+  #login button{width:100%;padding:11px}
+  #loginErr{color:var(--red);font-size:13px;margin-bottom:10px;display:none}
+  #app{display:none}
+</style>
+</head>
+<body>
+<div id="login">
+  <h2>텔로스 케어 관리자 콘솔</h2>
+  <p>콘솔 토큰을 입력하세요. 토큰은 이 컴퓨터의 현재 탭에만 잠시 보관되고, 탭을 닫으면 사라집니다.</p>
+  <div id="loginErr">토큰이 올바르지 않습니다.</div>
+  <input id="tokenInput" type="password" placeholder="콘솔 토큰" autocomplete="off">
+  <button class="primary" id="loginBtn">접속</button>
+</div>
+
+<div id="app">
+<header>
+  <h1>텔로스 케어 · 관리자 콘솔</h1>
+  <span class="live"><span class="dot" id="liveDot"></span><span id="liveText">연결 중…</span></span>
+  <span class="spacer"></span>
+  <button id="refreshBtn">지금 새로고침</button>
+  <button id="logoutBtn">잠금</button>
+</header>
+<main>
+  <div class="cards" id="statCards"></div>
+
+  <section>
+    <h2>주차 연결 추세 (OBV)</h2>
+    <div class="desc">등록 1주차를 기준점(0)으로, 직전 주 대비 변화를 누적한 선입니다. 절대 점수가 아니라 그 어르신 자신과의 비교입니다.</div>
+    <div id="obvChart"></div>
+  </section>
+
+  <section>
+    <h2>최근 14일 · 일 단위 관계망 접촉</h2>
+    <div class="desc">대면+통화(진한 색)와 미디어 노출(연한 색), 분 단위. 빈 날은 미측정입니다(0이 아님).</div>
+    <div id="dailyChart"></div>
+  </section>
+
+  <section>
+    <h2>어르신별 최신 주간 요약</h2>
+    <div class="desc">가명·동네 기준(실명 없음). 비어 있는 칸은 "측정 중"입니다 — 0으로 읽지 마세요.</div>
+    <div class="tablewrap"><table id="elderlyTable"></table></div>
+  </section>
+
+  <section>
+    <h2>회사 전체 · 주간 집계</h2>
+    <div class="desc">참여 어르신 전체의 주 단위 합계/평균입니다.</div>
+    <div class="tablewrap"><table id="companyTable"></table></div>
+  </section>
+</main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var DASH = "https://xeerqdsedmafbqbgqooi.supabase.co/functions/v1/get-effect-dashboard";
+  var POLL_MS = 60000;
+  var timer = null;
+
+  function tok(){ return sessionStorage.getItem("console_token") || ""; }
+  function el(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function fmt(v, unit){ return (v === null || v === undefined) ? '<span class="muted">측정 중</span>'
+    : esc(Math.round(Number(v)*10)/10) + (unit || ""); }
+  function fmtSigned(v){ if (v === null || v === undefined) return '<span class="muted">측정 중</span>';
+    var n = Math.round(Number(v));
+    return n >= 0 ? '<span class="pos">+' + n + '</span>' : '<span class="neg">' + n + '</span>'; }
+
+  function showLogin(bad){
+    el("login").style.display = "block"; el("app").style.display = "none";
+    el("loginErr").style.display = bad ? "block" : "none";
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function showApp(){
+    el("login").style.display = "none"; el("app").style.display = "block";
+    if (!timer) timer = setInterval(load, POLL_MS);
+  }
+
+  function load(){
+    fetch(DASH, { method: "POST", headers: { "x-console-token": tok() } })
+      .then(function(r){
+        if (r.status === 401) { sessionStorage.removeItem("console_token"); showLogin(true); throw new Error("unauthorized"); }
+        if (!r.ok) throw new Error("http " + r.status);
+        return r.json();
+      })
+      .then(function(d){ showApp(); render(d);
+        el("liveDot").className = "dot on";
+        el("liveText").textContent = "실측 연결됨 · " + new Date().toLocaleTimeString("ko-KR") + " (60초마다 자동)";
+      })
+      .catch(function(e){
+        if (String(e.message) === "unauthorized") return;
+        el("liveDot").className = "dot";
+        el("liveText").textContent = "연결 실패 — 다음 주기에 재시도";
+      });
+  }
+
+  function render(d){
+    var roster = {};
+    (d.roster || []).forEach(function(r){ roster[r.id] = { alias: r.alias || "어르신", region: r.region || "" }; });
+    var name = function(id){ var r = roster[id]; return r ? (r.alias + (r.region ? " · " + r.region : "")) : id.slice(0,8); };
+
+    // ── 요약 카드 ──
+    var obv = d.weekly_obv || [];
+    var latestByElder = {};
+    obv.forEach(function(w){ var p = latestByElder[w.elderly_id];
+      if (!p || w.week_index > p.week_index) latestByElder[w.elderly_id] = w; });
+    var latest = Object.values(latestByElder);
+    var withObv = latest.filter(function(w){ return w.connection_obv !== null; });
+    var avgObv = withObv.length ? withObv.reduce(function(a,w){ return a + Number(w.connection_obv); }, 0) / withObv.length : null;
+    var elderCount = Object.keys(roster).length;
+    var reporting = Object.keys(latestByElder).length;
+    var comp = d.company || [];
+    var lastWeek = comp.length ? comp[comp.length-1] : null;
+
+    el("statCards").innerHTML =
+      card("등록 어르신", elderCount + "명", "elderly 가명 기준") +
+      card("주간 지표 보고", reporting + "명", "connection_weekly 유입 기기") +
+      card("연결 추세 평균 (OBV)", avgObv === null ? "측정 중" : (avgObv >= 0 ? "+" : "") + Math.round(avgObv), "산출 가능 " + withObv.length + "명 평균 · 0=기준") +
+      card("이번 주 관계망 접촉(전체)", lastWeek ? fmtPlain(lastWeek.total_relational_contact_min) + "분" : "측정 중", lastWeek ? "주 시작 " + lastWeek.week_start : "");
+
+    // ── OBV 라인 차트 ──
+    el("obvChart").innerHTML = obvSvg(obv, name);
+
+    // ── 일 단위 접촉 바 차트 ──
+    el("dailyChart").innerHTML = dailySvg(d.daily || []);
+
+    // ── 어르신별 최신 주 테이블 ──
+    var ew = d.elderly || [];
+    var latestEff = {};
+    ew.forEach(function(r){ var p = latestEff[r.elderly_id];
+      if (!p || r.week_start > p.week_start) latestEff[r.elderly_id] = r; });
+    var rows = Object.values(latestEff).map(function(r){
+      var w = latestByElder[r.elderly_id];
+      return "<tr><td>" + esc(name(r.elderly_id)) + "</td><td>" + esc(r.week_start) + "</td><td>" +
+        fmt(r.days_reported, "일") + "</td><td>" + fmt(r.relational_contact_min, "분") + "</td><td>" +
+        fmt(r.usage_minutes, "분") + "</td><td>" + fmt(r.travel_distance_m, "m") + "</td><td>" +
+        fmt(r.mood_avg) + "</td><td>" + (w ? fmtSigned(w.connection_obv) : '<span class="muted">측정 중</span>') + "</td></tr>";
+    }).join("");
+    el("elderlyTable").innerHTML =
+      "<tr><th>어르신</th><th>주 시작</th><th>보고일</th><th>관계망 접촉</th><th>사용시간</th><th>이동거리</th><th>기분평균</th><th>연결 추세</th></tr>" +
+      (rows || '<tr><td colspan="8" class="muted">아직 데이터가 없습니다</td></tr>');
+
+    // ── 회사 주간 테이블 ──
+    var crow = comp.map(function(r){
+      return "<tr><td>" + esc(r.week_start) + "</td><td>" + fmt(r.elderly_count, "명") + "</td><td>" +
+        fmt(r.total_relational_contact_min, "분") + "</td><td>" + fmt(r.total_usage_minutes, "분") + "</td><td>" +
+        fmt(r.total_conversation_sessions, "회") + "</td><td>" + fmt(r.total_travel_distance_m, "m") + "</td></tr>";
+    }).join("");
+    el("companyTable").innerHTML =
+      "<tr><th>주 시작</th><th>어르신</th><th>관계망 접촉 합</th><th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th></tr>" +
+      (crow || '<tr><td colspan="6" class="muted">아직 데이터가 없습니다</td></tr>');
+  }
+
+  function fmtPlain(v){ return (v === null || v === undefined) ? "측정 중" : String(Math.round(Number(v))); }
+  function card(k, v, s){ return '<div class="card"><div class="k">' + esc(k) + '</div><div class="v">' +
+    v + '</div><div class="s">' + esc(s) + "</div></div>"; }
+
+  // 주차 OBV 멀티 라인(SVG 자체 생성 — 외부 라이브러리 없음)
+  function obvSvg(obv, name){
+    if (!obv.length) return '<div class="muted" style="font-size:13px">아직 주차 데이터가 없습니다</div>';
+    var series = {};
+    obv.forEach(function(w){ (series[w.elderly_id] = series[w.elderly_id] || []).push(w); });
+    var ids = Object.keys(series);
+    var maxWeek = 1, maxAbs = 10;
+    obv.forEach(function(w){ if (w.week_index > maxWeek) maxWeek = w.week_index;
+      if (w.connection_obv !== null && Math.abs(w.connection_obv) > maxAbs) maxAbs = Math.abs(w.connection_obv); });
+    var W = 1000, H = 260, L = 46, R = 12, T = 14, B = 30;
+    var x = function(wi){ return maxWeek === 1 ? L : L + (wi - 1) * (W - L - R) / (maxWeek - 1); };
+    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
+    var colors = ["#17857A", "#b45309", "#2563eb", "#7c3aed", "#db2777", "#0e7490"];
+    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
+    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) + '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
+    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0</text>';
+    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
+    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
+    ids.forEach(function(id, i){
+      var pts = series[id].filter(function(w){ return w.connection_obv !== null; });
+      if (!pts.length) return;
+      var c = colors[i % colors.length];
+      var dstr = pts.map(function(w, j){ return (j ? "L" : "M") + x(w.week_index) + " " + y(Number(w.connection_obv)); }).join(" ");
+      out += '<path d="' + dstr + '" fill="none" stroke="' + c + '" stroke-width="2.5"/>';
+      pts.forEach(function(w){ out += '<circle cx="' + x(w.week_index) + '" cy="' + y(Number(w.connection_obv)) + '" r="3.5" fill="' + c + '"/>'; });
+      var last = pts[pts.length - 1];
+      out += '<text x="' + Math.min(x(last.week_index) + 8, W - 150) + '" y="' + (y(Number(last.connection_obv)) - 6) +
+             '" font-size="11.5" fill="' + c + '">' + esc(name(last.elderly_id)) + "</text>";
+    });
+    for (var wi = 1; wi <= maxWeek; wi++) {
+      out += '<text x="' + x(wi) + '" y="' + (H - 8) + '" font-size="11" fill="#5b7078" text-anchor="middle">' + wi + "주차</text>";
+    }
+    out += "</svg>";
+    return out;
+  }
+
+  // 최근 14일 접촉 바(어르신 합산 — 콘솔은 코호트 시야, 개인 상세는 표에서)
+  function dailySvg(daily){
+    if (!daily.length) return '<div class="muted" style="font-size:13px">최근 14일 데이터가 없습니다</div>';
+    var byDate = {};
+    daily.forEach(function(r){
+      var d = byDate[r.metric_date] = byDate[r.metric_date] || { rel: 0, media: 0 };
+      d.rel += (Number(r.face_to_face_minutes) || 0) + (Number(r.phone_call_minutes) || 0);
+      d.media += Number(r.media_minutes) || 0;
+    });
+    var dates = Object.keys(byDate).sort();
+    var maxV = 10;
+    dates.forEach(function(k){ var v = Math.max(byDate[k].rel, byDate[k].media); if (v > maxV) maxV = v; });
+    var W = 1000, H = 220, L = 40, R = 10, T = 10, B = 30;
+    var bw = (W - L - R) / dates.length;
+    var y = function(v){ return T + (1 - v / maxV) * (H - T - B); };
+    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
+    out += '<text x="4" y="' + (T + 10) + '" font-size="11" fill="#5b7078">' + maxV + "분</text>";
+    dates.forEach(function(k, i){
+      var v = byDate[k];
+      var x0 = L + i * bw;
+      out += '<rect x="' + (x0 + bw * 0.12) + '" y="' + y(v.media) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(v.media)) + '" fill="#c9e2de"/>';
+      out += '<rect x="' + (x0 + bw * 0.52) + '" y="' + y(v.rel) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(v.rel)) + '" fill="#17857A"/>';
+      if (i % 2 === 0) out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' + esc(k.slice(5)) + "</text>";
+    });
+    out += "</svg>";
+    out += '<div style="font-size:12px;color:#5b7078;margin-top:6px">■ 진한 색 = 대면+통화 · ■ 연한 색 = 미디어(TV 등) 노출</div>';
+    return out;
+  }
+
+  // ── 이벤트 ──
+  el("loginBtn").addEventListener("click", function(){
+    var v = el("tokenInput").value.trim();
+    if (!v) return;
+    sessionStorage.setItem("console_token", v);
+    load();
+  });
+  el("tokenInput").addEventListener("keydown", function(e){ if (e.key === "Enter") el("loginBtn").click(); });
+  el("refreshBtn").addEventListener("click", load);
+  el("logoutBtn").addEventListener("click", function(){ sessionStorage.removeItem("console_token"); showLogin(false); });
+
+  if (tok()) load(); else showLogin(false);
+})();
+</script>
+</body>
+</html>
