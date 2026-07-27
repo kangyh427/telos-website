@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>텔로스 케어 · 이메일 확인</title>
+<!-- ============================================================================
+  텔로스 케어 · 인증 착지 페이지  (https://www.telos.it.kr/auth/)
+  정본: naoncare-edge/console/auth_landing.html  →  telos-website/auth/index.html
+  작성: 2026-07-27 (S497 — Site URL 이 localhost:3000 이라 가입 확인 메일이 죽어 있던 문제)
+
+  ★무엇을 고치는가
+    보호자 앱 이메일 가입은 "메일의 링크를 누른 뒤 로그인" 흐름인데, Supabase Site URL 이
+    개발용 http://localhost:3000 으로 남아 있어 ★그 링크가 죽은 주소로 갔다★.
+    → Site URL 을 이 페이지로 바꾸면, 링크를 누른 사람이 "확인됐습니다"를 보고 앱으로 돌아간다.
+
+  ★이 페이지가 하는 일은 안내뿐이다(인증 자체는 서버가 이미 끝냈다).
+    · 주소 조각(#access_token=…)이 있으면 = 확인 성공 → 안내 + 앱 열기
+    · #error=… 이면 = 링크 만료·재사용 → 사람 말로 사유와 다음 행동
+    · 아무것도 없으면 = 직접 들어온 경우 → 이 페이지의 용도만 설명
+  ★토큰은 ★즉시 주소창에서 지운다★ — 브라우저 방문기록·공유에 남으면 안 된다.
+    이 페이지는 토큰을 저장하지도, 어디로 보내지도 않는다.
+============================================================================ -->
+<style>
+  :root{--teal:#17857A;--ink:#1a2b32;--sub:#5b7078;--line:#dbe6e4;--bg:#f4f8f7;--card:#fff;
+        --good:#0e7490;--amber:#b45309;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);
+       line-height:1.6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+        padding:36px 30px;max-width:440px;width:100%;text-align:center}
+  .mark{width:64px;height:64px;border-radius:50%;margin:0 auto 18px;display:flex;
+        align-items:center;justify-content:center;font-size:30px}
+  .mark.ok{background:#e6f4ef;color:#15803d}
+  .mark.warn{background:#fdf3e6;color:var(--amber)}
+  .mark.info{background:#eaf2f4;color:var(--teal)}
+  h1{font-size:21px;margin-bottom:10px;color:var(--ink)}
+  p{font-size:15px;color:var(--sub);margin-bottom:8px}
+  .steps{text-align:left;background:#f7fbfa;border:1px solid #e3efec;border-radius:10px;
+         padding:14px 18px;margin:18px 0 6px;font-size:14.5px;color:var(--ink)}
+  .steps b{color:var(--teal)}
+  a.btn{display:block;margin-top:20px;background:var(--teal);color:#fff;text-decoration:none;
+        border-radius:10px;padding:14px;font-size:16px;font-weight:600}
+  a.btn.ghost{background:#fff;color:var(--teal);border:1px solid var(--line);margin-top:10px;font-weight:500}
+  .foot{margin-top:22px;font-size:12.5px;color:var(--sub)}
+  .foot a{color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="mark info" id="mark">✉</div>
+  <h1 id="title">확인 중입니다…</h1>
+  <p id="msg">잠시만 기다려 주세요.</p>
+  <div id="extra"></div>
+  <div class="foot">텔로스 케어 · <a href="/">www.telos.it.kr</a></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var APP_DEEPLINK = "naoncareguardian://login-callback";
+
+  function $(id){ return document.getElementById(id); }
+  function set(markClass, markChar, title, msg, extraHtml){
+    $("mark").className = "mark " + markClass;
+    $("mark").textContent = markChar;
+    $("title").textContent = title;
+    $("msg").textContent = msg;
+    $("extra").innerHTML = extraHtml || "";
+  }
+
+  // 주소 조각·질의문자열 양쪽에서 결과를 읽는다(GoTrue 가 상황에 따라 다르게 붙인다).
+  var hash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+  var query = new URLSearchParams(location.search || "");
+  function pick(k){ return hash.get(k) || query.get(k); }
+
+  var accessToken = pick("access_token");
+  var errCode = pick("error_code") || pick("error");
+  var errDesc = pick("error_description") || "";
+  var type = pick("type") || "";
+
+  // ★토큰·오류를 읽은 즉시 주소창을 청소한다(방문기록·화면 공유에 남지 않게).
+  if (location.hash || location.search) {
+    history.replaceState(null, "", location.pathname);
+  }
+
+  var appBtn = '<a class="btn" href="' + APP_DEEPLINK + '">보호자 앱 열기</a>' +
+               '<a class="btn ghost" href="/">텔로스 홈페이지로</a>';
+
+  if (accessToken) {
+    set("ok", "✓", "이메일 확인이 끝났습니다",
+        "이제 보호자 앱에서 로그인하실 수 있어요.",
+        '<div class="steps">① 아래 <b>보호자 앱 열기</b>를 누르거나, 휴대폰에서 <b>텔로스 케어 보호자</b> 앱을 실행하세요.<br>' +
+        "② 가입하신 <b>이메일과 비밀번호</b>로 로그인하시면 됩니다.</div>" + appBtn);
+  } else if (errCode) {
+    var expired = /expired|otp_expired/i.test(String(errCode) + " " + errDesc);
+    var used = /already|used|invalid/i.test(String(errCode) + " " + errDesc);
+    set("warn", "!", expired ? "링크 사용 기한이 지났습니다"
+                   : used ? "이미 사용한 링크입니다"
+                          : "링크를 확인하지 못했습니다",
+        expired ? "메일로 받은 확인 링크는 일정 시간이 지나면 쓸 수 없게 됩니다."
+                : used ? "이 링크는 이미 한 번 쓰였습니다. 확인이 끝났다면 그대로 로그인하시면 됩니다."
+                       : "링크가 올바르지 않거나 만료됐습니다.",
+        '<div class="steps">먼저 <b>앱에서 로그인</b>을 해 보세요. 이미 확인이 끝나 있으면 그대로 들어가집니다.<br>' +
+        "그래도 안 되면 앱에서 <b>다시 가입</b>하시면 새 확인 메일이 갑니다.</div>" + appBtn);
+  } else {
+    set("info", "✉", "이메일 확인 페이지입니다",
+        "가입하실 때 받으신 메일의 링크를 눌러 주세요.",
+        '<div class="steps">이 페이지는 <b>메일 속 링크를 눌렀을 때</b> 확인 결과를 알려 드리는 곳입니다. ' +
+        "직접 들어오셨다면 메일함에서 텔로스 케어 확인 메일을 찾아 링크를 눌러 주세요.</div>" + appBtn);
+  }
+})();
+</script>
+</body>
+</html>
