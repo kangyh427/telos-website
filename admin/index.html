@@ -79,6 +79,10 @@
   input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .note{font-size:12px;color:var(--sub);margin-top:10px;line-height:1.6}
+  .sechead{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap}
+  .sechead .csv{flex:0 0 auto}
+  .tag{display:inline-block;background:#fff7e6;border:1px solid #f0e0c0;color:#8a5a10;
+       border-radius:6px;padding:2px 8px;font-size:12px;margin-left:6px;vertical-align:middle}
   #login{max-width:420px;margin:10vh auto;background:var(--card);border:1px solid var(--line);
          border-radius:14px;padding:30px}
   #login h2{color:var(--teal);font-size:19px;margin-bottom:6px}
@@ -294,6 +298,113 @@
     var n = Number(w.connection_obv);
     return n > 0 ? "up" : (n < 0 ? "down" : "flat");
   }
+  function noteOf(id){
+    var n = (DATA.notes || []).filter(function(r){ return r.elderly_id === id; })[0];
+    return n ? (n.note || "") : "";
+  }
+
+  // ── CSV 내려받기 ─────────────────────────────────────────────────────
+  //   ★null 은 ★빈 칸★ 으로 쓴다(0 으로 쓰면 받는 사람이 "측정했는데 0"으로 읽는다 —
+  //     화면의 "측정 중"과 같은 원칙을 파일에서도 지킨다).
+  //   ★맨 앞에 BOM 을 붙인다 — 없으면 엑셀이 한글을 깨뜨린다(실사용에서 가장 흔한 사고).
+  //   ★값에 쉼표·따옴표·줄바꿈이 있어도 깨지지 않게 RFC4180 방식으로 감싼다.
+  function csvCell(v){
+    if (v === null || v === undefined) return "";
+    var s = String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function downloadCsv(filename, headers, rows){
+    var lines = [headers.map(csvCell).join(",")];
+    rows.forEach(function(r){ lines.push(r.map(csvCell).join(",")); });
+    var blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+  function today(){ return new Date().toISOString().slice(0, 10); }
+  function csvBtn(kind, arg){
+    return '<button class="csv" data-csv="' + esc(kind) + '"' +
+           (arg ? ' data-csvarg="' + esc(arg) + '"' : "") + ">CSV 내려받기</button>";
+  }
+  function bindCsv(){
+    Array.prototype.forEach.call(el("view").querySelectorAll("[data-csv]"), function(b){
+      b.addEventListener("click", function(){
+        exportCsv(b.getAttribute("data-csv"), b.getAttribute("data-csvarg"));
+      });
+    });
+  }
+  function exportCsv(kind, arg){
+    var rs = roster();
+    if (kind === "elders") {
+      downloadCsv("텔로스_어르신목록_" + today() + ".csv",
+        ["가명", "동네", "메모", "최근 주차", "그 주 기록일", "관계망 접촉(분/일)", "이번 주 추세(OBV)", "비교된 축", "마지막 데이터"],
+        Object.keys(rs).map(function(id){
+          var w = latestWeek(id), ds = dailyOf(id);
+          return [rs[id].alias, rs[id].region, noteOf(id),
+                  w ? w.week_index : null, w ? w.observed_days : null,
+                  w ? w.relational_min_avg : null, w ? w.connection_obv : null,
+                  w ? (w.valid_axis_count || 0) + "/3" : null,
+                  ds.length ? ds[ds.length - 1].metric_date : null];
+        }));
+    } else if (kind === "company") {
+      downloadCsv("텔로스_회사주간집계_" + today() + ".csv",
+        ["주 시작", "어르신 수", "관계망 접촉 합(분)", "미디어 합(분)", "부재 합(분)", "사용시간 합(분)", "대화 세션 합(회)", "이동거리 합(m)"],
+        (DATA.company || []).map(function(r){
+          return [r.week_start, r.elderly_count, r.total_relational_contact_min, r.total_media_min,
+                  r.total_absence_min, r.total_usage_minutes, r.total_conversation_sessions, r.total_travel_distance_m];
+        }));
+    } else if (kind === "elderWeeks") {
+      var m = rs[arg];
+      downloadCsv("텔로스_" + (m ? m.alias : "어르신") + "_주차_" + today() + ".csv",
+        ["가명", "주차", "주 시작", "주 끝", "기록일", "관계망(분/일)", "관계망 변화%", "대화(분/일)", "대화 변화%",
+         "이동(m/일)", "이동 변화%", "누적 추세(OBV)", "비교된 축"],
+        weeksOf(arg).map(function(r){
+          return [m ? m.alias : arg, r.week_index, r.week_start, r.week_end, r.observed_days,
+                  r.relational_min_avg, r.relational_delta_pct, r.conversation_min_avg, r.conversation_delta_pct,
+                  r.mobility_m_avg, r.mobility_delta_pct, r.connection_obv, (r.valid_axis_count || 0) + "/3"];
+        }));
+    } else if (kind === "elderDaily") {
+      var m2 = rs[arg];
+      downloadCsv("텔로스_" + (m2 ? m2.alias : "어르신") + "_일별_" + today() + ".csv",
+        ["가명", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)", "어르신 발화(분)", "사용시간(분)",
+         "이동거리(m)", "집밖 체류(분)", "기분평균", "기분 긍정비율",
+         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
+        dailyOf(arg).map(function(r){
+          return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
+                  r.media_minutes, r.absence_minutes, r.elder_utterance_minutes, r.active_span_minutes,
+                  r.travel_distance_m, r.away_from_home_minutes, r.mood_score_avg, r.mood_positive_ratio,
+                  r.companion_alone_windows, r.companion_one_windows, r.companion_multiple_windows,
+                  r.companion_undetermined_windows, r.prosody_utterance_count, r.prosody_low_activation];
+        }));
+    } else if (kind === "week") {
+      downloadCsv("텔로스_" + arg + "주_어르신별_" + today() + ".csv",
+        ["주 시작", "가명", "동네", "메모", "기록일", "관계망 접촉(분)", "미디어(분)", "사용시간(분)",
+         "어르신 발화(건)", "대화 세션(회)", "이동거리(m)", "기분평균"],
+        (DATA.elderly || []).filter(function(r){ return r.week_start === arg; }).map(function(r){
+          var m3 = rs[r.elderly_id];
+          return [r.week_start, m3 ? m3.alias : r.elderly_id, m3 ? m3.region : null, noteOf(r.elderly_id),
+                  r.days_reported, r.relational_contact_min, r.media_min, r.usage_minutes,
+                  r.elder_utterances, r.conversation_sessions, r.travel_distance_m, r.mood_avg];
+        }));
+    } else if (kind === "all") {
+      // 전체 원지표(최근 14일) — 어르신별 일별 전량. IR·분석용 한 방 내려받기.
+      downloadCsv("텔로스_전체원지표_최근14일_" + today() + ".csv",
+        ["가명", "동네", "메모", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)", "어르신 발화(분)",
+         "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "기분평균", "기분 긍정비율",
+         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
+        (DATA.daily || []).map(function(r){
+          var m4 = rs[r.elderly_id];
+          return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, noteOf(r.elderly_id), r.metric_date,
+                  r.face_to_face_minutes, r.phone_call_minutes, r.media_minutes, r.absence_minutes,
+                  r.elder_utterance_minutes, r.active_span_minutes, r.travel_distance_m, r.away_from_home_minutes,
+                  r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
+                  r.companion_multiple_windows, r.companion_undetermined_windows,
+                  r.prosody_utterance_count, r.prosody_low_activation];
+        }));
+    }
+  }
 
   // ── 라우팅 ───────────────────────────────────────────────────────────
   function go(r){ route = r; renderRoute(); window.scrollTo(0, 0); }
@@ -338,18 +449,21 @@
       "</div>";
 
     // 어르신 목록(클릭 가능)
-    html += "<section><h2>어르신 목록</h2>" +
-      '<div class="desc">한 줄 = 한 분. 누르면 그분의 추세·일별 기록 상세로 들어갑니다. 가명·동네만 표시합니다(실명 없음).</div>' +
-      '<div class="tablewrap"><table><tr><th>어르신</th><th>최근 주차</th><th>그 주 기록</th>' +
+    html += '<section><div class="sechead"><div><h2>어르신 목록</h2>' +
+      '<div class="desc">한 줄 = 한 분. 누르면 그분의 추세·일별 기록 상세로 들어갑니다. 가명·동네·메모만 표시합니다(실명 없음).</div></div>' +
+      csvBtn("elders") + "</div>" +
+      '<div class="tablewrap"><table><tr><th>어르신</th><th>메모</th><th>최근 주차</th><th>그 주 기록</th>' +
       "<th>관계망 접촉</th><th>이번 주 추세</th><th>비교된 축</th><th>마지막 데이터</th><th>상태</th></tr>";
     ids.sort(function(a,b){ return rs[a].alias.localeCompare(rs[b].alias); }).forEach(function(id){
-      var w = latestWeek(id), ds = dailyOf(id);
+      var w = latestWeek(id), ds = dailyOf(id), nt = noteOf(id);
       var last = ds.length ? ds[ds.length - 1].metric_date : null;
       var status = ds.length === 0
         ? '<span class="warn">데이터 없음</span>'
         : (w ? '<span class="muted">정상</span>' : '<span class="warn">주차 미산출</span>');
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: id })) + "'>" +
         "<td><b>" + esc(rs[id].alias) + "</b>" + (rs[id].region ? ' <span class="muted">· ' + esc(rs[id].region) + "</span>" : "") + "</td>" +
+        '<td style="text-align:left;white-space:normal;max-width:260px">' +
+          (nt ? esc(nt) : '<span class="muted">—</span>') + "</td>" +
         "<td>" + (w ? w.week_index + "주차" : '<span class="muted">—</span>') + "</td>" +
         "<td>" + (w ? w.observed_days + "일" : '<span class="muted">—</span>') + "</td>" +
         "<td>" + (w ? fmt(w.relational_min_avg, "분/일") : '<span class="muted">—</span>') + "</td>" +
@@ -369,8 +483,9 @@
       obvSvg(ids.map(function(id){ return { id: id, rows: weeksOf(id) }; })) + "</section>";
 
     // 회사 집계(주차 클릭 가능)
-    html += "<section><h2>회사 전체 · 주간 집계" + '<span class="whose">달력 주(월요일 시작)</span></h2>' +
-      '<div class="desc">참여 어르신 <b>전원의 합계</b>입니다. 주차를 누르면 그 주에 각 어르신이 어땠는지 볼 수 있어요.</div>' +
+    html += '<section><div class="sechead"><div><h2>회사 전체 · 주간 집계' + '<span class="whose">달력 주(월요일 시작)</span></h2>' +
+      '<div class="desc">참여 어르신 <b>전원의 합계</b>입니다. 주차를 누르면 그 주에 각 어르신이 어땠는지 볼 수 있어요.</div></div>' +
+      csvBtn("company") + "</div>" +
       '<div class="tablewrap"><table><tr><th>주 시작</th><th>어르신</th><th>관계망 접촉 합</th>' +
       "<th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th></tr>";
     var comp = (DATA.company || []).slice().reverse();
@@ -383,9 +498,15 @@
     });
     html += "</table></div></section>";
 
+    // 전체 원지표 한 번에 내려받기(IR·분석용)
+    html += '<section><div class="sechead"><div><h2>전체 원지표 내려받기</h2>' +
+      '<div class="desc">최근 14일 · 어르신별 일별 원지표 전량을 CSV 한 장으로 받습니다. ' +
+      '<b>못 잰 값은 빈 칸</b>입니다(0이 아닙니다). 엑셀에서 한글이 깨지지 않도록 저장합니다.</div></div>' +
+      csvBtn("all") + "</div></section>";
+
     html += adminSection();
     el("view").innerHTML = html;
-    bindGo(); bindAdmin();
+    bindGo(); bindAdmin(); bindCsv();
   }
 
   function latestDataDate(){
@@ -409,6 +530,17 @@
             (me.region ? ' <span class="muted" style="font-size:14px">· ' + esc(me.region) + "</span>" : "") + "</h2>";
     html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">가명·동네만 표시합니다. 실명·전화번호·대화 원문·정확한 위치는 이 콘솔에 오지 않습니다.</div>';
 
+    // ★이름표(메모) — 가명만으로는 누구인지 떠올리기 어려워서 운영자가 자기 말로 단다.
+    html += '<section><h2>이름표<span class="tag">이 콘솔에만 보입니다</span></h2>' +
+      '<div class="desc">가명("' + esc(me.alias) + '")만으로 기억하기 어려울 때 쓰는 메모입니다. ' +
+      '어르신 앱·보호자 앱·복지사 화면에는 나오지 않습니다.<br>' +
+      '<b>★실명·전화번호는 적지 마세요</b> — 적는 순간 가명으로 지켜 온 경계가 깨집니다(200자까지).</div>' +
+      '<div class="row"><input id="noteInput" type="text" maxlength="200" placeholder="예: 종촌동 첫 시범 · 딸이 보호자 · 화요일 경로당" ' +
+      'style="flex:1;min-width:280px" value="' + esc(noteOf(id)) + '">' +
+      '<button class="primary" id="saveNoteBtn">저장</button>' +
+      '<button id="clearNoteBtn">지우기</button></div>' +
+      '<div id="noteMsg" style="font-size:13px;margin-top:8px"></div></section>';
+
     html += '<div class="cards">' +
       cardHtml("이번 주 추세", w && w.connection_obv !== null ? (Number(w.connection_obv) > 0 ? "+" : "") + Math.round(Number(w.connection_obv)) : "측정 중",
                w ? w.week_index + "주차 · 비교된 축 " + (w.valid_axis_count || 0) + "/3" : "주차 미산출") +
@@ -428,8 +560,9 @@
       elderAxisSvg(ws) + "</section>";
 
     // 이 사람만의 주차 표
-    html += "<section><h2>주차별 상세" + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-      '<div class="desc">각 축의 하루 평균과, 직전 주 대비 변화율입니다. “—”는 비교할 지난주 값이 없었다는 뜻입니다.</div>' +
+    html += '<section><div class="sechead"><div><h2>주차별 상세' + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
+      '<div class="desc">각 축의 하루 평균과, 직전 주 대비 변화율입니다. “—”는 비교할 지난주 값이 없었다는 뜻입니다.</div></div>' +
+      csvBtn("elderWeeks", id) + "</div>" +
       '<div class="tablewrap"><table><tr><th>주차</th><th>기간</th><th>기록일</th>' +
       "<th>관계망(분/일)</th><th>변화</th><th>대화(분/일)</th><th>변화</th><th>이동(m/일)</th><th>변화</th><th>누적 추세</th></tr>";
     if (!ws.length) html += '<tr><td colspan="10" class="muted">아직 주차 데이터가 없습니다</td></tr>';
@@ -443,8 +576,9 @@
     html += "</table></div></section>";
 
     // 이 사람만의 일별
-    html += "<section><h2>최근 14일 · 일별 기록" + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-      '<div class="desc">진한 색 = 대면+통화(관계망), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님).</div>' +
+    html += '<section><div class="sechead"><div><h2>최근 14일 · 일별 기록' + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
+      '<div class="desc">진한 색 = 대면+통화(관계망), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님).</div></div>' +
+      csvBtn("elderDaily", id) + "</div>" +
       dailySvg(ds) +
       '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th><th>미디어</th>' +
       "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>기분평균</th></tr>";
@@ -475,7 +609,33 @@
     }
 
     el("view").innerHTML = html;
-    bindGo();
+    bindGo(); bindCsv(); bindNote(id);
+  }
+
+  // 이름표 저장/지우기 — 저장 후 데이터를 다시 받아 목록·CSV 에도 즉시 반영한다.
+  function bindNote(id){
+    var save = el("saveNoteBtn"), clear = el("clearNoteBtn"), input = el("noteInput");
+    if (!save || !input) return;
+    function put(text){
+      rpc("console_set_elderly_note", { p_elderly_id: id, p_note: text }).then(function(r){
+        var msg = el("noteMsg"); if (!msg) return;
+        if (r.ok) {
+          msg.style.color = "#0e7490";
+          msg.textContent = text ? "저장했습니다." : "지웠습니다.";
+          load();   // 서버에서 다시 받아 목록·CSV 에도 반영
+        } else {
+          var raw = (r.body && (r.body.message || r.body.hint)) || r.raw || "";
+          msg.style.color = "#b91c1c";
+          msg.textContent = raw.indexOf("NOTE_TOO_LONG") >= 0 ? "메모가 너무 깁니다(200자까지)."
+                          : raw.indexOf("NOT_CONSOLE_ADMIN") >= 0 ? "권한이 없습니다."
+                          : "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+        setTimeout(function(){ if (msg) msg.textContent = ""; }, 5000);
+      });
+    }
+    save.addEventListener("click", function(){ put(input.value.trim()); });
+    input.addEventListener("keydown", function(e){ if (e.key === "Enter") put(input.value.trim()); });
+    if (clear) clear.addEventListener("click", function(){ input.value = ""; put(""); });
   }
 
   function pct(v){
@@ -506,16 +666,19 @@
         "</div>";
     }
 
-    html += "<section><h2>어르신별 내역" + '<span class="whose">' + esc(weekStart) + " 주</span></h2>" +
-      '<div class="desc">한 줄을 누르면 그 어르신의 전체 상세로 들어갑니다.</div>' +
-      '<div class="tablewrap"><table><tr><th>어르신</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
+    html += '<section><div class="sechead"><div><h2>어르신별 내역' + '<span class="whose">' + esc(weekStart) + " 주</span></h2>" +
+      '<div class="desc">한 줄을 누르면 그 어르신의 전체 상세로 들어갑니다.</div></div>' +
+      csvBtn("week", weekStart) + "</div>" +
+      '<div class="tablewrap"><table><tr><th>어르신</th><th>메모</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
       "<th>사용시간</th><th>대화 세션</th><th>이동거리</th><th>기분평균</th></tr>";
-    if (!rows.length) html += '<tr><td colspan="8" class="muted">이 주에는 기록이 없습니다</td></tr>';
+    if (!rows.length) html += '<tr><td colspan="9" class="muted">이 주에는 기록이 없습니다</td></tr>';
     rows.forEach(function(r){
-      var m = rs[r.elderly_id];
+      var m = rs[r.elderly_id], nt = noteOf(r.elderly_id);
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.elderly_id })) + "'>" +
         "<td><b>" + esc(m ? m.alias : String(r.elderly_id).slice(0,8)) + "</b>" +
         (m && m.region ? ' <span class="muted">· ' + esc(m.region) + "</span>" : "") + "</td>" +
+        '<td style="text-align:left;white-space:normal;max-width:220px">' +
+          (nt ? esc(nt) : '<span class="muted">—</span>') + "</td>" +
         "<td>" + fmt(r.days_reported, "일") + "</td><td>" + fmt(r.relational_contact_min, "분") + "</td><td>" +
         fmt(r.media_min, "분") + "</td><td>" + fmt(r.usage_minutes, "분") + "</td><td>" +
         fmt(r.conversation_sessions, "회") + "</td><td>" + fmt(r.travel_distance_m, "m") + "</td><td>" +
@@ -524,7 +687,7 @@
     html += "</table></div></section>";
 
     el("view").innerHTML = html;
-    bindGo();
+    bindGo(); bindCsv();
   }
   function fmtPlainNum(v){ var n = num(v); return n === null ? "측정 중" : String(Math.round(n)); }
 
