@@ -83,6 +83,26 @@
   .sechead .csv{flex:0 0 auto}
   .tag{display:inline-block;background:#fff7e6;border:1px solid #f0e0c0;color:#8a5a10;
        border-radius:6px;padding:2px 8px;font-size:12px;margin-left:6px;vertical-align:middle}
+  select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;
+         font-family:inherit;background:var(--card);color:var(--ink);cursor:pointer}
+  /* 경보 */
+  .alerts{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+  .alert{display:flex;gap:12px;align-items:flex-start;border-radius:10px;padding:13px 16px;
+         border:1px solid;cursor:pointer}
+  .alert:hover{filter:brightness(0.985)}
+  .alert.hi{background:#fdf2f2;border-color:#f0cccc}
+  .alert.mid{background:#fff8ec;border-color:#f0e0c0}
+  .alert.low{background:#f4f7f8;border-color:#dde5e8}
+  .alert .badge{flex:0 0 auto;font-size:11.5px;font-weight:700;border-radius:6px;padding:3px 9px;
+                margin-top:1px;white-space:nowrap}
+  .alert.hi .badge{background:#b91c1c;color:#fff}
+  .alert.mid .badge{background:#b45309;color:#fff}
+  .alert.low .badge{background:#7a8f96;color:#fff}
+  .alert .body{flex:1;min-width:0}
+  .alert .t{font-size:14px;font-weight:600;margin-bottom:2px}
+  .alert .d{font-size:12.5px;color:var(--sub);line-height:1.55}
+  .ok-banner{background:#eef8f4;border:1px solid #cde8db;color:#166534;border-radius:10px;
+             padding:13px 16px;font-size:13.5px;margin-bottom:20px}
   #login{max-width:420px;margin:10vh auto;background:var(--card);border:1px solid var(--line);
          border-radius:14px;padding:30px}
   #login h2{color:var(--teal);font-size:19px;margin-bottom:6px}
@@ -120,6 +140,14 @@
   <h1 id="homeBtn">텔로스 케어 · 관리자 콘솔</h1>
   <span class="live"><span class="dot" id="liveDot"></span><span id="liveText">연결 중…</span></span>
   <span class="spacer"></span>
+  <select id="rangeSelect" title="일별 기록을 몇 일치까지 볼지">
+    <option value="7">최근 7일</option>
+    <option value="14">최근 14일</option>
+    <option value="30">최근 30일</option>
+    <option value="60">최근 60일</option>
+    <option value="90">최근 90일</option>
+    <option value="180">최근 180일</option>
+  </select>
   <span class="who" id="whoText"></span>
   <button id="refreshBtn">지금 새로고침</button>
   <button id="logoutBtn">로그아웃</button>
@@ -235,8 +263,19 @@
     });
   }
 
+  // ★기간은 취향(비밀 아님)이라 localStorage 에 남긴다 — 탭을 닫아도 다음에 그대로 열린다.
+  function rangeDays(){
+    var v = Number(localStorage.getItem("telos_range_days"));
+    return [7, 14, 30, 60, 90, 180].indexOf(v) >= 0 ? v : 14;
+  }
+  function setRangeDays(v){ localStorage.setItem("telos_range_days", String(v)); }
+
   function load(){
-    apiFetch(DASH, { method: "POST" })
+    apiFetch(DASH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ days: rangeDays() }),
+    })
       .then(function(r){
         if (r.status === 403) {
           return r.json().then(function(j){
@@ -252,6 +291,8 @@
       .then(function(d){
         DATA = d; showApp();
         el("whoText").textContent = d.viewer || "";
+        // ★서버가 실제 적용한 기간으로 선택기를 맞춘다(요청과 다르면 화면이 거짓말하지 않게).
+        if (d.range_days) el("rangeSelect").value = String(d.range_days);
         el("liveDot").className = "dot on";
         el("liveText").textContent = "실측 연결됨 · " + new Date().toLocaleTimeString("ko-KR") + " (60초마다 자동)";
         renderRoute();
@@ -301,6 +342,79 @@
   function noteOf(id){
     var n = (DATA.notes || []).filter(function(r){ return r.elderly_id === id; })[0];
     return n ? (n.note || "") : "";
+  }
+
+  // ── 경보 ─────────────────────────────────────────────────────────────
+  //  ★설계 원칙 3가지(이걸 어기면 경보는 곧 무시된다)
+  //   ① ★근거가 얇으면 등급을 낮춘다★ — 기록 이틀·비교 축 1개로 나온 "급감"을 빨간 경보로
+  //      띄우면, 사람은 며칠 만에 경보 전체를 무시하게 된다(늑대 소년). 얇으면 회색으로 내린다.
+  //   ② ★못 잰 것을 나쁜 것으로 세지 않는다★ — null 은 "0"이 아니다. 측정 실패는 '데이터 유입'
+  //      문제로만 알리고, 연결이 나빠졌다고 말하지 않는다.
+  //   ③ ★무엇을 하면 되는지 함께 적는다★ — 원인이 기기인지 사람인지에 따라 할 일이 다르다.
+  //  ※ 임계값은 운영하며 조정할 대상이다(지금은 초기값). 여기 한곳에만 둔다.
+  var ALERT = {
+    silentDays: 3,        // 마지막 데이터가 이 일수 이상 전 → 주의
+    silentDaysHigh: 7,    // 이 이상이면 위험
+    dropObv: -30,         // 이번 주 추세가 이 값 이하 → 급감 후보
+    thinDays: 3,          // 그 주 기록일이 이 값 미만이면 근거 얇음
+    thinAxes: 2,          // 비교된 축이 이 값 미만이면 근거 얇음
+  };
+  function daysBetween(dateStr){
+    if (!dateStr) return null;
+    var d = new Date(dateStr + "T00:00:00");
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    return Math.round((t - d) / 86400000);
+  }
+  function buildAlerts(){
+    var rs = roster(), out = [];
+    Object.keys(rs).forEach(function(id){
+      var name = rs[id].alias + (rs[id].region ? " · " + rs[id].region : "");
+      var ds = dailyOf(id), w = latestWeek(id);
+
+      // ① 데이터가 한 번도 안 왔다 — 기기가 아예 안 돌고 있다는 뜻.
+      if (!ds.length) {
+        out.push({ sev: "hi", id: id, t: name + " — 데이터가 한 번도 오지 않았습니다",
+          d: "등록은 됐지만 기기에서 지표가 0건입니다. 기기 전원·인터넷 연결·앱 동의 화면을 확인해 주세요." });
+        return;
+      }
+      // ② 오다가 끊겼다.
+      var gap = daysBetween(ds[ds.length - 1].metric_date);
+      if (gap !== null && gap >= ALERT.silentDays) {
+        out.push({
+          sev: gap >= ALERT.silentDaysHigh ? "hi" : "mid", id: id,
+          t: name + " — " + gap + "일째 데이터가 없습니다",
+          d: "마지막 기록이 " + ds[ds.length - 1].metric_date + "입니다. 기기가 꺼졌거나 인터넷이 끊겼을 수 있어요.",
+        });
+      }
+      // ③ 연결 급감 — ★근거 두께에 따라 등급을 나눈다(원칙 ①).
+      if (w && num(w.connection_obv) !== null && num(w.connection_obv) <= ALERT.dropObv) {
+        var thin = (w.observed_days || 0) < ALERT.thinDays || (w.valid_axis_count || 0) < ALERT.thinAxes;
+        out.push({
+          sev: thin ? "low" : "mid", id: id,
+          t: name + " — 지난주보다 연결이 크게 줄었습니다 (" + Math.round(num(w.connection_obv)) + ")",
+          d: thin
+            ? "다만 근거가 얇습니다(기록 " + (w.observed_days || 0) + "일 · 비교된 축 " +
+              (w.valid_axis_count || 0) + "/3). 숫자보다 며칠 더 지켜보는 편이 낫습니다."
+            : "기록 " + (w.observed_days || 0) + "일 · 비교된 축 " + (w.valid_axis_count || 0) +
+              "/3 로 비교했습니다. 어떤 축이 줄었는지 상세에서 확인해 보세요.",
+        });
+      }
+    });
+    // 위험 → 주의 → 정보 순.
+    var rank = { hi: 0, mid: 1, low: 2 };
+    return out.sort(function(a, b){ return rank[a.sev] - rank[b.sev]; });
+  }
+  function alertsHtml(){
+    var list = buildAlerts();
+    if (!list.length) {
+      return '<div class="ok-banner">지금 살펴볼 것이 없습니다 — 데이터가 끊긴 기기도, 크게 줄어든 분도 없습니다.</div>';
+    }
+    var badge = { hi: "위험", mid: "주의", low: "참고" };
+    return '<div class="alerts">' + list.map(function(a){
+      return '<div class="alert ' + a.sev + '" data-go=\'' + esc(JSON.stringify({ view: "elder", id: a.id })) + "'>" +
+        '<span class="badge">' + badge[a.sev] + '</span><div class="body">' +
+        '<div class="t">' + esc(a.t) + '</div><div class="d">' + esc(a.d) + "</div></div></div>";
+    }).join("") + "</div>";
   }
 
   // ── CSV 내려받기 ─────────────────────────────────────────────────────
@@ -389,8 +503,8 @@
                   r.elder_utterances, r.conversation_sessions, r.travel_distance_m, r.mood_avg];
         }));
     } else if (kind === "all") {
-      // 전체 원지표(최근 14일) — 어르신별 일별 전량. IR·분석용 한 방 내려받기.
-      downloadCsv("텔로스_전체원지표_최근14일_" + today() + ".csv",
+      // 전체 원지표(선택 기간) — 어르신별 일별 전량. IR·분석용 한 방 내려받기.
+      downloadCsv("텔로스_전체원지표_최근" + (DATA.range_days || 14) + "일_" + today() + ".csv",
         ["가명", "동네", "메모", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)", "어르신 발화(분)",
          "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
@@ -440,6 +554,9 @@
     html += '<div class="purpose">이 콘솔이 답하는 질문: <b>“우리 서비스가 어르신 한 분 한 분의 사회적 연결을 늘리고 있는가?”</b><br>' +
             '아래 목록에서 어르신을 누르면 그분 한 명의 상세로 들어갑니다. 회사 집계 표의 주차를 누르면 그 주의 어르신별 내역이 나옵니다.</div>';
 
+    // ★경보를 맨 위에 — 화면을 열자마자 "지금 손봐야 할 것"이 먼저 보여야 한다.
+    html += alertsHtml();
+
     html += '<div class="cards">' +
       cardHtml("등록 어르신", ids.length + "명", "가명 기준") +
       cardHtml("데이터 들어오는 기기", reporting + "명", (ids.length - reporting) + "명은 유입 없음") +
@@ -447,6 +564,9 @@
                "측정 중 " + buckets.unknown + "명 · 각자 지난주 대비") +
       cardHtml("최근 데이터", latestDataDate() || "없음", "가장 최근 유입일") +
       "</div>";
+
+    html += '<div class="note" style="margin:-8px 0 16px">일별 기록은 <b>' + rangeLabel() +
+            '</b> 기준입니다(오른쪽 위에서 바꿀 수 있어요). 주차·회사 집계는 기간 선택과 무관하게 전체를 보여 줍니다.</div>';
 
     // 어르신 목록(클릭 가능)
     html += '<section><div class="sechead"><div><h2>어르신 목록</h2>' +
@@ -500,7 +620,7 @@
 
     // 전체 원지표 한 번에 내려받기(IR·분석용)
     html += '<section><div class="sechead"><div><h2>전체 원지표 내려받기</h2>' +
-      '<div class="desc">최근 14일 · 어르신별 일별 원지표 전량을 CSV 한 장으로 받습니다. ' +
+      '<div class="desc"><b>' + rangeLabel() + '</b> · 어르신별 일별 원지표 전량을 CSV 한 장으로 받습니다. ' +
       '<b>못 잰 값은 빈 칸</b>입니다(0이 아닙니다). 엑셀에서 한글이 깨지지 않도록 저장합니다.</div></div>' +
       csvBtn("all") + "</div></section>";
 
@@ -513,6 +633,8 @@
     var all = (DATA.daily || []).map(function(r){ return r.metric_date; }).sort();
     return all.length ? all[all.length - 1] : null;
   }
+  /** 서버가 실제 적용한 기간 문구(요청값이 아니라 받은 값으로 쓴다). */
+  function rangeLabel(){ return "최근 " + (DATA && DATA.range_days ? DATA.range_days : 14) + "일"; }
   function cardHtml(k, v, s){
     return '<div class="card"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) +
            '</div><div class="s">' + esc(s) + "</div></div>";
@@ -576,7 +698,7 @@
     html += "</table></div></section>";
 
     // 이 사람만의 일별
-    html += '<section><div class="sechead"><div><h2>최근 14일 · 일별 기록' + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
+    html += '<section><div class="sechead"><div><h2>' + rangeLabel() + ' · 일별 기록' + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
       '<div class="desc">진한 색 = 대면+통화(관계망), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님).</div></div>' +
       csvBtn("elderDaily", id) + "</div>" +
       dailySvg(ds) +
@@ -773,7 +895,7 @@
 
   // 한 사람의 일별 막대
   function dailySvg(ds){
-    if (!ds.length) return '<div class="muted" style="font-size:13px">최근 14일 기록이 없습니다</div>';
+    if (!ds.length) return '<div class="muted" style="font-size:13px">이 기간에는 기록이 없습니다</div>';
     var maxV = 10;
     ds.forEach(function(r){
       var rel = (num(r.face_to_face_minutes) || 0) + (num(r.phone_call_minutes) || 0);
@@ -870,6 +992,12 @@
   el("refreshBtn").addEventListener("click", load);
   el("homeBtn").addEventListener("click", function(){ go({ view: "overview" }); });
   el("logoutBtn").addEventListener("click", function(){ setSess(null); showLogin(null); });
+  el("rangeSelect").value = String(rangeDays());
+  el("rangeSelect").addEventListener("change", function(){
+    setRangeDays(Number(el("rangeSelect").value));
+    el("liveText").textContent = "기간 바꾸는 중…";
+    load();   // 기간이 바뀌면 서버에서 다시 받아 그 자리에서 갱신한다
+  });
 
   captureHashSession();
   if (sess()) load(); else showLogin(null);
