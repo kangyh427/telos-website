@@ -345,6 +345,69 @@
     return n ? (n.note || "") : "";
   }
 
+  // ── 기기 상태 (S508) ─────────────────────────────────────────────────
+  //  ★이 블록이 답하는 질문은 나머지와 다르다: "어르신이 어떻게 지내시는가"가 아니라
+  //    ★"그분의 기기가 돌고는 있는가"★ 다. 만든 것이 실제로 도는지 보는 자리다.
+  //  ★왜 필요한가(S507 실측): 하루에 조용한 고장 셋이 났는데 전부 로드맵상 완료 영역이었고
+  //    ★아무도 몰랐다★. 어르신이 겪는 증상은 하나다 — 불러도 대답이 없고 먼저 말도 안 건다.
+  //  ★★판정 규칙이 ★여기(콘솔)★ 에 있는 이유: 단말은 사실(숫자·예아니오)만 보낸다.
+  //    규칙을 앱에 두면 임계를 바꿀 때마다 ★220만 대에 앱 업데이트를 밀어야 한다★.
+  //    단말에도 같은 규칙의 판정기가 있지만 그것은 기기 자신의 로그용이고, ★정본은 이쪽★ 이다.
+  //  ★들어오는 값에 대화 내용·좌표는 없다 — 집 좌표는 있다/없다 한 칸뿐이다.
+  var DEVICE = {
+    deafMinutes: 24 * 60,   // 이만큼 아무것도 못 들었으면 듣고 있지 않다고 본다
+    staleDays: 2,           // 기기 상태 보고가 이 일수 이상 없으면 신호 자체가 끊긴 것
+  };
+  function healthOf(id){
+    return (DATA.device_health || []).filter(function(r){ return r.elderly_id === id; })
+      .sort(function(a, b){ return a.metric_date < b.metric_date ? -1 : 1; });
+  }
+  function latestHealth(id){
+    var h = healthOf(id);
+    return h.length ? h[h.length - 1] : null;
+  }
+  function agoLabel(minutes){
+    var m = num(minutes);
+    if (m === null) return null;
+    if (m < 60) return m + "분 전";
+    if (m < 60 * 48) return Math.floor(m / 60) + "시간 전";
+    return Math.floor(m / 1440) + "일 전";
+  }
+  // ★한 원인이 나머지를 설명하면 나머지를 문제라 부르지 않는다 —
+  //   동의를 안 하셨으면 청취가 꺼진 것이 정상이고, 청취를 꺼 두셨으면 안 들리는 것이 정상이다.
+  //   나란히 나열하면 기기 하나에 빨간불이 넷 켜지고 ★진짜 고장이 묻힌다★.
+  function deviceProblems(h){
+    if (!h) return [];
+    if (h.consent_granted === false) {
+      return [{ sev: "hi", t: "동의 없음",
+        d: "동의 화면에서 멈춰 있어 청취가 시작되지 않습니다. 어르신께 동의 절차를 안내해 주세요." }];
+    }
+    if (h.listening_desired === false) {
+      return [{ sev: "hi", t: "청취 꺼짐",
+        d: "어르신이 듣기를 끄셨거나 아직 켜지 않으셨습니다. 앱에서 다시 켜 드려야 합니다." }];
+    }
+    var out = [];
+    // ★null 을 괜찮음으로 접지 않는다 — 관측이 한 건도 없다는 것은 들은 적이 없다는 뜻이다.
+    var m = num(h.minutes_since_observation);
+    if (m === null) {
+      out.push({ sev: "hi", t: "들은 적이 없음",
+        d: "관측 기록이 한 건도 없습니다. 마이크 권한과 청취 서비스를 확인해 주세요." });
+    } else if (m > DEVICE.deafMinutes) {
+      out.push({ sev: "hi", t: Math.floor(m / 60) + "시간째 아무것도 못 들음",
+        d: "사람이 계신 집에서 하루 내내 아무 소리도 안 잡히는 일은 없습니다. 마이크가 죽었을 수 있어요." });
+    }
+    var deaths = num(h.mic_death_count);
+    if (deaths !== null && deaths > 0) {
+      out.push({ sev: "mid", t: "마이크가 " + deaths + "번 죽었다 살아남",
+        d: "앱이 스스로 되살렸지만 그동안은 돌봄이 멈춰 있었습니다. 다른 앱이 마이크를 자주 가져가는지 확인해 주세요." });
+    }
+    if (h.home_location_known === false) {
+      out.push({ sev: "mid", t: "집 좌표 없음",
+        d: "집을 몰라 먼저 말 걸기가 통째로 멈춥니다. 어르신 앱에서 주소를 다시 저장해 주세요(댁에서 저장해야 잡힙니다)." });
+    }
+    return out;
+  }
+
   // ── 경보 ─────────────────────────────────────────────────────────────
   //  ★설계 원칙 3가지(이걸 어기면 경보는 곧 무시된다)
   //   ① ★근거가 얇으면 등급을 낮춘다★ — 기록 이틀·비교 축 1개로 나온 "급감"을 빨간 경보로
@@ -399,6 +462,23 @@
             : "기록 " + (w.observed_days || 0) + "일 · 비교된 축 " + (w.valid_axis_count || 0) +
               "/3 로 비교했습니다. 어떤 축이 줄었는지 상세에서 확인해 보세요.",
         });
+      }
+
+      // ④ ★(S508) 기기가 스스로 알려 온 고장 — 안전망.
+      //    ★기기가 보고를 하고 있을 때만 본다★: 보고 자체가 끊긴 경우는 ②가 이미 알린다.
+      //    같은 사실을 두 곳에서 두 번 알리면 경보는 곧 무시된다(설계 원칙 ①).
+      var h = latestHealth(id);
+      var hGap = h ? daysBetween(h.metric_date) : null;
+      if (h && hGap !== null && hGap <= DEVICE.staleDays) {
+        deviceProblems(h).forEach(function(p){
+          out.push({ sev: p.sev, id: id, t: name + " — 기기: " + p.t, d: p.d });
+        });
+      } else if (!h) {
+        // ★고장이라고 말하지 않는다 — 아직 이 신호를 안 보내는 앱 버전일 수 있다.
+        //   다만 ★모른다는 사실★ 은 알린다(모르는 것을 괜찮음으로 접지 않는다).
+        out.push({ sev: "low", id: id,
+          t: name + " — 기기 상태를 알 수 없습니다",
+          d: "이 기기가 기기 상태 신호를 보내지 않고 있습니다. 앱 버전이 낮으면 그럴 수 있어요(고장이라는 뜻은 아닙니다)." });
       }
     });
     // 위험 → 주의 → 정보 순.
@@ -554,6 +634,11 @@
     var buckets = { up: 0, flat: 0, down: 0, unknown: 0 };
     ids.forEach(function(id){ buckets[trendBucket(latestWeek(id))]++; });
     var reporting = ids.filter(function(id){ return dailyOf(id).length > 0; }).length;
+    // ★(S508) 기기 상태 — 보고 중인 기기 수와 그중 이상이 있는 기기 수.
+    //   ★두 숫자를 함께 보여 준다★: "이상 0명"만 적으면 아무도 보고를 안 해서 0인 것과
+    //   정말로 다 멀쩡한 것이 같아 보인다(근거의 두께를 함께 적는다는 이 콘솔의 원칙).
+    var devReporting = ids.filter(function(id){ return latestHealth(id) !== null; }).length;
+    var devBad = ids.filter(function(id){ return deviceProblems(latestHealth(id)).length > 0; }).length;
 
     var html = "";
     html += '<div class="purpose">이 콘솔이 답하는 질문: <b>“우리 서비스가 어르신 한 분 한 분의 사회적 연결을 늘리고 있는가?”</b><br>' +
@@ -568,10 +653,47 @@
       cardHtml("이번 주 추세", buckets.up + " ↑ / " + buckets.flat + " → / " + buckets.down + " ↓",
                "측정 중 " + buckets.unknown + "명 · 각자 지난주 대비") +
       cardHtml("최근 데이터", latestDataDate() || "없음", "가장 최근 유입일") +
+      cardHtml("기기 이상", devBad + "명", devReporting + "명이 기기 상태를 보고 중") +
       "</div>";
 
     html += '<div class="note" style="margin:-8px 0 16px">일별 기록은 <b>' + rangeLabel() +
             '</b> 기준입니다(오른쪽 위에서 바꿀 수 있어요). 주차·회사 집계는 기간 선택과 무관하게 전체를 보여 줍니다.</div>';
+
+    // ★(S508) 기기 상태 — 어르신 목록보다 ★앞★ 에 둔다.
+    //   돌봄 숫자를 읽기 전에 "그 숫자가 나올 기기가 돌고는 있었는가"를 먼저 봐야 한다.
+    html += '<section><div class="sechead"><div><h2>기기 상태' +
+      '<span class="whose">어르신이 아니라 기기를 봅니다</span></h2>' +
+      '<div class="desc">만든 것이 실제로 돌고 있는지 보는 자리입니다. 여기 오는 값은 숫자와 예/아니오뿐이고 ' +
+      '<b>대화 내용이나 위치는 들어오지 않습니다</b>(집 좌표는 있다/없다 한 칸입니다).</div></div></div>' +
+      '<div class="tablewrap"><table><tr><th>어르신</th><th>마지막 보고</th><th>상태</th>' +
+      '<th>마지막으로 들은 때</th><th>오늘 마이크 죽음</th><th>집 좌표</th></tr>';
+    ids.forEach(function(id){
+      var h = latestHealth(id), probs = deviceProblems(h);
+      var gap = h ? daysBetween(h.metric_date) : null;
+      var stale = h && gap !== null && gap > DEVICE.staleDays;
+      var state;
+      if (!h) state = '<span class="muted">보고 없음</span>';
+      else if (stale) state = '<span class="warn">' + gap + '일째 보고 없음</span>';
+      else if (!probs.length) state = '<span class="muted">이상 없음</span>';
+      else state = '<span class="warn">' + esc(probs.map(function(p){ return p.t; }).join(" · ")) + '</span>';
+      var heard = h ? agoLabel(h.minutes_since_observation) : null;
+      html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: id })) + "'>" +
+        "<td><b>" + esc(rs[id].alias) + "</b>" + (rs[id].region ? ' <span class="muted">· ' + esc(rs[id].region) + "</span>" : "") + "</td>" +
+        "<td>" + (h ? esc(h.metric_date) : '<span class="muted">—</span>') + "</td>" +
+        "<td style='text-align:left;white-space:normal;max-width:280px'>" + state + "</td>" +
+        // ★들은 적이 없으면 0분 전이 아니라 ★없음★ 이다(정반대의 뜻을 섞지 않는다).
+        "<td>" + (heard ? esc(heard) : '<span class="warn">없음</span>') + "</td>" +
+        "<td>" + (h && num(h.mic_death_count) !== null ? num(h.mic_death_count) + "회" : '<span class="muted">—</span>') + "</td>" +
+        "<td>" + (!h ? '<span class="muted">—</span>'
+                     : (h.home_location_known === false ? '<span class="warn">없음</span>'
+                        : (h.home_location_known === true ? '<span class="muted">있음</span>' : '<span class="muted">—</span>'))) + "</td></tr>";
+    });
+    html += "</table></div>" +
+      '<div class="note">★<b>마지막으로 들은 때</b>가 <b>없음</b>이면 "방금 들었다"가 아니라 <b>한 번도 못 들었다</b>는 뜻입니다 — ' +
+      '두 값의 뜻이 정반대라 0으로 채우지 않았습니다.<br>' +
+      '★<b>오늘 마이크 죽음</b>의 0은 사실입니다(도는 동안 안 죽었다). 다만 앱이 아예 안 돌던 날도 0이라 ' +
+      '<b>마지막으로 들은 때와 함께</b> 읽어야 합니다.<br>' +
+      '★<b>집 좌표 없음</b>이면 부르면 대답은 하지만 <b>먼저 말 거는 기능이 통째로 멈춥니다</b>(댁에서 주소를 다시 저장하면 잡힙니다).</div></section>';
 
     // 어르신 목록(클릭 가능)
     html += '<section><div class="sechead"><div><h2>어르신 목록</h2>' +
