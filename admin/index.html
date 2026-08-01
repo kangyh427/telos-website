@@ -659,6 +659,32 @@
     html += '<div class="note" style="margin:-8px 0 16px">일별 기록은 <b>' + rangeLabel() +
             '</b> 기준입니다(오른쪽 위에서 바꿀 수 있어요). 주차·회사 집계는 기간 선택과 무관하게 전체를 보여 줍니다.</div>';
 
+    // ★★(S509) 등록 대기 중인 기기 — ★기기 상태 표보다도 앞★ 에 둔다.
+    //   [왜 맨 앞인가] 아래 "기기 상태" 표는 ★등록된 어르신★ 을 한 줄씩 그린다. 그래서
+    //   등록되지 않은 기기는 그 표에 ★행 자체가 안 생긴다★ — 아래를 아무리 들여다봐도
+    //   ★영영 안 보인다★. 그 사각지대를 여는 것이 이 블록이라 위에 둔다.
+    //   [왜 중요한가] 앱을 깔고 동의까지 마쳤는데 device_id 가 등록 안 됐으면 그 댁의
+    //   데이터는 매일 서버 문을 두드리다 ★조용히 버려진다★. 앱 쪽 로그만 보면 정상이다.
+    //   ★등록 여부 판별은 ★서버가★ 끝내서 준다(pending_devices) — 화면이 두 목록을 맞추면
+    //     등록된 기기의 번호까지 브라우저에 내려받아야 한다. 필요한 건 미등록 번호뿐이다.
+    var pending = DATA.pending_devices || [];
+    if (pending.length) {
+      html += '<section><div class="sechead"><div><h2>등록 대기 중인 기기' +
+        '<span class="whose">아직 어느 어르신도 아닙니다</span></h2>' +
+        '<div class="desc">앱이 서버에 신호를 보내고 있지만 <b>어느 어르신의 기기인지 등록되지 않았습니다</b>. ' +
+        '등록 전까지 이 기기의 데이터는 <b>매일 버려집니다</b>.</div></div></div>' +
+        '<div class="tablewrap"><table><tr><th>기기 번호(device_id)</th><th>처음 신호</th><th>마지막 신호</th><th>보낸 횟수</th></tr>';
+      pending.forEach(function(c){
+        html += "<tr><td style='font-family:monospace;font-size:12px'>" + esc(c.device_id) + "</td>" +
+          "<td>" + esc(String(c.first_seen_at || "").slice(0, 16).replace("T", " ")) + "</td>" +
+          "<td>" + esc(String(c.last_seen_at || "").slice(0, 16).replace("T", " ")) + "</td>" +
+          "<td>" + esc(String(c.seen_count == null ? "-" : c.seen_count)) + "회</td></tr>";
+      });
+      html += "</table></div>" +
+        '<div class="note">★<b>처음 신호</b>가 오래됐는데 아직 여기 있다면 <b>그만큼 오래 방치된 기기</b>입니다.<br>' +
+        '★이 표에 담기는 것은 <b>기기 번호와 시각뿐</b>입니다 — 어르신에 대한 정보는 들어오지 않습니다.</div></section>';
+    }
+
     // ★(S508) 기기 상태 — 어르신 목록보다 ★앞★ 에 둔다.
     //   돌봄 숫자를 읽기 전에 "그 숫자가 나올 기기가 돌고는 있었는가"를 먼저 봐야 한다.
     html += '<section><div class="sechead"><div><h2>기기 상태' +
