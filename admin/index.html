@@ -567,6 +567,27 @@
         }));
       return;
     }
+    // ★★(S514) 대면 설문 점수 — 연구자가 위 주차 자료와 ★가명으로★ 맞붙이는 파일.
+    //   ★척도의 범위와 방향을 함께 싣는다★ — 점수 12 는 그 자체로 뜻이 없다(LSNS-6 의
+    //     12 와 UCLA 3문항의 12 는 전혀 다른 사실이고, 후자는 있을 수도 없는 값이다).
+    //     ★이 파일은 우리 DB 없이도 읽혀야 한다★ — 그것이 척도 코드를 사람이 읽을 수 있는
+    //     글자로 둔 이유이기도 하다.
+    //   ★기기 번호는 넣지 않는다★(study_roster 와 같은 규율) — 파일은 밖으로 나간다.
+    if (kind === "study_survey") {
+      var instBy = {};
+      instrumentsOf().forEach(function(x){ instBy[x.code] = x; });
+      downloadCsv("텔로스_연구설문_" + today() + ".csv",
+        ["가명", "척도코드", "척도", "시점주", "시행일", "점수", "최소", "최대", "방향", "기록자", "기록시각"],
+        surveysOf().map(function(r){
+          var x = instBy[r.instrument] || {};
+          return [r.pseudonym, r.instrument, x.label, r.timepoint_week, r.measured_on,
+                  fmtScore(r.total_score), fmtScore(x.min_score), fmtScore(x.max_score),
+                  x.higher_is_better === undefined ? ""
+                    : (x.higher_is_better ? "높을수록 좋음" : "낮을수록 좋음"),
+                  r.recorded_by, String(r.recorded_at || "").slice(0, 19).replace("T", " ")];
+        }));
+      return;
+    }
     if (kind === "elders") {
       downloadCsv("텔로스_어르신목록_" + today() + ".csv",
         ["가명", "동네", "메모", "최근 주차", "그 주 기록일", "관계망 접촉(분/일)", "이번 주 추세(OBV)", "비교된 축", "마지막 데이터"],
@@ -973,6 +994,37 @@
     return m;
   }
 
+  // ── 설문(S514) ────────────────────────────────────────────────────────
+  //   ★척도 목록을 화면에 박아 두지 않는다★ — IRB 연구계획서가 "정확한 버전·문항은
+  //     심리 자문 감수 후 확정한다"고 적어 두었고, CRF 표의 네 행 중 둘이 아직
+  //     "[확정]"·"[선택]" 이다. 서버 조회표에 한 줄 넣으면 이 화면이 따라온다.
+  var SURVEY_TIMEPOINTS = [0, 4, 8, 12];   // CRF ① 표의 열. 서버 check 와 같은 값이다.
+  function tpLabel(t){ return Number(t) === 0 ? "0주 (기저)" : t + "주"; }
+  // numeric(6,2) 는 "12.00" 으로 온다 — 사람이 읽는 자리에서는 꼬리 0 을 떼되
+  // ★값을 반올림해 뭉개지 않는다★(3.5 를 쓰는 단축척도가 있다).
+  function fmtScore(v){ var n = num(v); return n === null ? "" : String(Math.round(n * 100) / 100); }
+  function instrumentsOf(){ return DATA.study_survey_instrument || []; }
+  function surveysOf(){ return DATA.study_survey || []; }
+  function surveyCell(pseudonym, instrument, tp){
+    var rows = surveysOf();
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (r.pseudonym === pseudonym && r.instrument === instrument &&
+          Number(r.timepoint_week) === Number(tp)) return r;
+    }
+    return null;
+  }
+  // ★변화량의 좋고 나쁨은 ★척도가 정한다★ — LSNS-6 은 오르면 좋고 UCLA 외로움은
+  //   오르면 나쁘다. 한 방향으로 칠하면 ★외로움이 늘어난 것을 개선으로 보여 준다★.
+  function surveyDelta(inst, base, last){
+    if (!base || !last) return '<span class="muted">—</span>';
+    var d = num(last.total_score) - num(base.total_score);
+    var r = Math.round(d * 10) / 10;
+    if (r === 0) return '<span class="muted">0</span>';
+    var good = inst.higher_is_better ? (r > 0) : (r < 0);
+    return '<span class="' + (good ? "pos" : "neg") + '">' + (r > 0 ? "+" : "") + r + "</span>";
+  }
+
   function renderStudy(){
     var assigns = assignmentsOf();
     var active = assigns.filter(function(r){ return !r.revoked_at; });
@@ -1056,7 +1108,81 @@
     }
     html += "</section>";
 
-    // ── 3) 주차 자료 — ★참여자 전원★ 을 그린다(자료가 없어도 자리를 만든다) ──
+    // ── 3) 설문 점수 (S514) — IRB CRF ① ★사람이 종이로 잰 것★ ────────────
+    //   ★기기 자료(아래 ④)보다 ★먼저★ 놓는다★ — CRF 자신의 순서가 그렇고(① 설문 → ②
+    //     기기 자동수집), 이 연구의 ★일차 지표★ 가 설문의 사전-사후 변화이기 때문이다.
+    //   ★여기 적힌 점수와 아래 주차 자료는 ★같은 가명★ 으로 이어진다★ — 그것이 이 자리를
+    //     만든 이유다. 종전에는 두 숫자가 종이와 DB 로 갈라져 사람이 엑셀로 맞춰야 했고,
+    //     그 대조는 실수가 섞이고 재현이 안 됐다(S511 §4-D).
+    var insts = instrumentsOf();
+    html += '<section><div class="sechead"><div><h2>설문 점수 ' +
+      '<span class="muted" style="font-size:13px">대면 · IRB CRF ①</span></h2>' +
+      '<div class="desc">종이로 받은 점수를 옮겨 적으면 <b>같은 가명으로</b> 아래 기기 자료와 이어집니다.</div></div>' +
+      csvBtn("study_survey") + "</div>";
+    if (!active.length) {
+      html += '<div class="note">참여자가 없습니다. 먼저 배정하세요.</div>';
+    } else if (!insts.length) {
+      // ★"고를 척도가 없다"를 빈 드롭다운으로 조용히 보여 주지 않는다 — 무엇이 없는지 적는다.
+      html += '<div class="note">쓸 수 있는 척도가 없습니다. 서버 척도 목록(study_survey_instrument)에 ' +
+              '먼저 척도를 넣어야 합니다.</div>';
+    } else {
+      html += '<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">' +
+        '<label style="display:block">참여자<br><select id="svPseudo">';
+      active.forEach(function(a){
+        html += '<option value="' + esc(a.pseudonym) + '">' + esc(a.pseudonym) + " · " + esc(a.cohort) + "</option>";
+      });
+      html += "</select></label>" +
+        '<label style="display:block">척도<br><select id="svInst" style="min-width:280px">';
+      insts.forEach(function(x){
+        html += '<option value="' + esc(x.code) + '">' + esc(x.label) +
+          " (" + esc(fmtScore(x.min_score)) + "~" + esc(fmtScore(x.max_score)) + ")</option>";
+      });
+      html += "</select></label>" +
+        '<label style="display:block">시점<br><select id="svTp">';
+      SURVEY_TIMEPOINTS.forEach(function(t){
+        html += '<option value="' + t + '">' + esc(tpLabel(t)) + "</option>";
+      });
+      html += "</select></label>" +
+        '<label style="display:block">시행일<br><input id="svDate" type="date" value="' + today() + '"></label>' +
+        '<label style="display:block">점수<br><input id="svScore" type="number" step="0.01" style="width:90px"></label>' +
+        '<button class="primary" id="svBtn" style="margin-bottom:2px">저장</button>' +
+        '<button class="csv" id="svDelBtn" style="margin-bottom:2px">지우기</button></div>' +
+        '<div id="svMsg" style="font-size:13px;margin-top:8px"></div>' +
+        '<div class="note">★같은 <b>참여자·척도·시점</b>을 다시 저장하면 <b>덮어씁니다</b> — 잘못 옮겨 적은 점수는 다시 넣어 고치세요.<br>' +
+        '★<b>지우기</b>는 <b>엉뚱한 참여자에게 적었을 때</b>만 쓰세요(위 세 칸이 가리키는 한 칸만 지웁니다).<br>' +
+        '★<b>시점</b>은 CRF 표의 열이고 <b>시행일</b>은 실제로 만난 날입니다 — 방문이 며칠 밀려도 시점은 그대로 두세요.<br>' +
+        '★점수가 척도의 범위를 벗어나면 <b>저장되지 않습니다</b>(30을 300으로 옮겨 적는 사고를 막습니다).</div>';
+
+      active.forEach(function(a){
+        html += '<div style="margin:18px 0 6px"><b style="font-size:16px">' + esc(a.pseudonym) + "</b>" +
+          '<span class="muted" style="margin-left:8px">' + esc(a.cohort) +
+          " · 기저일 " + esc(a.baseline_date) + "</span></div>";
+        html += '<div class="tablewrap"><table><tr><th>척도</th>';
+        SURVEY_TIMEPOINTS.forEach(function(t){ html += "<th>" + esc(tpLabel(t)) + "</th>"; });
+        html += "<th>변화 (0→12주)</th></tr>";
+        insts.forEach(function(x){
+          html += "<tr><td>" + esc(x.label) +
+            '<span class="muted" style="font-size:11px"> ' +
+            esc(fmtScore(x.min_score)) + "~" + esc(fmtScore(x.max_score)) + " · " +
+            (x.higher_is_better ? "높을수록 좋음" : "낮을수록 좋음") + "</span></td>";
+          SURVEY_TIMEPOINTS.forEach(function(t){
+            var c = surveyCell(a.pseudonym, x.code, t);
+            html += "<td" + (c ? ' title="' + esc("시행일 " + c.measured_on +
+                     (c.recorded_by ? " · 기록 " + c.recorded_by : "")) + '"' : "") + ">" +
+              (c ? "<b>" + esc(fmtScore(c.total_score)) + "</b>" : '<span class="muted">—</span>') + "</td>";
+          });
+          html += "<td>" + surveyDelta(x, surveyCell(a.pseudonym, x.code, 0),
+                                          surveyCell(a.pseudonym, x.code, 12)) + "</td></tr>";
+        });
+        html += "</table></div>";
+      });
+      html += '<div class="note">★빈 칸(—)은 <b>아직 그 시점에 그 척도를 재지 않았다</b>는 뜻입니다 — <b>0점이 아닙니다</b>.<br>' +
+        '★<b>변화</b>가 이 연구의 <b>일차 지표</b>입니다(기저 0주 대비 12주). ' +
+        '색은 <b>척도의 방향</b>을 따릅니다 — 관계망은 오르는 것이, 외로움은 내려가는 것이 좋은 일입니다.</div>';
+    }
+    html += "</section>";
+
+    // ── 4) 주차 자료 — ★참여자 전원★ 을 그린다(자료가 없어도 자리를 만든다) ──
     html += '<section><div class="sechead"><div><h2>주차 자료</h2>' +
       '<div class="desc"><b>참여자 한 명당 한 묶음</b>입니다(종합이 아닙니다).</div></div>' +
       csvBtn("study_weeks") + "</div>";
@@ -1119,26 +1245,41 @@
     }
 
     el("view").innerHTML = html;
-    bindGo(); bindCsv(); bindStudy();
+    bindGo(); bindCsv(); bindStudy(); bindSurvey();
+  }
+
+  // ★(S514) 두 화면(배정·설문)이 같은 말투로 답하도록 ★한 곳★ 에 둔다.
+  //   종전엔 bindStudy 안에만 있었는데, 설문에서 복붙하면 어느 날 한쪽만 고쳐져
+  //   같은 실패에 화면이 서로 다른 말을 하게 된다(S486 이 TTS 에서 걷어낸 것과 같은 결).
+  function say(elId, ok, text){
+    var m = el(elId); if (!m) return;
+    m.style.color = ok ? "#0e7490" : "#b91c1c";
+    m.textContent = text;
+    setTimeout(function(){ if (m) m.textContent = ""; }, 6000);
+  }
+  // ★서버가 던진 코드를 ★사람 말★ 로 옮긴다 — 운영자에게 'SCORE_OUT_OF_RANGE' 를
+  //   그대로 보여 주면 무엇을 고쳐야 하는지 알 수 없다.
+  function rpcReason(r){
+    var raw = (r.body && (r.body.message || r.body.hint)) || r.raw || "";
+    if (raw.indexOf("NOT_CONSOLE_ADMIN") >= 0) return "권한이 없습니다.";
+    if (raw.indexOf("INVALID_COHORT") >= 0) return "군이 올바르지 않습니다.";
+    if (raw.indexOf("BASELINE_DATE_REQUIRED") >= 0) return "기저일을 넣어 주세요.";
+    if (raw.indexOf("DEVICE_ID_REQUIRED") >= 0) return "기기를 골라 주세요.";
+    if (raw.indexOf("ASSIGNMENT_NOT_FOUND") >= 0) return "그 배정을 찾지 못했습니다.";
+    // ★(S514) 설문
+    if (raw.indexOf("SCORE_OUT_OF_RANGE") >= 0) return "점수가 그 척도의 범위를 벗어납니다 — 종이를 다시 확인해 주세요.";
+    if (raw.indexOf("SCORE_REQUIRED") >= 0) return "점수를 넣어 주세요.";
+    if (raw.indexOf("UNKNOWN_INSTRUMENT") >= 0) return "그 척도를 찾지 못했습니다.";
+    if (raw.indexOf("INVALID_TIMEPOINT") >= 0) return "시점이 올바르지 않습니다.";
+    if (raw.indexOf("MEASURED_ON_REQUIRED") >= 0) return "시행일을 넣어 주세요.";
+    if (raw.indexOf("PSEUDONYM_REQUIRED") >= 0) return "참여자를 골라 주세요.";
+    if (raw.indexOf("SURVEY_NOT_FOUND") >= 0) return "그 칸에는 적힌 점수가 없습니다.";
+    return "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
 
   // 배정·철회 — 성공하면 데이터를 다시 받아 표에 즉시 반영한다(bindNote 와 같은 결).
   function bindStudy(){
-    function say(elId, ok, text){
-      var m = el(elId); if (!m) return;
-      m.style.color = ok ? "#0e7490" : "#b91c1c";
-      m.textContent = text;
-      setTimeout(function(){ if (m) m.textContent = ""; }, 6000);
-    }
-    function reason(r){
-      var raw = (r.body && (r.body.message || r.body.hint)) || r.raw || "";
-      if (raw.indexOf("NOT_CONSOLE_ADMIN") >= 0) return "권한이 없습니다.";
-      if (raw.indexOf("INVALID_COHORT") >= 0) return "군이 올바르지 않습니다.";
-      if (raw.indexOf("BASELINE_DATE_REQUIRED") >= 0) return "기저일을 넣어 주세요.";
-      if (raw.indexOf("DEVICE_ID_REQUIRED") >= 0) return "기기를 골라 주세요.";
-      if (raw.indexOf("ASSIGNMENT_NOT_FOUND") >= 0) return "그 배정을 찾지 못했습니다.";
-      return "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-    }
+    var reason = rpcReason;
 
     var btn = el("asgBtn");
     if (btn) btn.addEventListener("click", function(){
@@ -1177,6 +1318,55 @@
           if (r.ok) { say("revMsg", true, name + " 배정을 철회했습니다."); load(); }
           else say("revMsg", false, reason(r));
         });
+      });
+    });
+  }
+
+  // ★(S514) 설문 저장·지우기 — 종이에서 옮겨 적는 그 한 칸.
+  function bindSurvey(){
+    var btn = el("svBtn");
+    if (btn) btn.addEventListener("click", function(){
+      var score = el("svScore").value, date = el("svDate").value;
+      // ★빈 칸을 0 으로 보내지 않는다★ — "안 쟀다"와 "0점"은 다른 사실이고,
+      //   0 으로 적으면 그분이 관계망이 전무하다는 뜻이 된다(서버도 같은 이유로 거부한다).
+      if (score === "") { say("svMsg", false, "점수를 넣어 주세요."); return; }
+      if (!date) { say("svMsg", false, "시행일을 넣어 주세요."); return; }
+      btn.disabled = true;
+      rpc("console_record_study_survey", {
+        p_pseudonym: el("svPseudo").value,
+        p_instrument: el("svInst").value,
+        p_timepoint_week: Number(el("svTp").value),
+        p_measured_on: date,
+        p_total_score: Number(score)
+      }).then(function(r){
+        btn.disabled = false;
+        if (r.ok) {
+          say("svMsg", true, "저장했습니다.");
+          // ★점수 칸을 비운다★ — 안 비우면 다음 참여자를 고르고 그대로 눌렀을 때
+          //   ★앞사람 점수가 그 사람 것으로 저장된다★.
+          el("svScore").value = "";
+          load();
+        } else say("svMsg", false, rpcReason(r));
+      });
+    });
+
+    var del = el("svDelBtn");
+    if (del) del.addEventListener("click", function(){
+      var p = el("svPseudo").value, i = el("svInst").value, t = Number(el("svTp").value);
+      var c = surveyCell(p, i, t);
+      if (!c) { say("svMsg", false, "그 칸에는 적힌 점수가 없습니다."); return; }
+      // ★확인을 받는다★ — 지우면 되돌릴 수 없고 원본은 종이에만 남는다.
+      //   ★"고치려는 것이면 지우지 말라"고 여기서 말해 준다★ — 덮어쓰기가 정정 수단이고,
+      //   지우기가 습관이 되면 언젠가 남의 칸을 지운다.
+      if (!window.confirm(p + " · " + tpLabel(t) + " 의 점수 " + fmtScore(c.total_score) + " 를 지울까요?\n\n" +
+          "되돌릴 수 없습니다.\n점수를 고치려는 것이라면 지우지 말고 다시 저장하세요(덮어씁니다).")) return;
+      del.disabled = true;
+      rpc("console_delete_study_survey", {
+        p_pseudonym: p, p_instrument: i, p_timepoint_week: t
+      }).then(function(r){
+        del.disabled = false;
+        if (r.ok) { say("svMsg", true, "지웠습니다."); load(); }
+        else say("svMsg", false, rpcReason(r));
       });
     });
   }
