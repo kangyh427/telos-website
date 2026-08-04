@@ -536,6 +536,37 @@
   }
   function exportCsv(kind, arg){
     var rs = roster();
+    // ★(S513) 연구 배정 대장 — ★기기 번호는 넣지 않는다★.
+    //   화면에서는 철회 버튼 때문에 필요하지만, ★파일은 밖으로 나간다★(메일·USB).
+    //   가명과 device_id 가 한 파일에 같이 담기면 그 파일 하나가 되짚기 열쇠가 된다.
+    if (kind === "study_roster") {
+      downloadCsv("텔로스_연구배정_" + today() + ".csv",
+        ["가명", "군", "기저일", "종이동의서", "도착주차수", "배정일", "배정자", "철회일"],
+        (DATA.study_assignment || []).map(function(r){
+          return [r.pseudonym, r.cohort, r.baseline_date, r.paper_consent ? "받음" : "없음",
+                  snapCount(r.pseudonym), String(r.assigned_at || "").slice(0, 10),
+                  r.assigned_by, String(r.revoked_at || "").slice(0, 10)];
+        }));
+      return;
+    }
+    // ★(S513) 연구 주차 자료 — 연구자에게 그대로 건네는 파일.
+    //   ★null 은 빈 칸★(RS-4 와 같은 규약) — 0 으로 적으면 "측정했는데 0"으로 읽힌다.
+    //   ★연결지수 옆에 척도를 반드시 함께 내보낸다★(v26 이 생긴 이유).
+    if (kind === "study_weeks") {
+      downloadCsv("텔로스_연구주차자료_" + today() + ".csv",
+        ["가명", "군", "주차", "주시작", "주끝", "어르신발화수", "사회적체크인수", "넛지실행전환수",
+         "선제응답률", "기분평균", "식사평균", "수면평균", "기분_기저대비", "대화분", "대화세션수",
+         "집밖평균분", "집밖측정일수", "연결지수", "연결지수척도"],
+        (DATA.study_snapshot || []).map(function(r){
+          return [r.pseudonym, r.cohort, r.study_week, r.week_start, r.week_end,
+                  r.elder_utterance_count, r.social_check_in_count, r.nudge_conversion_count,
+                  r.proactive_response_rate, r.mood_avg, r.meal_avg, r.sleep_avg,
+                  r.mood_delta_from_baseline, r.conversation_minutes, r.conversation_session_count,
+                  r.away_minutes_avg, r.away_measured_days,
+                  r.connection_index, r.connection_index_mode];
+        }));
+      return;
+    }
     if (kind === "elders") {
       downloadCsv("텔로스_어르신목록_" + today() + ".csv",
         ["가명", "동네", "메모", "최근 주차", "그 주 기록일", "관계망 접촉(분/일)", "이번 주 추세(OBV)", "비교된 축", "마지막 데이터"],
@@ -611,6 +642,7 @@
     if (!DATA) return;
     if (route.view === "elder") renderElder(route.id);
     else if (route.view === "week") renderWeek(route.weekStart);
+    else if (route.view === "study") renderStudy();
     else renderOverview();
   }
   function crumb(parts){
@@ -658,6 +690,16 @@
 
     html += '<div class="note" style="margin:-8px 0 16px">일별 기록은 <b>' + rangeLabel() +
             '</b> 기준입니다(오른쪽 위에서 바꿀 수 있어요). 주차·회사 집계는 기간 선택과 무관하게 전체를 보여 줍니다.</div>';
+
+    // ★(S513) 연구 화면으로 가는 문 — 개요에 표를 통째로 앉히지 않는다.
+    //   ★연구 배정은 매일 보는 일이 아니다 — 매일 보는 개요가 길어지면
+    //   정작 급한 "기기 이상"이 아래로 밀린다.
+    html += '<div class="row" style="margin:-4px 0 18px">' +
+      // ★기존 data-go 6곳과 ★같은 표기★ 를 쓴다 — 작은따옴표 속성 + esc().
+      //   JSON.stringify 를 두 번 씌우면 백슬래시가 HTML 에 그대로 박혀 JSON.parse 가
+      //   터지고 ★버튼이 조용히 죽는다★(눌러도 아무 일이 없고 오류도 안 보인다).
+      '<button class="link" data-go=\'' + esc(JSON.stringify({ view: "study" })) + '\'>' +
+      '연구 참여 관리 ›</button></div>';
 
     // ★★(S509) 등록 대기 중인 기기 — ★기기 상태 표보다도 앞★ 에 둔다.
     //   [왜 맨 앞인가] 아래 "기기 상태" 표는 ★등록된 어르신★ 을 한 줄씩 그린다. 그래서
@@ -911,6 +953,217 @@
     save.addEventListener("click", function(){ put(input.value.trim()); });
     input.addEventListener("keydown", function(e){ if (e.key === "Enter") put(input.value.trim()); });
     if (clear) clear.addEventListener("click", function(){ input.value = ""; put(""); });
+  }
+
+  // ── 화면 4: 연구 (S513) ──────────────────────────────────────────────
+  //   ★왜 별도 화면인가★: 연구 배정은 ★운영자만★ 하는 일이고 자주 하지 않는다.
+  //     개요에 얹으면 매일 보는 화면이 길어지고, 정작 급한 "기기 이상"이 아래로 밀린다.
+  //   ★PC 전용이다★(대표 지시) — 반응형에 시간 쓰지 말 것.
+  function assignmentsOf(){ return DATA.study_assignment || []; }
+  function snapshotsOf(){ return DATA.study_snapshot || []; }
+  function snapCount(pseudonym){
+    return snapshotsOf().filter(function(r){ return r.pseudonym === pseudonym; }).length;
+  }
+  // ★서버가 준 pending_devices = 두드렸는데 elderly 에 없는 기기★ = ★미등록 집합★.
+  //   배정은 됐는데 여기 들어 있으면 그 기기는 자료를 ★모으고는 있지만 못 보내고 있다★
+  //   (ingest-study-snapshot 이 미등록 기기에 404 를 준다). 그 조용한 실패를 표에 띄운다.
+  function unregisteredSet(){
+    var m = {};
+    (DATA.pending_devices || []).forEach(function(c){ m[c.device_id] = true; });
+    return m;
+  }
+
+  function renderStudy(){
+    var unreg = unregisteredSet();
+    var rows = assignmentsOf();
+    var active = rows.filter(function(r){ return !r.revoked_at; });
+    var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "연구" }]);
+
+    html += "<h1>연구 참여 관리</h1>" +
+      '<div class="sub">종이 동의서를 받은 뒤 여기서 배정하면, 그 기기가 <b>다음 날 스스로 등록</b>됩니다. ' +
+      "어르신 폰에 따로 손댈 일이 없습니다.</div>";
+
+    html += '<div class="cards">' +
+      cardHtml("참여 중", active.length + "명", "철회되지 않은 배정") +
+      cardHtml("주차 자료", snapshotsOf().length + "건", "서버에 도착한 주차 수") +
+      cardHtml("배정 대기", (DATA.pending_devices || []).length + "대", "아직 어느 참여자도 아닌 기기") +
+      "</div>";
+
+    // ── 1) 배정하기 ────────────────────────────────────────────────────
+    html += '<section><div class="sechead"><div><h2>배정하기' +
+      '<span class="whose">종이 동의서를 받은 뒤에</span></h2>' +
+      '<div class="desc">기기 번호를 고르고 <b>군</b>과 <b>기저일</b>을 정합니다. ' +
+      "가명(P01…)은 <b>서버가 붙입니다</b> — 운영자가 직접 정하지 않습니다.</div></div></div>";
+    var assignable = DATA.pending_devices || [];
+    if (!assignable.length) {
+      html += '<div class="note">지금 배정할 수 있는 새 기기가 없습니다. ' +
+              "이미 배정된 기기의 <b>군·기저일</b>만 고치려면 아래 표의 기기 번호로 다시 배정하세요.</div>";
+    }
+    html += '<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">' +
+      '<label style="display:block">기기 번호<br><select id="asgDevice" style="min-width:330px;font-family:monospace">' +
+      '<option value="">— 고르세요 —</option>';
+    assignable.forEach(function(c){
+      html += '<option value="' + esc(c.device_id) + '">' + esc(c.device_id) + "</option>";
+    });
+    html += "</select></label>" +
+      '<label style="display:block">군<br><select id="asgCohort">' +
+      '<option value="IMMEDIATE">IMMEDIATE (즉시)</option>' +
+      '<option value="WAITLIST">WAITLIST (대기)</option></select></label>' +
+      '<label style="display:block">기저일(Week0 시작)<br>' +
+      '<input id="asgBaseline" type="date" value="' + today() + '"></label>' +
+      '<label style="display:flex;align-items:center;gap:6px;padding-bottom:6px">' +
+      '<input id="asgPaper" type="checkbox"> 종이 동의서를 받았습니다</label>' +
+      '<button class="primary" id="asgBtn" style="margin-bottom:2px">배정</button></div>' +
+      '<div id="asgMsg" style="font-size:13px;margin-top:8px"></div>' +
+      '<div class="note">★<b>기저일</b>은 그분의 Week0 이 시작하는 날입니다. ' +
+      "<b>나중에 바꾸면 이미 얼린 주차의 번호는 안 바뀝니다</b> — 처음에 정확히 넣으세요.<br>" +
+      "★<b>종이 동의서</b> 칸은 IRB 가 “이 참여자의 동의 근거”를 물을 때의 답입니다. " +
+      "우리 시험 기기처럼 동의서가 없으면 <b>비워 두세요</b>(연구 대상과 섞이지 않게).</div></section>";
+
+    // ── 2) 배정된 참여자 ───────────────────────────────────────────────
+    html += '<section><div class="sechead"><div><h2>배정된 참여자' +
+      '<span class="whose">가명으로만 부릅니다</span></h2>' +
+      '<div class="desc">가명과 실제 어르신을 잇는 대응표는 <b>이 화면에 없습니다</b> — 기관이 종이로 관리합니다.</div></div>' +
+      csvBtn("study_roster") + "</div>";
+    if (!rows.length) {
+      html += '<div class="note">아직 배정된 참여자가 없습니다.</div></section>';
+    } else {
+      html += '<div class="tablewrap"><table><tr><th>가명</th><th>군</th><th>기저일</th>' +
+        "<th>종이 동의서</th><th>서버 도착</th><th>배정</th><th>기기 번호</th><th></th></tr>";
+      rows.forEach(function(r){
+        var n = snapCount(r.pseudonym);
+        var arrive;
+        if (r.revoked_at) arrive = '<span class="muted">철회됨</span>';
+        else if (n > 0) arrive = '<span class="muted">' + n + "주</span>";
+        else if (unreg[r.device_id]) arrive = '<span class="warn">0주 · 기기 미등록</span>';
+        else arrive = '<span class="muted">0주</span>';
+        html += "<tr" + (r.revoked_at ? ' style="opacity:.55"' : "") + ">" +
+          "<td><b>" + esc(r.pseudonym) + "</b></td>" +
+          "<td>" + esc(r.cohort) + "</td>" +
+          "<td>" + esc(r.baseline_date) + "</td>" +
+          "<td>" + (r.paper_consent ? '<span class="muted">받음</span>'
+                                    : '<span class="warn">없음</span>') + "</td>" +
+          "<td>" + arrive + "</td>" +
+          "<td>" + esc(String(r.assigned_at || "").slice(0, 10)) +
+            (r.assigned_by ? '<br><span class="muted" style="font-size:11px">' + esc(r.assigned_by) + "</span>" : "") + "</td>" +
+          "<td style=\"font-family:monospace;font-size:11px\">" + esc(r.device_id) + "</td>" +
+          "<td>" + (r.revoked_at ? "" :
+            '<button class="csv" data-revoke="' + esc(r.device_id) + '" data-revokename="' + esc(r.pseudonym) + '">철회</button>') +
+          "</td></tr>";
+      });
+      html += "</table></div>" +
+        '<div id="revMsg" style="font-size:13px;margin-top:8px"></div>' +
+        '<div class="note">★<b>서버 도착</b>이 <b>0주 · 기기 미등록</b>이면 그 기기는 연구 자료를 ' +
+        "<b>계속 모으고 있지만 서버에 못 보내고 있습니다</b>(복지사 연동이 아직 안 된 기기입니다). " +
+        "연동되면 <b>밀린 주차가 한꺼번에 올라옵니다</b> — 자료는 잃지 않습니다.<br>" +
+        "★<b>철회</b>는 배정을 거두는 것입니다. 그 기기는 다음 날 스스로 연구에서 빠지고, " +
+        "회사에 보관된 그분 몫의 숫자도 함께 지워 달라고 청합니다.</div></section>";
+    }
+
+    // ── 3) 주차 자료 ───────────────────────────────────────────────────
+    html += '<section><div class="sechead"><div><h2>주차 자료' +
+      '<span class="whose">가명과 숫자뿐</span></h2>' +
+      '<div class="desc">단말이 주마다 얼려 보낸 값입니다. <b>빈 칸은 0이 아니라 못 잰 것</b>입니다.</div></div>' +
+      csvBtn("study_weeks") + "</div>";
+    var snaps = snapshotsOf();
+    if (!snaps.length) {
+      html += '<div class="note">아직 도착한 주차 자료가 없습니다. ' +
+              "배정 뒤 <b>첫 주가 끝나야</b> 첫 줄이 생깁니다.</div></section>";
+    } else {
+      html += '<div class="tablewrap"><table><tr><th>가명</th><th>군</th><th>주차</th><th>기간</th>' +
+        "<th>어르신 발화</th><th>사회적 체크인</th><th>선제 응답률</th><th>기분</th>" +
+        "<th>대화(분)</th><th>집 밖(분/일)</th><th>연결지수</th></tr>";
+      snaps.forEach(function(r){
+        html += "<tr><td><b>" + esc(r.pseudonym) + "</b></td>" +
+          "<td>" + esc(r.cohort) + "</td>" +
+          "<td>" + esc(String(r.study_week)) + "주</td>" +
+          "<td style=\"font-size:12px\">" + esc(r.week_start) + " ~ " + esc(r.week_end) + "</td>" +
+          "<td>" + esc(String(r.elder_utterance_count == null ? "" : r.elder_utterance_count)) + "</td>" +
+          "<td>" + esc(String(r.social_check_in_count == null ? "" : r.social_check_in_count)) + "</td>" +
+          "<td>" + (num(r.proactive_response_rate) === null ? '<span class="muted">측정 중</span>'
+                    : Math.round(num(r.proactive_response_rate) * 100) + "%") + "</td>" +
+          "<td>" + fmt(r.mood_avg) + "</td>" +
+          "<td>" + fmt(r.conversation_minutes) + "</td>" +
+          "<td>" + (num(r.away_minutes_avg) === null ? '<span class="muted">측정 중</span>'
+                    : esc(String(Math.round(num(r.away_minutes_avg)))) +
+                      '<span class="muted" style="font-size:11px"> (' +
+                      esc(String(r.away_measured_days == null ? "?" : r.away_measured_days)) + "일)</span>") + "</td>" +
+          // ★지수와 척도를 ★반드시 나란히★ 보여 준다 — A_PERSONAL 은 100 이 평소이고
+          //   상한이 없다(실측 542.6). 척도 없이 보여 주면 "40 → 542"가 폭발적 개선으로 읽힌다.
+          "<td>" + (num(r.connection_index) === null ? '<span class="muted">측정 중</span>'
+                    : esc(String(Math.round(num(r.connection_index)))) +
+                      '<span class="muted" style="font-size:11px"> ' +
+                      esc(r.connection_index_mode === "A_PERSONAL" ? "평소대비"
+                          : r.connection_index_mode === "B_COLDSTART" ? "목표대비"
+                          : (r.connection_index_mode || "척도불명")) + "</span>") + "</td></tr>";
+      });
+      html += "</table></div>" +
+        '<div class="note">★<b>연결지수</b> 옆의 <b>평소대비</b>는 <b>100이 평소</b>이고 상한이 없습니다. ' +
+        "<b>목표대비</b>는 0~100입니다 — <b>척도가 다르면 두 숫자를 곧바로 견주면 안 됩니다</b>.<br>" +
+        "★<b>집 밖(분/일)</b> 괄호 안은 <b>그 주에 실제로 측정된 날 수</b>입니다. " +
+        "2일만 잰 평균을 한 주 평균으로 읽지 마세요.</div></section>";
+    }
+
+    el("view").innerHTML = html;
+    bindGo(); bindCsv(); bindStudy();
+  }
+
+  // 배정·철회 — 성공하면 데이터를 다시 받아 표에 즉시 반영한다(bindNote 와 같은 결).
+  function bindStudy(){
+    function say(elId, ok, text){
+      var m = el(elId); if (!m) return;
+      m.style.color = ok ? "#0e7490" : "#b91c1c";
+      m.textContent = text;
+      setTimeout(function(){ if (m) m.textContent = ""; }, 6000);
+    }
+    function reason(r){
+      var raw = (r.body && (r.body.message || r.body.hint)) || r.raw || "";
+      if (raw.indexOf("NOT_CONSOLE_ADMIN") >= 0) return "권한이 없습니다.";
+      if (raw.indexOf("INVALID_COHORT") >= 0) return "군이 올바르지 않습니다.";
+      if (raw.indexOf("BASELINE_DATE_REQUIRED") >= 0) return "기저일을 넣어 주세요.";
+      if (raw.indexOf("DEVICE_ID_REQUIRED") >= 0) return "기기를 골라 주세요.";
+      if (raw.indexOf("ASSIGNMENT_NOT_FOUND") >= 0) return "그 배정을 찾지 못했습니다.";
+      return "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    var btn = el("asgBtn");
+    if (btn) btn.addEventListener("click", function(){
+      var dev = el("asgDevice").value, base = el("asgBaseline").value;
+      if (!dev) { say("asgMsg", false, "기기를 골라 주세요."); return; }
+      if (!base) { say("asgMsg", false, "기저일을 넣어 주세요."); return; }
+      btn.disabled = true;
+      rpc("console_assign_study_participant", {
+        p_device_id: dev,
+        p_cohort: el("asgCohort").value,
+        p_baseline_date: base,
+        p_paper_consent: el("asgPaper").checked
+      }).then(function(r){
+        btn.disabled = false;
+        if (r.ok) {
+          var b = r.body, row = (b && b.length) ? b[0] : b;
+          var name = row && row.pseudonym ? row.pseudonym : "";
+          say("asgMsg", true, "배정했습니다" + (name ? " — 가명 " + name : "") +
+              ". 그 기기는 다음 날 스스로 등록됩니다.");
+          load();
+        } else say("asgMsg", false, reason(r));
+      });
+    });
+
+    Array.prototype.forEach.call(el("view").querySelectorAll("[data-revoke]"), function(b){
+      b.addEventListener("click", function(){
+        var dev = b.getAttribute("data-revoke"), name = b.getAttribute("data-revokename");
+        // ★확인을 한 번 받는다★ — 표 안의 버튼이라 손이 미끄러지면 엉뚱한 참여자를 거둔다.
+        //   ★같은 좌표를 두 번 누르는 사고를 막는다(메모리 adb-tap-repeat-destructive 와 같은 결).
+        if (!window.confirm(name + " 님의 연구 배정을 철회할까요?\n\n" +
+            "그 기기는 다음 날 스스로 연구에서 빠지고,\n회사에 보관된 그분 몫의 숫자도 지워 달라고 청합니다.")) return;
+        b.disabled = true;
+        rpc("console_revoke_study_assignment", { p_device_id: dev }).then(function(r){
+          b.disabled = false;
+          if (r.ok) { say("revMsg", true, name + " 배정을 철회했습니다."); load(); }
+          else say("revMsg", false, reason(r));
+        });
+      });
+    });
   }
 
   function pct(v){
