@@ -151,7 +151,7 @@
   </select>
   <span class="who" id="whoText"></span>
   <button id="refreshBtn">지금 새로고침</button>
-  <button id="logoutBtn">로그아웃</button>
+  <button id="logoutBtn" title="로그인 상태는 이 브라우저에 유지됩니다. 공용 PC 에서는 반드시 로그아웃하세요.">로그아웃</button>
 </header>
 <main id="view"></main>
 </div>
@@ -170,8 +170,29 @@
   var COLORS = ["#17857A", "#b45309", "#2563eb", "#7c3aed", "#db2777", "#0e7490", "#65a30d"];
 
   function el(id){ return document.getElementById(id); }
-  function sess(){ try { return JSON.parse(sessionStorage.getItem("telos_session") || "null"); } catch(e){ return null; } }
-  function setSess(s){ if (s) sessionStorage.setItem("telos_session", JSON.stringify(s)); else sessionStorage.removeItem("telos_session"); }
+  // ★★(S517) 로그인 유지 — 대표 지적("계속 로그인 상태가 유지되어야 하는데").
+  //   종전엔 sessionStorage 였다. 그것은 ★탭을 닫으면 사라진다★ — 콘솔은 하루에도 몇 번
+  //   여닫는 자리라 그때마다 다시 로그인해야 했다. localStorage 로 옮겨 탭을 닫아도 남긴다.
+  //   ★대신 로그아웃 버튼이 확실히 지운다★(공용 PC 에서는 그것을 눌러야 한다 — 화면에도 적었다).
+  //   ★옛 열쇠를 한 번 물려받는다★: 이미 로그인해 둔 사람이 이 배포 직후 튕기지 않도록,
+  //   sessionStorage 에 남아 있으면 옮겨 온 뒤 지운다(한 번만 일어나는 이사다).
+  var SESS_KEY = "telos_session";
+  function sess(){
+    try {
+      var v = localStorage.getItem(SESS_KEY);
+      if (!v) {
+        var old = sessionStorage.getItem(SESS_KEY);
+        if (old) { localStorage.setItem(SESS_KEY, old); sessionStorage.removeItem(SESS_KEY); v = old; }
+      }
+      return JSON.parse(v || "null");
+    } catch(e){ return null; }
+  }
+  function setSess(s){
+    try {
+      if (s) localStorage.setItem(SESS_KEY, JSON.stringify(s));
+      else { localStorage.removeItem(SESS_KEY); sessionStorage.removeItem(SESS_KEY); }
+    } catch(e){}
+  }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
   function num(v){ return (v === null || v === undefined || v === "") ? null : Number(v); }
@@ -296,7 +317,9 @@
         if (d.range_days) el("rangeSelect").value = String(d.range_days);
         el("liveDot").className = "dot on";
         el("liveText").textContent = "실측 연결됨 · " + new Date().toLocaleTimeString("ko-KR") + " (60초마다 자동)";
-        renderRoute();
+        // ★(S517) 지금 보고 있는 화면을 이력의 ★현재 항목★ 으로 심는다(쌓지는 않는다).
+        //   60초마다 도는 자동 갱신이 이력을 쌓으면 뒤로 가기가 제자리걸음이 된다.
+        go(route, true);
       })
       .catch(function(e){
         var m = String(e.message || "");
@@ -672,7 +695,34 @@
   }
 
   // ── 라우팅 ───────────────────────────────────────────────────────────
-  function go(r){ route = r; renderRoute(); window.scrollTo(0, 0); }
+  // ★★(S517) 뒤로 가기 — 대표 지적("뒤로 가기 누르면 바로 전페이지가 아니라 그냥 튕겨져서").
+  //   종전엔 화면을 바꿔도 ★브라우저 이력을 남기지 않았다★ → 뒤로 가기가 콘솔 안의 이전
+  //   화면이 아니라 ★콘솔 밖★ 으로 나갔다(그 앞이 로그인 시점이라 로그인 화면으로 보였다).
+  //   이제 화면을 옮길 때마다 이력을 하나 쌓고, 뒤로 가기는 그 이력을 되짚는다.
+  //   ★replace=true 는 이력을 쌓지 않는다★ — 첫 그림과 데이터 재적재처럼 "옮긴 것이
+  //   아닌" 경우에 쓴다. 안 그러면 새로고침마다 이력이 늘어 뒤로 가기가 제자리걸음한다.
+  function go(r, replace){
+    route = r;
+    try {
+      if (replace) history.replaceState(r, "", location.pathname);
+      else history.pushState(r, "", location.pathname);
+    } catch(e){}
+    renderRoute();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("popstate", function(e){
+    route = (e.state && e.state.view) ? e.state : { view: "overview" };
+    renderRoute();
+    window.scrollTo(0, 0);
+  });
+  // ★뒤로 가기로 되돌아왔을 때 화면이 ★로그인 상태로 얼어 있는 것★ 을 푼다.
+  //   브라우저가 페이지를 통째로 캐시(bfcache)했다가 되살리면 자바스크립트가 다시 돌지
+  //   않아, 세션은 멀쩡한데 그때 보이던 로그인 화면이 그대로 복원된다.
+  //   ★그것이 "튕겨서 다시 로그인하라고 나온다"의 정체다★ — 세션을 다시 보고 판단한다.
+  window.addEventListener("pageshow", function(e){
+    if (!e.persisted) return;
+    if (sess()) load(); else showLogin(null);
+  });
   function renderRoute(){
     if (!DATA) return;
     if (route.view === "elder") renderElder(route.id);
