@@ -750,16 +750,28 @@
         '<span class="whose">아직 어느 어르신도 아닙니다</span></h2>' +
         '<div class="desc">앱이 서버에 신호를 보내고 있지만 <b>어느 어르신의 기기인지 등록되지 않았습니다</b>. ' +
         '등록 전까지 이 기기의 데이터는 <b>매일 버려집니다</b>.</div></div></div>' +
-        '<div class="tablewrap"><table><tr><th>기기 번호(device_id)</th><th>처음 신호</th><th>마지막 신호</th><th>보낸 횟수</th></tr>';
+        '<div class="tablewrap"><table><tr><th>기기 번호(device_id)</th><th>처음 신호</th><th>마지막 신호</th><th>보낸 횟수</th>' +
+        '<th>가명</th><th>동네</th><th></th></tr>';
       pending.forEach(function(c){
-        html += "<tr><td style='font-family:monospace;font-size:12px'>" + esc(c.device_id) + "</td>" +
+        // ★(S517) 여기서 바로 어르신으로 등록한다(대표 지시 "앱을 깔면 자동으로 추가").
+        //   ★완전 자동 생성이 아니라 버튼 한 번인 이유★ = 가명 없는 어르신이 생기면
+        //   콘솔에서 누구인지 영영 알 수 없고, 배정표(P03…) 대조도 중복 방지도 무력해진다.
+        //   ★여기 떴다 = 이미 동의를 마친 기기다★(동의 전에는 서버로 아무것도 나가지 않는다).
+        var d = esc(c.device_id);
+        html += "<tr><td style='font-family:monospace;font-size:12px'>" + d + "</td>" +
           "<td>" + esc(String(c.first_seen_at || "").slice(0, 16).replace("T", " ")) + "</td>" +
           "<td>" + esc(String(c.last_seen_at || "").slice(0, 16).replace("T", " ")) + "</td>" +
-          "<td>" + esc(String(c.seen_count == null ? "-" : c.seen_count)) + "회</td></tr>";
+          "<td>" + esc(String(c.seen_count == null ? "-" : c.seen_count)) + "회</td>" +
+          '<td><input class="pendAlias" data-dev="' + d + '" placeholder="예: P03" style="width:110px"></td>' +
+          '<td><input class="pendRegion" data-dev="' + d + '" placeholder="예: 고운동" style="width:130px"></td>' +
+          '<td><button class="primary pendReg" data-dev="' + d + '">어르신으로 등록</button>' +
+          '<div class="pendMsg" data-dev="' + d + '" style="font-size:12px;margin-top:4px"></div></td></tr>';
       });
       html += "</table></div>" +
         '<div class="note">★<b>처음 신호</b>가 오래됐는데 아직 여기 있다면 <b>그만큼 오래 방치된 기기</b>입니다.<br>' +
-        '★이 표에 담기는 것은 <b>기기 번호와 시각뿐</b>입니다 — 어르신에 대한 정보는 들어오지 않습니다.</div></section>';
+        '★이 표에 담기는 것은 <b>기기 번호와 시각뿐</b>입니다 — 어르신에 대한 정보는 들어오지 않습니다.<br>' +
+        '★가명은 <b>배정표에 인쇄된 것과 똑같이</b> 적어 주세요. 같은 가명이 이미 있으면 등록되지 않습니다' +
+        '(같은 분이 두 명으로 늘어나는 것을 막습니다).</div></section>';
     }
 
     // ★(S508) 기기 상태 — 어르신 목록보다 ★앞★ 에 둔다.
@@ -856,7 +868,51 @@
 
     html += adminSection();
     el("view").innerHTML = html;
-    bindGo(); bindAdmin(); bindCsv();
+    bindGo(); bindAdmin(); bindCsv(); bindPendingRegister();
+  }
+
+  /**
+   * ★(S517) 대기 기기 → 어르신 등록. 대표 지시("앱을 깔면 자동으로 추가되게").
+   *
+   * ★서버가 판정하고 화면은 옮기기만 한다★ — 이미 등록된 기기인지, 가명이 겹치는지는
+   * console_register_pending_device 가 결정한다. 화면이 스스로 판정하려 들면 두 곳의
+   * 규칙이 갈라지고, 그때부터 무엇이 참인지 아무도 모른다.
+   * ★성공해도 목록을 손으로 지우지 않고 다시 불러온다★ — 화면이 서버보다 앞서가면
+   * 등록에 실패했는데 사라진 것처럼 보일 수 있다.
+   */
+  function bindPendingRegister(){
+    Array.prototype.forEach.call(el("view").querySelectorAll(".pendReg"), function(b){
+      b.addEventListener("click", function(){
+        var dev = b.getAttribute("data-dev");
+        function pick(cls){
+          var n = el("view").querySelector(cls + '[data-dev="' + dev.replace(/"/g, '\\"') + '"]');
+          return n ? n.value.trim() : "";
+        }
+        var msg = el("view").querySelector('.pendMsg[data-dev="' + dev.replace(/"/g, '\\"') + '"]');
+        function say(t, ok){ if (msg) { msg.textContent = t; msg.style.color = ok ? "#0e7490" : "#b91c1c"; } }
+
+        var alias = pick(".pendAlias");
+        if (!alias) { say("가명을 적어 주세요(배정표와 똑같이).", false); return; }
+
+        b.disabled = true; say("등록하는 중…", true);
+        rpc("console_register_pending_device", {
+          p_device_id: dev, p_alias: alias, p_region: pick(".pendRegion"),
+        }).then(function(r){
+          b.disabled = false;
+          if (!r.ok) { say(friendlyRpcError(r), false); return; }
+          var row = Array.isArray(r.body) ? r.body[0] : r.body;
+          var st = row && row.register_status;
+          if (st === "CREATED") { say("등록했습니다.", true); load(); return; }
+          if (st === "ALIAS_TAKEN") {
+            // ★막은 것이지 고장이 아니다★ — 같은 분이 두 명으로 늘어나는 것을 막았다.
+            say('"' + (row.linked_alias || alias) + '" 이라는 이름의 어르신이 이미 있습니다. 다른 이름을 적어 주세요.', false);
+            return;
+          }
+          if (st === "ALREADY_REGISTERED") { say("이미 등록된 기기입니다.", false); load(); return; }
+          say("결과를 확인하지 못했습니다. 목록을 새로고침해 확인해 주세요.", false);
+        });
+      });
+    });
   }
 
   function latestDataDate(){
