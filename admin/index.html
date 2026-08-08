@@ -523,7 +523,10 @@
     return out.sort(function(a, b){ return rank[a.sev] - rank[b.sev]; });
   }
   function alertsHtml(){
-    var list = buildAlerts();
+    // ★(S523 대표 지적 "위험, 주의, 이건 뭐지?") — ★위험·주의만 띄운다★.
+    //   "참고" 등급(기기 상태 신호 없음 · 근거 얇은 하락)은 매일 떠서 경보를 무디게 했다.
+    //   S508 원칙("매일 울리는 경보는 아무도 안 본다")을 표시 단계에도 적용한 것.
+    var list = buildAlerts().filter(function(a){ return a.sev !== "low"; });
     if (!list.length) {
       return '<div class="ok-banner">지금 살펴볼 것이 없습니다 — 데이터가 끊긴 기기도, 크게 줄어든 분도 없습니다.</div>';
     }
@@ -759,34 +762,28 @@
     var devReporting = ids.filter(function(id){ return latestHealth(id) !== null; }).length;
     var devBad = ids.filter(function(id){ return deviceProblems(latestHealth(id)).length > 0; }).length;
 
-    var html = "";
-    html += '<div class="purpose">이 콘솔이 답하는 질문: <b>“우리 서비스가 어르신 한 분 한 분의 사회적 연결을 늘리고 있는가?”</b><br>' +
-            '아래 목록에서 어르신을 누르면 그분 한 명의 상세로 들어갑니다. 회사 집계 표의 주차를 누르면 그 주의 어르신별 내역이 나옵니다.</div>';
+    // ★(S523 대표 지적 "체계적으로, 데이터를 쓰기 편하게") — 개요의 축을
+    //   "회사 자산으로 무엇이 얼마나 쌓이고 있는가" 로 다시 잡았다.
+    //   카드 = 자산 숫자(어르신 · 오늘 도착 · 누적) · 정보성 문구는 전량 걷어냈다(대표 지시).
+    var todayStr = today();
+    var arrivedToday = ids.filter(function(id){
+      return dailyOf(id).some(function(r){ return r.metric_date === todayStr; });
+    }).length;
+    var totalDailyRows = (DATA.daily || []).length;
+    var totalWeeklyRows = (DATA.weekly_obv || []).length;
 
-    // ★경보를 맨 위에 — 화면을 열자마자 "지금 손봐야 할 것"이 먼저 보여야 한다.
+    var html = "";
+    // 경보를 맨 위에 — 위험·주의만(참고는 표시하지 않는다 · alertsHtml 참조).
     html += alertsHtml();
 
     html += '<div class="cards">' +
       cardHtml("등록 어르신", ids.length + "명", "가명 기준") +
-      cardHtml("데이터 들어오는 기기", reporting + "명", (ids.length - reporting) + "명은 유입 없음") +
+      cardHtml("오늘 데이터 도착", arrivedToday + " / " + ids.length + "명", "오늘 일간 지표가 온 어르신") +
+      cardHtml("쌓인 데이터", totalWeeklyRows + "주차", rangeLabel() + " 일간 " + totalDailyRows + "건") +
       cardHtml("이번 주 추세", buckets.up + " ↑ / " + buckets.flat + " → / " + buckets.down + " ↓",
                "측정 중 " + buckets.unknown + "명 · 각자 지난주 대비") +
-      cardHtml("최근 데이터", latestDataDate() || "없음", "가장 최근 유입일") +
       cardHtml("기기 이상", devBad + "명", devReporting + "명이 기기 상태를 보고 중") +
       "</div>";
-
-    html += '<div class="note" style="margin:-8px 0 16px">일별 기록은 <b>' + rangeLabel() +
-            '</b> 기준입니다(오른쪽 위에서 바꿀 수 있어요). 주차·회사 집계는 기간 선택과 무관하게 전체를 보여 줍니다.</div>';
-
-    // ★(S513) 연구 화면으로 가는 문 — 개요에 표를 통째로 앉히지 않는다.
-    //   ★연구 배정은 매일 보는 일이 아니다 — 매일 보는 개요가 길어지면
-    //   정작 급한 "기기 이상"이 아래로 밀린다.
-    html += '<div class="row" style="margin:-4px 0 18px">' +
-      // ★기존 data-go 6곳과 ★같은 표기★ 를 쓴다 — 작은따옴표 속성 + esc().
-      //   JSON.stringify 를 두 번 씌우면 백슬래시가 HTML 에 그대로 박혀 JSON.parse 가
-      //   터지고 ★버튼이 조용히 죽는다★(눌러도 아무 일이 없고 오류도 안 보인다).
-      '<button class="link" data-go=\'' + esc(JSON.stringify({ view: "study" })) + '\'>' +
-      '연구 참여 관리 ›</button></div>';
 
     // ★★(S509) 등록 대기 중인 기기 — ★기기 상태 표보다도 앞★ 에 둔다.
     //   [왜 맨 앞인가] 아래 "기기 상태" 표는 ★등록된 어르신★ 을 한 줄씩 그린다. 그래서
@@ -799,39 +796,42 @@
     var pending = DATA.pending_devices || [];
     if (pending.length) {
       html += '<section><div class="sechead"><div><h2>등록 대기 중인 기기' +
-        '<span class="whose">아직 어느 어르신도 아닙니다</span></h2>' +
-        '<div class="desc">앱이 서버에 신호를 보내고 있지만 <b>어느 어르신의 기기인지 등록되지 않았습니다</b>. ' +
-        '등록 전까지 이 기기의 데이터는 <b>매일 버려집니다</b>.</div></div></div>' +
+        '<span class="whose">등록 전까지 이 기기의 데이터는 버려집니다</span></h2></div></div>' +
         '<div class="tablewrap"><table><tr><th>기기 번호(device_id)</th><th>처음 신호</th><th>마지막 신호</th><th>보낸 횟수</th>' +
         '<th>가명</th><th>동네</th><th></th></tr>';
       pending.forEach(function(c){
-        // ★(S517) 여기서 바로 어르신으로 등록한다(대표 지시 "앱을 깔면 자동으로 추가").
-        //   ★완전 자동 생성이 아니라 버튼 한 번인 이유★ = 가명 없는 어르신이 생기면
-        //   콘솔에서 누구인지 영영 알 수 없고, 배정표(P03…) 대조도 중복 방지도 무력해진다.
-        //   ★여기 떴다 = 이미 동의를 마친 기기다★(동의 전에는 서버로 아무것도 나가지 않는다).
+        // ★(S517) 여기서 바로 어르신으로 등록한다. ★여기 떴다 = 동의를 마친 기기다★.
+        // ★★(S523) 신호가 끊긴 기기는 등록 버튼을 잠근다 — 재발 방지.★★
+        //   [사고] 2026-08-08 이 목록에 ★재설치·삭제로 사라진 옛 기기 2대★(3일+ 무신호)가
+        //   그대로 떠 있었고, 대표가 그 죽은 기기를 어르신("101"·"102")으로 등록했다 →
+        //   데이터가 영영 오지 않는 어르신이 생겨 경보("데이터가 한 번도 안 옴")만 울렸다.
+        //   앱 재설치마다 device_id 가 새로 생기므로 옛 번호는 반드시 여기 남는다 —
+        //   ★죽은 번호를 "등록하세요"라고 내밀지 않는 것★ 이 근본 처방이다(48시간 기준).
         var d = esc(c.device_id);
-        html += "<tr><td style='font-family:monospace;font-size:12px'>" + d + "</td>" +
+        var lastMs = Date.parse(c.last_seen_at || "");
+        var deadDays = isNaN(lastMs) ? null : Math.floor((Date.now() - lastMs) / 86400000);
+        var dead = deadDays !== null && deadDays >= 2;
+        html += "<tr" + (dead ? ' style="opacity:.55"' : "") + "><td style='font-family:monospace;font-size:12px'>" + d + "</td>" +
           "<td>" + esc(String(c.first_seen_at || "").slice(0, 16).replace("T", " ")) + "</td>" +
-          "<td>" + esc(String(c.last_seen_at || "").slice(0, 16).replace("T", " ")) + "</td>" +
+          "<td>" + (dead ? '<span class="warn">' + deadDays + "일째 무신호</span>"
+                         : esc(String(c.last_seen_at || "").slice(0, 16).replace("T", " "))) + "</td>" +
           "<td>" + esc(String(c.seen_count == null ? "-" : c.seen_count)) + "회</td>" +
-          '<td><input class="pendAlias" data-dev="' + d + '" placeholder="예: P03" style="width:110px"></td>' +
-          '<td><input class="pendRegion" data-dev="' + d + '" placeholder="예: 고운동" style="width:130px"></td>' +
-          '<td><button class="primary pendReg" data-dev="' + d + '">어르신으로 등록</button>' +
-          '<div class="pendMsg" data-dev="' + d + '" style="font-size:12px;margin-top:4px"></div></td></tr>';
+          (dead
+            ? '<td colspan="3"><span class="muted">재설치 등으로 사라진 기기일 수 있습니다 — 등록하지 마세요. ' +
+              '새로 깐 앱은 새 번호로 다시 나타납니다.</span></td>'
+            : '<td><input class="pendAlias" data-dev="' + d + '" placeholder="예: P03" style="width:110px"></td>' +
+              '<td><input class="pendRegion" data-dev="' + d + '" placeholder="예: 고운동" style="width:130px"></td>' +
+              '<td><button class="primary pendReg" data-dev="' + d + '">어르신으로 등록</button>' +
+              '<div class="pendMsg" data-dev="' + d + '" style="font-size:12px;margin-top:4px"></div></td>') +
+          "</tr>";
       });
-      html += "</table></div>" +
-        '<div class="note">★<b>처음 신호</b>가 오래됐는데 아직 여기 있다면 <b>그만큼 오래 방치된 기기</b>입니다.<br>' +
-        '★이 표에 담기는 것은 <b>기기 번호와 시각뿐</b>입니다 — 어르신에 대한 정보는 들어오지 않습니다.<br>' +
-        '★가명은 <b>배정표에 인쇄된 것과 똑같이</b> 적어 주세요. 같은 가명이 이미 있으면 등록되지 않습니다' +
-        '(같은 분이 두 명으로 늘어나는 것을 막습니다).</div></section>';
+      html += "</table></div></section>";
     }
 
     // ★(S508) 기기 상태 — 어르신 목록보다 ★앞★ 에 둔다.
     //   돌봄 숫자를 읽기 전에 "그 숫자가 나올 기기가 돌고는 있었는가"를 먼저 봐야 한다.
     html += '<section><div class="sechead"><div><h2>기기 상태' +
-      '<span class="whose">어르신이 아니라 기기를 봅니다</span></h2>' +
-      '<div class="desc">만든 것이 실제로 돌고 있는지 보는 자리입니다. 여기 오는 값은 숫자와 예/아니오뿐이고 ' +
-      '<b>대화 내용이나 위치는 들어오지 않습니다</b>(집 좌표는 있다/없다 한 칸입니다).</div></div></div>' +
+      '<span class="whose">어르신이 아니라 기기를 봅니다</span></h2></div></div>' +
       '<div class="tablewrap"><table><tr><th>어르신</th><th>마지막 보고</th><th>상태</th>' +
       '<th>마지막으로 들은 때</th><th>오늘 마이크 죽음</th><th>집 좌표</th></tr>';
     ids.forEach(function(id){
@@ -855,19 +855,16 @@
                      : (h.home_location_known === false ? '<span class="warn">없음</span>'
                         : (h.home_location_known === true ? '<span class="muted">있음</span>' : '<span class="muted">—</span>'))) + "</td></tr>";
     });
-    html += "</table></div>" +
-      '<div class="note">★<b>마지막으로 들은 때</b>가 <b>없음</b>이면 "방금 들었다"가 아니라 <b>한 번도 못 들었다</b>는 뜻입니다 — ' +
-      '두 값의 뜻이 정반대라 0으로 채우지 않았습니다.<br>' +
-      '★<b>오늘 마이크 죽음</b>의 0은 사실입니다(도는 동안 안 죽었다). 다만 앱이 아예 안 돌던 날도 0이라 ' +
-      '<b>마지막으로 들은 때와 함께</b> 읽어야 합니다.<br>' +
-      '★<b>집 좌표 없음</b>이면 부르면 대답은 하지만 <b>먼저 말 거는 기능이 통째로 멈춥니다</b>(댁에서 주소를 다시 저장하면 잡힙니다).</div></section>';
+    // ★(S523) 설명 문구는 걷어냈다(대표 지시). 값의 뜻(없음≠0 · 집 좌표 없음 = 선제발화
+    //   침묵)은 위 데이터 생산 규칙 주석과 S508 헤더가 보존한다.
+    html += "</table></div></section>";
 
-    // 어르신 목록(클릭 가능)
-    html += '<section><div class="sechead"><div><h2>어르신 목록</h2>' +
-      '<div class="desc">한 줄 = 한 분. 누르면 그분의 추세·일별 기록 상세로 들어갑니다. 가명·동네·메모만 표시합니다(실명 없음).</div></div>' +
+    // 어르신 목록(클릭 가능) — 추세 열은 지난주 대비 변화량(OBV) 그대로.
+    html += '<section><div class="sechead"><div><h2>어르신 목록' +
+      '<span class="whose">누르면 상세</span></h2></div>' +
       csvBtn("elders") + "</div>" +
       '<div class="tablewrap"><table><tr><th>어르신</th><th>메모</th><th>최근 주차</th><th>그 주 기록</th>' +
-      "<th>관계망 접촉</th><th>이번 주 추세</th><th>비교된 축</th><th>마지막 데이터</th><th>상태</th></tr>";
+      "<th>관계망 접촉</th><th>추세(OBV)</th><th>비교된 축</th><th>마지막 데이터</th><th>상태</th></tr>";
     ids.sort(function(a,b){ return rs[a].alias.localeCompare(rs[b].alias); }).forEach(function(id){
       var w = latestWeek(id), ds = dailyOf(id), nt = noteOf(id);
       var last = ds.length ? ds[ds.length - 1].metric_date : null;
@@ -886,19 +883,18 @@
         "<td>" + (last ? esc(last) : '<span class="muted">—</span>') + "</td>" +
         "<td>" + status + "</td></tr>";
     });
-    html += "</table></div>" +
-      '<div class="note">★<b>“비교된 축”</b>이 3분의 1이면 그 추세는 <b>한 가지 축(예: 관계망 접촉)만</b> 보고 나온 숫자입니다 — ' +
-      '나머지 축은 아직 지난주 값이 없어 비교하지 못했다는 뜻이라, 숫자를 그만큼 얇게 읽어야 합니다.<br>' +
-      '★주차는 <b>그 어르신의 등록일 기준</b>입니다(사람마다 시작일이 다릅니다).</div></section>';
+    html += "</table></div></section>";
 
-    // 전원 추세 그래프 — 누구 선인지 범례로 명시
-    html += "<section><h2>어르신별 주차 연결 추세 (OBV)" + '<span class="whose">선 1개 = 어르신 1명</span></h2>' +
-      '<div class="desc">각자 등록 1주차를 0으로 두고, <b>직전 주 대비 변화</b>를 누적한 선입니다. 절대 점수가 아니라 그 어르신 자신과의 비교예요.</div>' +
+    // 전원 추세 그래프 — 점 하나 = 그 주의 지난주 대비 변화량(OBV).
+    //   ★(S523) 종전 설명("변화를 누적한 선")은 코드와 달랐다 — 코드는 처음부터 주별
+    //   OBV 를 그대로 찍고 있었다. 잘못된 설명이 "이 차트는 OBV 가 아니다"라는 오독을
+    //   낳았으므로(대표 지적) 설명을 지우고 제목이 그 사실만 말하게 한다.
+    html += "<section><h2>어르신별 주차 연결 추세 (OBV · 지난주 대비)" +
+      '<span class="whose">선 1개 = 어르신 1명 · 0 위 = 늘었다</span></h2>' +
       obvSvg(ids.map(function(id){ return { id: id, rows: weeksOf(id) }; })) + "</section>";
 
     // 회사 집계(주차 클릭 가능)
-    html += '<section><div class="sechead"><div><h2>회사 전체 · 주간 집계' + '<span class="whose">달력 주(월요일 시작)</span></h2>' +
-      '<div class="desc">참여 어르신 <b>전원의 합계</b>입니다. 주차를 누르면 그 주에 각 어르신이 어땠는지 볼 수 있어요.</div></div>' +
+    html += '<section><div class="sechead"><div><h2>회사 전체 · 주간 집계' + '<span class="whose">달력 주(월요일 시작) · 전원 합계</span></h2></div>' +
       csvBtn("company") + "</div>" +
       '<div class="tablewrap"><table><tr><th>주 시작</th><th>어르신</th><th>관계망 접촉 합</th>' +
       "<th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th></tr>";
@@ -912,11 +908,22 @@
     });
     html += "</table></div></section>";
 
-    // 전체 원지표 한 번에 내려받기(IR·분석용)
-    html += '<section><div class="sechead"><div><h2>전체 원지표 내려받기</h2>' +
-      '<div class="desc"><b>' + rangeLabel() + '</b> · 어르신별 일별 원지표 전량을 CSV 한 장으로 받습니다. ' +
-      '<b>못 잰 값은 빈 칸</b>입니다(0이 아닙니다). 엑셀에서 한글이 깨지지 않도록 저장합니다.</div></div>' +
-      csvBtn("all") + "</div></section>";
+    // ★★(S523) 데이터 내려받기 허브 — 대표 지시 "데이터 뽑아야해".
+    //   회사 자산으로 나가는 파일을 ★한 자리★ 에 모은다(종전엔 화면 곳곳에 흩어져
+    //   어떤 데이터가 뽑히는지 한눈에 알 수 없었다). 빈 칸 = 측정 못 함(0 아님).
+    html += '<section><div class="sechead"><div><h2>데이터 내려받기' +
+      '<span class="whose">빈 칸 = 측정 못 함(0 아님)</span></h2></div></div>' +
+      '<div class="tablewrap"><table>' +
+      '<tr><td><b>전체 원지표</b> <span class="muted">어르신별 일별 전량 · ' + rangeLabel() + "</span></td><td>" + csvBtn("all") + "</td></tr>" +
+      '<tr><td><b>어르신 목록</b> <span class="muted">가명·최근 주차·추세</span></td><td>' + csvBtn("elders") + "</td></tr>" +
+      '<tr><td><b>회사 주간 집계</b> <span class="muted">전원 합계</span></td><td>' + csvBtn("company") + "</td></tr>" +
+      '<tr><td><b>연구 주차 자료</b> <span class="muted">가명·주차 지표(연구자 전달용)</span></td><td>' + csvBtn("study_weeks") + "</td></tr>" +
+      '<tr><td><b>연구 설문 점수</b> <span class="muted">SGDS 등 대면 설문</span></td><td>' + csvBtn("study_survey") + "</td></tr>" +
+      '<tr><td><b>연구 배정 명단</b> <span class="muted">가명·군·기저일·종이동의</span></td><td>' + csvBtn("study_roster") + "</td></tr>" +
+      "</table></div>" +
+      '<div class="row" style="margin-top:10px">' +
+      '<button class="link" data-go=\'' + esc(JSON.stringify({ view: "study" })) + '\'>' +
+      '연구 배정 · 설문 입력 ›</button></div></section>';
 
     html += adminSection();
     el("view").innerHTML = html;
@@ -1050,8 +1057,8 @@
         fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.away_from_home_minutes, "분") + "</td><td>" +
         fmt(r.mood_score_avg) + "</td></tr>";
     });
-    html += "</table></div>" +
-      '<div class="note">★“측정 중”은 <b>0이 아니라 못 쟀다</b>는 뜻입니다. 특히 <b>어르신 발화</b>는 목소리 주인 판별(화자귀속)이 되어야 채워지며, 현재 개선 작업 중이라 비어 있는 날이 많습니다.</div></section>';
+    // ★(S523) "측정 중 = 0이 아니라 못 쟀다" 설명 문구는 걷어냈다(대표 지시 · 규약은 RS-4).
+    html += "</table></div></section>";
 
     // 달력 주 기준 요약(effect_weekly) — 축이 다르므로 분리해 표시
     if (eff.length) {
@@ -1165,15 +1172,12 @@
     var nameOfDevice = {};
     active.forEach(function(r){ nameOfDevice[r.device_id] = r.pseudonym; });
 
+    // ★(S523 대표 지적 "연구 참여 관리는 또 뭐야? 관리하고 말것도 없어. 데이터 뽑아야해")
+    //   — 화면의 정체를 "관리"에서 ★입력 창구★ 로 좁혔다. 하는 일은 딱 둘:
+    //   ①가명 배정(자동 수집이 붙는 자리) ②대면 설문 점수 입력. 뽑는 것(CSV)은 개요의
+    //   "데이터 내려받기" 허브로 옮겼고, 카드·설명 문구는 걷어냈다.
     var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "연구" }]);
-    html += "<h1>연구 참여 관리</h1>" +
-      '<div class="sub">기기를 배정하면 그 기기가 <b>다음 날 스스로 등록</b>되고, 주마다 자료가 올라옵니다.</div>';
-
-    html += '<div class="cards">' +
-      cardHtml("참여자", active.length + "명", "철회되지 않은 배정") +
-      cardHtml("자료 도착", snaps.length + "건", "주차 단위") +
-      cardHtml("기기", devices.length + "대", "서버를 두드린 기기") +
-      "</div>";
+    html += "<h1>연구 배정 · 설문 입력</h1>";
 
     // ── 1) 배정 ────────────────────────────────────────────────────────
     //   ★폼을 숨기지 않는다★ — 배정할 새 기기가 없을 때가 곧 고칠 때다.
@@ -1201,16 +1205,15 @@
         '<input type="checkbox" id="asgPaper"> <span style="font-size:13px">서명 받았음</span></label>' +
         '<button class="primary" id="asgBtn" style="margin-bottom:2px">배정</button></div>' +
         '<div id="asgMsg" style="font-size:13px;margin-top:8px"></div>' +
-        '<div class="note">★<b>종이 동의서</b>는 <b>받았을 때만</b> 체크하세요. 한 번 체크해 두면 나중에 재배정하며 ' +
-        '체크를 깜빡해도 <b>없던 일이 되지 않습니다</b>(서버가 지키는 규칙 — 지우려면 사람이 직접).<br>' +
-        '★<b>기저일</b>을 나중에 바꿔도 <b>이미 얼린 주차의 번호는 안 바뀝니다</b> — 처음에 정확히 넣으세요.<br>' +
-        '★<b>연동 전</b> 기기도 배정할 수 있습니다. 다만 복지사 연동이 끝나야 자료가 서버에 도착합니다(그전까지는 기기에 쌓입니다).</div>';
+        // ★(S523) 안내는 이 한 줄만 남긴다 — 기저일 오입력은 소급이 안 되는 유일한 값이다
+        //   (S515 실측 · 나머지 규칙은 서버가 지키므로 화면이 떠들 필요 없다).
+        '<div class="note">★<b>기저일</b>은 처음에 정확히 — 이미 얼린 주차의 번호는 나중에 못 바꿉니다.</div>';
     }
     html += "</section>";
 
     // ── 2) 참여자 ──────────────────────────────────────────────────────
-    html += '<section><div class="sechead"><div><h2>참여자</h2>' +
-      '<div class="desc">가명과 실제 어르신을 잇는 대응표는 이 화면에 없습니다.</div></div>' +
+    html += '<section><div class="sechead"><div><h2>참여자' +
+      '<span class="whose">가명 기준 · 대응표 없음</span></h2></div>' +
       csvBtn("study_roster") + "</div>";
     if (!assigns.length) {
       html += '<div class="note">아직 배정된 참여자가 없습니다.</div>';
@@ -1238,9 +1241,7 @@
           "</td></tr>";
       });
       html += "</table></div>" +
-        '<div id="revMsg" style="font-size:13px;margin-top:8px"></div>' +
-        '<div class="note">★<b>0주 · 연동 전</b>이면 그 기기는 자료를 <b>모으고 있지만 서버에 못 보내는 중</b>입니다. ' +
-        '복지사 연동이 끝나면 밀린 주차가 한꺼번에 올라옵니다.</div>';
+        '<div id="revMsg" style="font-size:13px;margin-top:8px"></div>';
     }
     html += "</section>";
 
@@ -1283,11 +1284,9 @@
         '<label style="display:block">점수<br><input id="svScore" type="number" step="0.01" style="width:90px"></label>' +
         '<button class="primary" id="svBtn" style="margin-bottom:2px">저장</button>' +
         '<button class="csv" id="svDelBtn" style="margin-bottom:2px">지우기</button></div>' +
-        '<div id="svMsg" style="font-size:13px;margin-top:8px"></div>' +
-        '<div class="note">★같은 <b>참여자·척도·시점</b>을 다시 저장하면 <b>덮어씁니다</b> — 잘못 옮겨 적은 점수는 다시 넣어 고치세요.<br>' +
-        '★<b>지우기</b>는 <b>엉뚱한 참여자에게 적었을 때</b>만 쓰세요(위 세 칸이 가리키는 한 칸만 지웁니다).<br>' +
-        '★<b>시점</b>은 CRF 표의 열이고 <b>시행일</b>은 실제로 만난 날입니다 — 방문이 며칠 밀려도 시점은 그대로 두세요.<br>' +
-        '★점수가 척도의 범위를 벗어나면 <b>저장되지 않습니다</b>(30을 300으로 옮겨 적는 사고를 막습니다).</div>';
+        '<div id="svMsg" style="font-size:13px;margin-top:8px"></div>';
+      // ★(S523) 사용 규칙 4줄은 걷어냈다(대표 지시) — 덮어쓰기·범위 검증은 서버가
+      //   집행하고, 실수는 저장 시 메시지(svMsg)로 그때그때 알린다.
 
       active.forEach(function(a){
         html += '<div style="margin:18px 0 6px"><b style="font-size:16px">' + esc(a.pseudonym) + "</b>" +
@@ -1312,17 +1311,14 @@
         });
         html += "</table></div>";
       });
-      html += '<div class="note">★빈 칸(—)은 <b>아직 그 시점에 그 척도를 재지 않았다</b>는 뜻입니다 — <b>0점이 아닙니다</b>.<br>' +
-        '★<b>변화</b>는 기저(0주) 대비 12주입니다. 색은 <b>척도의 방향</b>을 따릅니다 — ' +
-        '척도 이름 옆에 적힌 대로, <b>우울 점수는 내려가는 것</b>이 좋은 일입니다.<br>' +
-        '★<b>점수의 해석(절단점 등)은 이 화면이 하지 않습니다</b> — 숫자와 그 범위만 보관합니다. ' +
-        '판정은 연구자와 의료인의 몫입니다.</div>';
+      // ★(S523) 표 아래 설명은 걷어냈다(대표 지시) — 척도 방향·범위는 척도 이름 옆에,
+      //   빈 칸의 뜻(측정 안 함≠0)은 데이터 규약(RS-4)에 이미 있다.
     }
     html += "</section>";
 
     // ── 4) 주차 자료 — ★참여자 전원★ 을 그린다(자료가 없어도 자리를 만든다) ──
-    html += '<section><div class="sechead"><div><h2>주차 자료</h2>' +
-      '<div class="desc"><b>참여자 한 명당 한 묶음</b>입니다(종합이 아닙니다).</div></div>' +
+    html += '<section><div class="sechead"><div><h2>주차 자료' +
+      '<span class="whose">참여자 한 명당 한 묶음</span></h2></div>' +
       csvBtn("study_weeks") + "</div>";
     if (!active.length) {
       html += '<div class="note">참여자가 없습니다.</div></section>';
@@ -1376,10 +1372,7 @@
         });
         html += "</table></div>";
       });
-      html += '<div class="note">★★빈 칸(—)은 <b>그 주를 얼릴 때 그 항목을 안 재고 있었다</b>는 뜻입니다. ' +
-        '<b>이미 얼린 주는 나중에 채워지지 않습니다</b> — 기다리셔도 그대로입니다(다시 재면 그때보다 나쁜 숫자가 나오므로 두는 것이 맞습니다).<br>' +
-        '★<b>연결지수</b> 옆 <b>평소대비</b>는 100이 평소이고 상한이 없습니다. <b>목표대비</b>는 0~100입니다 — 척도가 다르면 곧바로 견주면 안 됩니다.<br>' +
-        '★<b>집 밖(분/일)</b> 괄호 안은 그 주에 <b>실제로 측정된 날 수</b>입니다.</div></section>';
+      html += "</section>";
     }
 
     el("view").innerHTML = html;
@@ -1577,7 +1570,19 @@
     var drawn = series.filter(function(s){
       return s.rows.some(function(w){ return w.connection_obv !== null && w.connection_obv !== undefined; });
     });
-    if (!drawn.length) return '<div class="muted" style="font-size:13px">아직 그릴 추세가 없습니다 — 두 번째 주가 지나야 첫 비교가 생깁니다.</div>';
+    // ★(S523) 기준 주만 있는 어르신도 ★이름은 보이게★ 한다 — 대표 지적("추세가 왜
+    //   1명만이지? 정보는 2명에게 받는다며?"). 첫 주는 비교 대상(지난주)이 없어 OBV 가
+    //   null 이라 선을 못 그리는데, 종전엔 그 사람이 그래프에서 통째로 사라져
+    //   "데이터가 안 온다"로 오독됐다. 선이 없어도 ★왜 없는지★ 는 화면이 말해야 한다.
+    var baseOnly = series.filter(function(s){
+      return s.rows.length > 0 && !s.rows.some(function(w){ return w.connection_obv !== null && w.connection_obv !== undefined; });
+    });
+    var baseNote = baseOnly.length
+      ? '<div class="muted" style="font-size:12.5px;margin-top:6px">' +
+        baseOnly.map(function(s){ return esc(label(s.id)); }).join(" · ") +
+        " — 첫 주(기준 주) 진행 중 · 다음 주부터 선이 생깁니다</div>"
+      : "";
+    if (!drawn.length) return '<div class="muted" style="font-size:13px">아직 그릴 추세가 없습니다 — 두 번째 주가 지나야 첫 비교가 생깁니다.</div>' + baseNote;
     var maxWeek = 1, maxAbs = 10;
     drawn.forEach(function(s){ s.rows.forEach(function(w){
       if (w.week_index > maxWeek) maxWeek = w.week_index;
@@ -1606,7 +1611,7 @@
     out += '<div class="legend">' + drawn.map(function(s, i){
       return '<span><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(label(s.id)) + "</span>";
     }).join("") + "</div>";
-    return out;
+    return out + baseNote;
   }
 
   // 한 사람의 축별 OBV(무엇이 오르고 내렸는지)
