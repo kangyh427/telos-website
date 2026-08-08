@@ -578,9 +578,11 @@
     //   가명과 device_id 가 한 파일에 같이 담기면 그 파일 하나가 되짚기 열쇠가 된다.
     if (kind === "study_roster") {
       downloadCsv("텔로스_연구배정_" + today() + ".csv",
-        ["가명", "군", "기저일", "도착주차수", "배정일", "배정자", "철회일"],
+        // ★(S523) 종이 동의 칸 추가 — IRB 서면 동의 대조는 결국 이 파일로 나간다.
+        ["가명", "군", "기저일", "종이동의", "도착주차수", "배정일", "배정자", "철회일"],
         (DATA.study_assignment || []).map(function(r){
           return [r.pseudonym, r.cohort, r.baseline_date,
+                  (r.paper_consent ? "받음" : "아직"),
                   snapCount(r.pseudonym), String(r.assigned_at || "").slice(0, 10),
                   r.assigned_by, String(r.revoked_at || "").slice(0, 10)];
         }));
@@ -1195,9 +1197,13 @@
         '<option value="IMMEDIATE">IMMEDIATE (즉시)</option>' +
         '<option value="WAITLIST">WAITLIST (대기)</option></select></label>' +
         '<label style="display:block">기저일(Week0)<br><input id="asgBaseline" type="date" value="' + today() + '"></label>' +
+        '<label style="display:block">종이 동의서<br>' +
+        '<input type="checkbox" id="asgPaper"> <span style="font-size:13px">서명 받았음</span></label>' +
         '<button class="primary" id="asgBtn" style="margin-bottom:2px">배정</button></div>' +
         '<div id="asgMsg" style="font-size:13px;margin-top:8px"></div>' +
-        '<div class="note">★<b>기저일</b>을 나중에 바꿔도 <b>이미 얼린 주차의 번호는 안 바뀝니다</b> — 처음에 정확히 넣으세요.<br>' +
+        '<div class="note">★<b>종이 동의서</b>는 <b>받았을 때만</b> 체크하세요. 한 번 체크해 두면 나중에 재배정하며 ' +
+        '체크를 깜빡해도 <b>없던 일이 되지 않습니다</b>(서버가 지키는 규칙 — 지우려면 사람이 직접).<br>' +
+        '★<b>기저일</b>을 나중에 바꿔도 <b>이미 얼린 주차의 번호는 안 바뀝니다</b> — 처음에 정확히 넣으세요.<br>' +
         '★<b>연동 전</b> 기기도 배정할 수 있습니다. 다만 복지사 연동이 끝나야 자료가 서버에 도착합니다(그전까지는 기기에 쌓입니다).</div>';
     }
     html += "</section>";
@@ -1210,7 +1216,7 @@
       html += '<div class="note">아직 배정된 참여자가 없습니다.</div>';
     } else {
       html += '<div class="tablewrap"><table><tr><th>가명</th><th>군</th><th>기저일</th>' +
-        "<th>자료</th><th>기기</th><th></th></tr>";
+        "<th>종이 동의</th><th>자료</th><th>기기</th><th></th></tr>";
       assigns.forEach(function(r){
         var n = snapCount(r.pseudonym), st;
         if (r.revoked_at) st = '<span class="muted">철회됨</span>';
@@ -1221,6 +1227,9 @@
           "<td><b>" + esc(r.pseudonym) + "</b></td>" +
           "<td>" + esc(r.cohort) + "</td>" +
           "<td>" + esc(r.baseline_date) + "</td>" +
+          // ★(S523) 종이 동의 — 안 받았으면 ★경고색★ 이다. IRB 가 약속한 서면 동의라
+          //   "아직"이 눈에 안 띄면 8/11 창구에서 통째로 빠진 채 지나간다.
+          "<td>" + (r.paper_consent ? "받음" : '<span class="warn">아직</span>') + "</td>" +
           "<td>" + st + "</td>" +
           "<td style=\"font-family:monospace;font-size:11px\" title=\"" + esc(r.device_id) + "\">" +
             esc(String(r.device_id || "").slice(0, 8)) + "…</td>" +
@@ -1416,13 +1425,22 @@
       if (!dev) { say("asgMsg", false, "기기를 골라 주세요."); return; }
       if (!base) { say("asgMsg", false, "기저일을 넣어 주세요."); return; }
       btn.disabled = true;
-      // ★종이 동의서는 콘솔이 묻지 않는다(대표 지시) — 대표가 직접 받으신다.
-      //   서버 컬럼은 남아 있으나 기본값(false)으로 두고 화면은 관여하지 않는다.
-      rpc("console_assign_study_participant", {
+      // ★(이력) 종전에는 "종이 동의서는 콘솔이 묻지 않는다(대표 지시) — 대표가 직접
+      //   받으신다" 였고, 그래서 이 값을 안 넘겨 서버는 늘 false 였다.
+      // ★★(S523 · 2026-08-08 대표 지시로 뒤집힘) "콘솔박스 진행" — 종이로 받는 것과
+      //   그 사실을 시스템에 남기는 것은 다르다. 8/11 PoC 에서 10명 서명을 받아도
+      //   남길 곳이 없어(콘솔에 칸 0개) IRB 대조가 사람 기억에 걸려 있었다.
+      //   서버 RPC 는 p_paper_consent 를 ★처음부터★ 받고 있었다 — 없던 것은 화면뿐이다.
+      // ★체크 안 하면 아예 안 넘긴다(undefined)★ — false 를 보내도 서버가
+      //   "paper_consent or 새값" 으로 지켜 주지만, 화면이 "안 받았다"를 주장하지는 않는다.
+      var paperEl = el("asgPaper");
+      var payload = {
         p_device_id: dev,
         p_cohort: el("asgCohort").value,
         p_baseline_date: base
-      }).then(function(r){
+      };
+      if (paperEl && paperEl.checked) payload.p_paper_consent = true;
+      rpc("console_assign_study_participant", payload).then(function(r){
         btn.disabled = false;
         if (r.ok) {
           var b = r.body, row = (b && b.length) ? b[0] : b;
