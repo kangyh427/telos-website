@@ -597,17 +597,36 @@
     return (DATA.console_cohort || []).filter(function(r){ return r.scope === "전체"; })
       .sort(function(a, b){ return a.metric_date < b.metric_date ? -1 : 1; });
   }
+  /**
+   * ★★(S525 정정) 일간 OBV — ★이것이 정본 척도다★(sql 034 · 대표 지시).
+   *
+   * ★절대 연결지수(console_status.index_avg_7d)를 사람끼리 비교하는 데 쓰지 말 것★ —
+   * 그 값은 목표치 60분·60분·3000m 로 잰 것이고 ★그 목표치는 2026-07-26 에 사용
+   * 중지됐다★(sql 012: "최대 목표치는 필요없어"). 어르신마다 삶이 다른데 하나의 목표를
+   * 세우는 것은 "평균적 노인을 상정하지 않는다"는 제0원칙에 정면으로 어긋난다.
+   * ★해도 되는 비교는 "그분이 자기 어제보다 나아졌는가" 하나뿐이다.★
+   */
+  function obvRowsOf(id){
+    return (DATA.console_obv || []).filter(function(r){ return r.elderly_id === id; });
+  }
+  function obvLatest(id){
+    var rows = obvRowsOf(id);
+    return rows.length ? rows[rows.length - 1] : null;
+  }
 
   // ── 상태판 정렬 (S525 · 대표 지시 "정렬 가능한 정보들로") ────────────
   //   ★정렬은 화면에서 한다★ — 자료는 이미 다 받아 왔다. 서버를 다시 부르면 느리고,
   //   폴링과 겹쳐 정렬이 제멋대로 되돌아간다.
   //   ★빈 값은 방향과 무관하게 언제나 맨 아래★ — null 을 "가장 나쁨"으로 올리면
   //   ★아직 못 잰 사람★ 이 ★나빠진 사람★ 을 화면 위에서 밀어낸다.
-  var SORT = { key: "delta", dir: 1 };   // 기본 = 나빠진 순(방향 오름차순)
+  var SORT = { key: "base7", dir: 1 };   // 기본 = 자기 평소보다 나빠진 순
   var STATUS_COLS = [
     { k: "alias",   t: "어르신",      txt: true,  v: function(r){ return r.alias; } },
-    { k: "delta",   t: "방향",        hint: "직전 7일 대비", v: function(r){ return num(r.index_delta); } },
-    { k: "index",   t: "7일 지수",    v: function(r){ return num(r.index_avg_7d); } },
+    // ★★척도 셋은 전부 ★그분 자신★ 을 기준으로 한다(sql 034 · 대표 정본).
+    //   절대 지수는 이 표에서 걷어냈다 — 사람끼리 견주게 만드는 열이었다.
+    { k: "prev",    t: "어제 대비",   hint: "%",     v: function(r){ return num(r.vsPrev); } },
+    { k: "base7",   t: "평소 대비",   hint: "직전 7일", v: function(r){ return num(r.vsBase7); } },
+    { k: "obv",     t: "추세(OBV)",   hint: "시작 이후 누적", v: function(r){ return num(r.obv); } },
     { k: "alone",   t: "혼자 비율",   v: function(r){ return num(r.alone_pct_7d); } },
     { k: "utter",   t: "발화",        v: function(r){ return num(r.utter_7d); } },
     { k: "sess",    t: "대화 세션",   v: function(r){ return num(r.sessions_7d); } },
@@ -622,6 +641,12 @@
       var s = statusOf(id) || {};
       var out = { id: id, alias: rs[id].alias, region: rs[id].region, note: noteOf(id) };
       Object.keys(s).forEach(function(k){ out[k] = s[k]; });
+      // ★(S525 정정) 정본 척도는 일간 OBV 다 — 마지막 관측일의 값을 붙인다.
+      var o = obvLatest(id);
+      out.vsPrev  = o ? o.connection_vs_prev_pct  : null;
+      out.vsBase7 = o ? o.connection_vs_base7_pct : null;
+      out.obv     = o ? o.connection_obv          : null;
+      out.obvDate = o ? o.metric_date             : null;
       return out;
     });
   }
@@ -652,7 +677,10 @@
     var rows = sortStatus(statusRows());
     var html = '<section><div class="sechead"><div><h2>어르신 상태판' +
       '<span class="whose">열 이름을 누르면 그 기준으로 정렬됩니다</span></h2>' +
-      '<div class="desc">최근 7일(<b>오늘 제외</b> — 오늘은 아직 집계 중입니다) 값과, 그 직전 7일 대비 방향입니다. ' +
+      '<div class="desc"><b>모든 비교는 그분 자신을 기준으로 합니다</b> — 어제의 그분, 요즘의 그분. ' +
+      '어르신끼리 견주지 않습니다(삶이 저마다 달라 하나의 목표를 세울 수 없습니다).<br>' +
+      '어제 대비 = 그날의 답 · 평소 대비 = 직전 7일 자기 평균과 견준 것(하루 출렁임이 걷힙니다) · ' +
+      '추세(OBV) = 시작 이후 누적. 참여·안부는 최근 7일(<b>오늘 제외</b>)이고, ' +
       '“도착”이 7일 중 며칠인지를 함께 보세요 — <b>이틀치로 나온 평균은 평균이 아닙니다</b>.</div></div>' +
       csvBtn("elders") + "</div><div class=\"tablewrap\"><table><tr>";
     STATUS_COLS.forEach(function(c){
@@ -667,8 +695,9 @@
     rows.forEach(function(r){
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.id })) + "'>" +
         "<td><b>" + esc(r.alias) + "</b>" + (r.region ? ' <span class="muted">· ' + esc(r.region) + "</span>" : "") + "</td>" +
-        "<td>" + deltaCell(r.index_delta) + "</td>" +
-        "<td>" + fmt(r.index_avg_7d) + "</td>" +
+        "<td>" + deltaCell(r.vsPrev) + "</td>" +
+        "<td>" + deltaCell(r.vsBase7) + "</td>" +
+        "<td>" + deltaCell(r.obv) + "</td>" +
         "<td>" + fmt(r.alone_pct_7d, "%") + "</td>" +
         "<td>" + fmt(r.utter_7d, "회") + "</td>" +
         "<td>" + fmt(r.sessions_7d, "회") + "</td>" +
@@ -705,12 +734,26 @@
     var html = '<section><div class="sechead"><div><h2>사용 전후 비교' +
       '<span class="whose">기저 = 관측 시작 첫 14일</span></h2>' +
       '<div class="desc">이 서비스를 쓰기 시작한 첫 2주와 최근 2주를 견줍니다(두 구간은 겹치지 않습니다). ' +
-      '기저가 아직 안 찬 분은 <b>몇 일째인지</b>가 대신 나옵니다 — 그 칸이 비었다고 나빠진 것이 아닙니다.</div></div></div>' +
+      '기저가 아직 안 찬 분은 <b>몇 일째인지</b>가 대신 나옵니다 — 그 칸이 비었다고 나빠진 것이 아닙니다.<br>' +
+      '<b>★모든 비교는 그분 안에서만 합니다</b> — 지수 칸의 숫자를 <b>어르신끼리 견주지 마세요</b>. ' +
+      '그 값은 잠정 목표치로 잰 것이라(사용 중지된 척도) 사람 간 비교에 쓸 수 없습니다. ' +
+      '견줄 수 있는 것은 맨 오른쪽 <b>OBV 변화</b>입니다.</div></div></div>' +
       '<div class="tablewrap"><table><tr><th>어르신</th><th>기저 구간</th><th>기저 지수</th>' +
-      "<th>최근 구간</th><th>최근 지수</th><th>변화</th><th>혼자 비율 변화</th></tr>";
-    if (!rows.length) html += '<tr><td colspan="7" class="muted">등록된 어르신이 없습니다</td></tr>';
+      "<th>최근 구간</th><th>최근 지수</th><th>변화</th><th>혼자 비율 변화</th><th>OBV 변화</th></tr>";
+    if (!rows.length) html += '<tr><td colspan="8" class="muted">등록된 어르신이 없습니다</td></tr>';
     rows.forEach(function(r){
       var p = r.p;
+      // ★OBV 변화 = (마지막 누적) − (기저 구간 끝의 누적).
+      //   누적선의 두 지점 차이라 ★그분 안의 변화★ 이고, 척도가 정본이라 사람끼리도 견줄 수 있다.
+      var ob = obvRowsOf(r.id).filter(function(o){ return num(o.connection_obv) !== null; });
+      var obvDelta = null;
+      // ★기저 창이 아직 안 닫혔으면 계산하지 않는다★ — 그때는 "기저 끝"이 미래라
+      //   마지막 행이 그대로 잡혀 ★변화 0★ 이라는 거짓이 나온다(미리보기에서 실제로 나왔다).
+      if (ob.length && p.baseline_end && p.baseline_window_closed) {
+        var atBase = null;
+        ob.forEach(function(o){ if (o.metric_date <= p.baseline_end) atBase = o; });
+        if (atBase) obvDelta = Math.round((num(ob[ob.length - 1].connection_obv) - num(atBase.connection_obv)) * 10) / 10;
+      }
       var baseCell = p.baseline_ready
         ? fmt(p.baseline_index_avg) + ' <span class="muted">' + p.baseline_days + "일</span>"
         : '<span class="muted">모으는 중 ' + (p.baseline_days == null ? 0 : p.baseline_days) + "/14일</span>";
@@ -724,49 +767,72 @@
         '<td class="muted">' + (p.recent_start ? esc(p.recent_start) + " ~ " + esc(p.recent_end) : "—") + "</td>" +
         "<td>" + recCell + "</td>" +
         "<td>" + deltaCell(p.index_delta) + "</td>" +
-        "<td>" + deltaCell(p.alone_pct_delta) + "</td></tr>";
+        "<td>" + deltaCell(p.alone_pct_delta) + "</td>" +
+        "<td>" + deltaCell(obvDelta) + "</td></tr>";
     });
     return html + "</table></div></section>";
   }
 
-  // ── 종합 추이(표②) — 전체 평균 연결지수 한 선 ────────────────────────
-  //   ★어르신 수를 함께 그린다★ — 사람이 늘거나 줄면 평균이 저절로 움직인다.
-  //   그 사실이 안 보이면 "좋아졌다/나빠졌다"를 잘못 읽는다.
-  function cohortSvg(){
-    var rows = cohortAll().filter(function(r){ return num(r.index_avg) !== null; });
-    if (rows.length < 2) {
-      return '<div class="muted" style="font-size:13px">아직 그릴 선이 없습니다 — 이틀 이상 쌓여야 선이 생깁니다.</div>';
+  // ── 일간 OBV 추세(표②) — ★선 1개 = 어르신 1명★ ──────────────────────
+  //   ★★평균 한 개를 그리지 않는다★★ — 서로 다른 사람의 값을 평균내면 아무에게도
+  //   답을 주지 않는다(S497 에 이미 같은 이유로 "연결 추세 평균 -50"을 걷어냈다).
+  //   그리고 절대 지수의 평균은 ★사용 중지된 목표치★ 로 잰 값이라 더더욱 안 된다.
+  //   ★모든 선은 0 에서 시작한다★ — 각자 자기 시작점이 기준이라 선끼리 높이를
+  //   비교하는 것이 아니라 ★올라가는가 내려가는가★ 를 본다.
+  function obvDailySvg(){
+    var rs = roster();
+    var series = Object.keys(rs).map(function(id){
+      return { id: id, rows: obvRowsOf(id).filter(function(r){ return num(r.connection_obv) !== null; }) };
+    });
+    var drawn = series.filter(function(s){ return s.rows.length > 0; });
+    var none = series.filter(function(s){ return s.rows.length === 0; });
+    var noteHtml = none.length
+      ? '<div class="muted" style="font-size:12.5px;margin-top:6px">' +
+        none.map(function(s){ return esc(label(s.id)); }).join(" · ") +
+        " — 아직 비교할 직전 날이 없습니다(둘째 날부터 선이 생깁니다)</div>"
+      : "";
+    if (!drawn.length) {
+      return '<div class="muted" style="font-size:13px">아직 그릴 선이 없습니다 — 이틀째부터 첫 비교가 생깁니다.</div>' + noteHtml;
     }
-    var maxV = 10;
-    rows.forEach(function(r){ var v = num(r.index_avg); if (v > maxV) maxV = v; });
-    maxV = Math.ceil(maxV / 10) * 10;
-    var W = 1000, H = 240, L = 44, R = 16, T = 14, B = 34;
-    var x = function(i){ return rows.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (rows.length - 1); };
-    var y = function(v){ return T + (1 - v / maxV) * (H - T - B); };
+    // 가로축 = 날짜(전원 공통). 세로축 = 0 을 가운데 둔 대칭.
+    var dates = {};
+    drawn.forEach(function(s){ s.rows.forEach(function(r){ dates[r.metric_date] = 1; }); });
+    var xs = Object.keys(dates).sort();
+    var maxAbs = 20;
+    drawn.forEach(function(s){ s.rows.forEach(function(r){
+      var v = Math.abs(num(r.connection_obv)); if (v > maxAbs) maxAbs = v;
+    }); });
+    var W = 1000, H = 250, L = 50, R = 20, T = 16, B = 34;
+    var x = function(dt){ var i = xs.indexOf(dt);
+      return xs.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (xs.length - 1); };
+    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
     var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
-    [0, 0.5, 1].forEach(function(f){
-      var v = maxV * f;
-      out += '<line x1="' + L + '" y1="' + y(v) + '" x2="' + (W - R) + '" y2="' + y(v) +
-        '" stroke="#e2ecea"/><text x="6" y="' + (y(v) + 4) + '" font-size="11" fill="#5b7078">' + Math.round(v) + "</text>";
+    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) +
+      '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
+    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0 (시작)</text>';
+    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
+    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
+    drawn.forEach(function(s, i){
+      var c = COLORS[i % COLORS.length];
+      var d = s.rows.map(function(r, j){ return (j ? "L" : "M") + x(r.metric_date) + " " + y(num(r.connection_obv)); }).join(" ");
+      if (s.rows.length > 1) out += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2.5"/>';
+      s.rows.forEach(function(r){
+        out += '<circle cx="' + x(r.metric_date) + '" cy="' + y(num(r.connection_obv)) + '" r="3.5" fill="' + c + '"><title>' +
+          esc(label(s.id) + " · " + r.metric_date + " · 누적 " + r.connection_obv +
+              " · 어제 대비 " + (r.connection_vs_prev_pct === null ? "—" : r.connection_vs_prev_pct)) + "</title></circle>";
+      });
     });
-    var d = rows.map(function(r, i){ return (i ? "L" : "M") + x(i) + " " + y(num(r.index_avg)); }).join(" ");
-    out += '<path d="' + d + '" fill="none" stroke="#17857A" stroke-width="2.5"/>';
-    rows.forEach(function(r, i){
-      out += '<circle cx="' + x(i) + '" cy="' + y(num(r.index_avg)) + '" r="3.5" fill="#17857A"><title>' +
-        esc(r.metric_date + " · 평균 " + r.index_avg + " · " + r.elderly_n + "명") + "</title></circle>";
-    });
-    // 날짜 눈금은 너무 많으면 겹친다 — 대략 8개만.
-    var step = Math.max(1, Math.ceil(rows.length / 8));
-    rows.forEach(function(r, i){
+    var step = Math.max(1, Math.ceil(xs.length / 8));
+    xs.forEach(function(dt, i){
       if (i % step) return;
-      out += '<text x="' + x(i) + '" y="' + (H - 10) + '" font-size="11" fill="#5b7078" text-anchor="middle">' +
-        esc(String(r.metric_date).slice(5)) + "</text>";
+      out += '<text x="' + x(dt) + '" y="' + (H - 10) + '" font-size="11" fill="#5b7078" text-anchor="middle">' +
+        esc(dt.slice(5)) + "</text>";
     });
     out += "</svg>";
-    var last = rows[rows.length - 1];
-    out += '<div class="legend"><span><i style="background:#17857A"></i>전체 평균 연결지수</span>' +
-      '<span class="muted">마지막 날(' + esc(last.metric_date) + ") 기준 " + esc(String(last.elderly_n)) + "명 평균</span></div>";
-    return out;
+    out += '<div class="legend">' + drawn.map(function(s, i){
+      return '<span><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(label(s.id)) + "</span>";
+    }).join("") + '<span class="muted">0 위 = 시작보다 나아진 쪽</span></div>';
+    return out + noteHtml;
   }
 
   // ── CSV 내려받기 ─────────────────────────────────────────────────────
@@ -865,19 +931,36 @@
       // ★(S525) 화면의 상태판을 ★그대로★ 내보낸다 — 파일과 화면이 다른 숫자를 말하면
       //   회의 자리에서 그 자체가 논점이 된다. 정렬 순서까지 화면과 같게 맞춘다.
       //   ★전후 비교(기저·최근)도 같은 줄에 실어 표① 슬로프를 이 파일 하나로 그릴 수 있게.
+      // ★(S525 정정) 정본 척도(일간 OBV)를 ★앞에★ 둔다 — 파일을 열었을 때 먼저 보이는
+      //   숫자가 사람 간 비교에 쓰면 안 되는 절대 지수여서는 안 된다.
       downloadCsv("텔로스_어르신상태판_" + today() + ".csv",
-        ["가명", "동네", "7일 지수", "직전 7일 지수", "방향", "혼자 비율(%)", "발화(회)", "대화 세션(회)",
-         "집밖(분/일)", "안부 기분", "안부 날짜", "도착일수(7일 중)", "마지막 도착",
-         "기저 시작", "기저 끝", "기저 일수", "기저 지수", "최근 시작", "최근 끝", "최근 일수", "최근 지수",
-         "전후 변화", "혼자 비율 변화", "메모"],
+        ["가명", "동네", "기준일", "어제 대비(%)", "평소(직전7일) 대비(%)", "추세 OBV(누적)",
+         "혼자 비율(%)", "발화(회)", "대화 세션(회)", "집밖(분/일)", "안부 기분", "안부 날짜",
+         "도착일수(7일 중)", "마지막 도착",
+         "[참고·잠정척도] 7일 지수", "[참고·잠정척도] 직전 7일 지수",
+         "기저 시작", "기저 끝", "기저 일수", "최근 시작", "최근 끝", "최근 일수",
+         "혼자 비율 변화", "메모"],
         sortStatus(statusRows()).map(function(r){
           var p = prepostOf(r.id) || {};
-          return [r.alias, r.region, r.index_avg_7d, r.index_avg_prev7d, r.index_delta,
+          return [r.alias, r.region, r.obvDate, r.vsPrev, r.vsBase7, r.obv,
                   r.alone_pct_7d, r.utter_7d, r.sessions_7d, r.away_avg_7d,
                   r.mood_last, r.checkin_date, r.days_arrived_7d, r.last_arrival,
-                  p.baseline_start, p.baseline_end, p.baseline_days, p.baseline_index_avg,
-                  p.recent_start, p.recent_end, p.recent_days, p.recent_index_avg,
-                  p.index_delta, p.alone_pct_delta, r.note];
+                  r.index_avg_7d, r.index_avg_prev7d,
+                  p.baseline_start, p.baseline_end, p.baseline_days,
+                  p.recent_start, p.recent_end, p.recent_days,
+                  p.alone_pct_delta, r.note];
+        }));
+    } else if (kind === "obv") {
+      // ★(S525) 일간 OBV 전량 — 개인별 추세선의 원재료.
+      var rsn = roster();
+      downloadCsv("텔로스_일간OBV_" + today() + ".csv",
+        ["가명", "날짜", "어제 대비(%)", "평소(직전7일) 대비(%)", "추세 OBV(누적)",
+         "관계망 OBV", "대화 OBV", "이동 OBV", "비교된 축"],
+        (DATA.console_obv || []).map(function(o){
+          var m = rsn[o.elderly_id];
+          return [m ? m.alias : o.elderly_id, o.metric_date,
+                  o.connection_vs_prev_pct, o.connection_vs_base7_pct, o.connection_obv,
+                  o.relational_obv, o.conversation_obv, o.mobility_obv, o.valid_axis_count];
         }));
     } else if (kind === "events") {
       // ★(S525) 사건 로그 — 표⑤ 개인 사례 카드의 주석. ★운영자 자유 입력이 담긴다★.
@@ -1051,11 +1134,12 @@
     //   [왜 이 순서인가] 대표 지적("이 표는 대체 뭘 말하는건지 전혀 모르겠어")의 진단은
     //   ★해석층 부재★ 였다. 종전 개요는 날것 나열부터 시작해서, 화면을 열어도 "지금
     //   좋아지는 중인가"에 아무도 답하지 않았다. 그 답을 ★맨 위★ 에 둔다.
-    html += "<section><h2>전체 연결지수 추이" +
-      '<span class="whose">등록 어르신 전원 평균 · 최근 30일</span></h2>' +
-      '<div class="desc">이 선 하나가 "우리 서비스가 지금 효과를 내고 있는가"에 답합니다. ' +
-      '점에 마우스를 올리면 그날의 인원수가 보입니다 — <b>사람이 늘고 줄어도 평균은 움직입니다</b>.</div>' +
-      cohortSvg() + "</section>";
+    html += "<section><h2>일간 연결 추세 (OBV)" +
+      '<span class="whose">선 1개 = 어르신 1명 · 각자 자기 시작점이 0</span></h2>' +
+      '<div class="desc"><b>어르신끼리 견주는 그래프가 아닙니다.</b> 각자 자기 시작점을 0으로 두고, ' +
+      '그 뒤로 <b>자기 어제보다</b> 나아졌는지를 더해 간 선입니다. 볼 것은 선의 높이가 아니라 ' +
+      '<b>올라가는가 내려가는가</b>입니다. 점에 마우스를 올리면 그날의 값이 보입니다.</div>' +
+      obvDailySvg() + "</section>";
 
     html += statusTableHtml();
     html += prepostHtml();
@@ -1169,7 +1253,8 @@
       '<span class="whose">빈 칸 = 측정 못 함(0 아님)</span></h2></div></div>' +
       '<div class="tablewrap"><table>' +
       '<tr><td><b>전체 원지표</b> <span class="muted">어르신별 일별 전량 · ' + rangeLabel() + "</span></td><td>" + csvBtn("all") + "</td></tr>" +
-      '<tr><td><b>어르신 상태판</b> <span class="muted">7일 지수·방향·혼자 비율 + 전후 비교(표① 재료)</span></td><td>' + csvBtn("elders") + "</td></tr>" +
+      '<tr><td><b>어르신 상태판</b> <span class="muted">어제·평소 대비 + OBV + 혼자 비율</span></td><td>' + csvBtn("elders") + "</td></tr>" +
+      '<tr><td><b>일간 OBV 전량</b> <span class="muted">개인별 추세선 원재료(표①②의 정본 척도)</span></td><td>' + csvBtn("obv") + "</td></tr>" +
       '<tr><td><b>사건 로그</b> <span class="muted">날짜별 특이사항(표⑤ 재료)</span></td><td>' + csvBtn("events") + "</td></tr>" +
       '<tr><td><b>경보 이력</b> <span class="muted">발견 → 확인까지(표⑥ 재료)</span></td><td>' + csvBtn("alerts") + "</td></tr>" +
       '<tr><td><b>회사 주간 집계</b> <span class="muted">전원 합계</span></td><td>' + csvBtn("company") + "</td></tr>" +
