@@ -1003,13 +1003,18 @@
     } else if (kind === "elderDaily") {
       var m2 = rs[arg];
       downloadCsv("텔로스_" + (m2 ? m2.alias : "어르신") + "_일별_" + today() + ".csv",
-        ["가명", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)", "어르신 발화(분)", "사용시간(분)",
-         "이동거리(m)", "집밖 체류(분)", "기분평균", "기분 긍정비율",
+        // ★(S525) 발화 초·외출 횟수 추가. ★분 칸은 지우지 않는다★ — 옛 행에는 분만 있고
+        //   연구 스냅샷도 분을 읽는다. 두 칸을 나란히 두면 받는 사람이 단위를 헷갈리지 않는다.
+        ["가명", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
+         "어르신 발화(초)", "어르신 발화(분)", "사용시간(분)",
+         "이동거리(m)", "집밖 체류(분)", "외출(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
-                  r.media_minutes, r.absence_minutes, r.elder_utterance_minutes, r.active_span_minutes,
-                  r.travel_distance_m, r.away_from_home_minutes, r.mood_score_avg, r.mood_positive_ratio,
+                  r.media_minutes, r.absence_minutes,
+                  r.elder_utterance_seconds, r.elder_utterance_minutes, r.active_span_minutes,
+                  r.travel_distance_m, r.away_from_home_minutes, r.outing_count,
+                  r.mood_score_avg, r.mood_positive_ratio,
                   r.companion_alone_windows, r.companion_one_windows, r.companion_multiple_windows,
                   r.companion_undetermined_windows, r.prosody_utterance_count, r.prosody_low_activation];
         }));
@@ -1026,14 +1031,17 @@
     } else if (kind === "all") {
       // 전체 원지표(선택 기간) — 어르신별 일별 전량. IR·분석용 한 방 내려받기.
       downloadCsv("텔로스_전체원지표_최근" + (DATA.range_days || 14) + "일_" + today() + ".csv",
-        ["가명", "동네", "메모", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "기분평균", "기분 긍정비율",
+        // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
+        ["가명", "동네", "메모", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
+         "어르신 발화(초)", "어르신 발화(분)",
+         "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "외출(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
           return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, noteOf(r.elderly_id), r.metric_date,
                   r.face_to_face_minutes, r.phone_call_minutes, r.media_minutes, r.absence_minutes,
-                  r.elder_utterance_minutes, r.active_span_minutes, r.travel_distance_m, r.away_from_home_minutes,
+                  r.elder_utterance_seconds, r.elder_utterance_minutes,
+                  r.active_span_minutes, r.travel_distance_m, r.away_from_home_minutes, r.outing_count,
                   r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
                   r.companion_multiple_windows, r.companion_undetermined_windows,
                   r.prosody_utterance_count, r.prosody_low_activation];
@@ -1463,14 +1471,26 @@
       '<div class="desc">진한 색 = 대면+통화(관계망), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님).</div></div>' +
       csvBtn("elderDaily", id) + "</div>" +
       dailySvg(ds) +
+      // ★★(S525) "어르신 발화"를 ★초★ 로 보여 준다 — 분은 이 축을 통째로 삼키고 있었다.
+      //   실측: 8/7 발화 46건인데 분 칸은 0(유성 합 52초 → 내림해서 0). 값은 정직했고
+      //   자(尺)가 틀렸다. 분 칸은 서버에 그대로 두되(연구 스냅샷이 읽는다) 화면은 초를 쓴다.
+      // ★(S525) "외출" 열 신설 — 집 반경 밖 구간의 수. ★좌표는 서버에 오지 않는다★
+      //   (단말이 안/밖 판정만으로 세고 그 수만 올린다 · docs/60 §8 삭제 확정은 그대로).
       '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th><th>미디어</th>' +
-      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="9" class="muted">기록 없음</td></tr>';
+      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>외출</th><th>기분평균</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="10" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
+      // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
+      //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
+      //   화면에서 같아 보인다.
+      var utter = num(r.elder_utterance_seconds) !== null
+        ? fmt(r.elder_utterance_seconds, "초")
+        : fmt(r.elder_utterance_minutes, "분");
       html += "<tr><td>" + esc(r.metric_date) + "</td><td>" + fmt(r.face_to_face_minutes, "분") + "</td><td>" +
         fmt(r.phone_call_minutes, "분") + "</td><td>" + fmt(r.media_minutes, "분") + "</td><td>" +
-        fmt(r.elder_utterance_minutes, "분") + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
+        utter + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
         fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.away_from_home_minutes, "분") + "</td><td>" +
+        fmt(r.outing_count, "회") + "</td><td>" +
         fmt(r.mood_score_avg) + "</td></tr>";
     });
     // ★(S523) "측정 중 = 0이 아니라 못 쟀다" 설명 문구는 걷어냈다(대표 지시 · 규약은 RS-4).
