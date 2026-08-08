@@ -593,10 +593,10 @@
   function alertLogOf(id){
     return (DATA.console_alerts || []).filter(function(a){ return a.elderly_id === id; });
   }
-  function cohortAll(){
-    return (DATA.console_cohort || []).filter(function(r){ return r.scope === "전체"; })
-      .sort(function(a, b){ return a.metric_date < b.metric_date ? -1 : 1; });
-  }
+  // ★(S526) cohortAll() 을 지웠다 — 호출처가 0 인 죽은 함수였고, 그것이 읽던
+  //   DATA.console_cohort 는 ★사용 중지된 절대 척도의 집단 평균★ 이다(sql 012).
+  //   서버(get-effect-dashboard)에서 조회 자체를 뺐으므로 이 키는 이제 오지 않는다.
+  //   되살릴 때는 ★OBV 로 다시 만든 뒤★ — 그 절차는 Edge 쪽 주석에 적어 두었다.
   /**
    * ★★(S525 정정) 일간 OBV — ★이것이 정본 척도다★(sql 034 · 대표 지시).
    *
