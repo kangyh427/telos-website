@@ -1007,13 +1007,14 @@
         //   연구 스냅샷도 분을 읽는다. 두 칸을 나란히 두면 받는 사람이 단위를 헷갈리지 않는다.
         ["가명", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)", "사용시간(분)",
-         "이동거리(m)", "집밖 체류(분)", "외출(회)", "기분평균", "기분 긍정비율",
+         "이동거리(m)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
                   r.media_minutes, r.absence_minutes,
                   r.elder_utterance_seconds, r.elder_utterance_minutes, r.active_span_minutes,
                   r.travel_distance_m, r.away_from_home_minutes, r.outing_count,
+                  r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio,
                   r.companion_alone_windows, r.companion_one_windows, r.companion_multiple_windows,
                   r.companion_undetermined_windows, r.prosody_utterance_count, r.prosody_low_activation];
@@ -1034,7 +1035,7 @@
         // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
         ["가명", "동네", "메모", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "외출(회)", "기분평균", "기분 긍정비율",
+         "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
@@ -1042,6 +1043,7 @@
                   r.face_to_face_minutes, r.phone_call_minutes, r.media_minutes, r.absence_minutes,
                   r.elder_utterance_seconds, r.elder_utterance_minutes,
                   r.active_span_minutes, r.travel_distance_m, r.away_from_home_minutes, r.outing_count,
+                  r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
                   r.companion_multiple_windows, r.companion_undetermined_windows,
                   r.prosody_utterance_count, r.prosody_low_activation];
@@ -1477,8 +1479,8 @@
       // ★(S525) "외출" 열 신설 — 집 반경 밖 구간의 수. ★좌표는 서버에 오지 않는다★
       //   (단말이 안/밖 판정만으로 세고 그 수만 올린다 · docs/60 §8 삭제 확정은 그대로).
       '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th><th>미디어</th>' +
-      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>외출</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="10" class="muted">기록 없음</td></tr>';
+      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="11" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
       //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
@@ -1491,6 +1493,11 @@
         utter + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
         fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.away_from_home_minutes, "분") + "</td><td>" +
         fmt(r.outing_count, "회") + "</td><td>" +
+        // ★(S527) 권유 = 그날 넛지 재료를 실제로 실은 횟수(표⑧ 퍼널의 분모 · sql 037).
+        //   ★0 과 "측정 중"이 화면에서 갈린다★ — 0(쟀고 한 번도 안 권했다)과
+        //   null(단말이 그날을 기억 못 한다)은 다른 사실이고, fmt 가 null 을 측정 중으로
+        //   적는다. ★어제 행이 대개 측정 중인 것은 정상이다★(단말이 하루치만 들고 있다).
+        fmt(r.nudge_served_count, "회") + "</td><td>" +
         fmt(r.mood_score_avg) + "</td></tr>";
     });
     // ★(S523) "측정 중 = 0이 아니라 못 쟀다" 설명 문구는 걷어냈다(대표 지시 · 규약은 RS-4).
