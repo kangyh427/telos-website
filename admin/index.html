@@ -233,39 +233,6 @@
       body: JSON.stringify(body),
     }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, body: j }; }); });
   }
-  // ★★(S534) 2단계 인증 — 대표 지시.
-  //   [왜] 구글 계정에 2단계가 걸려 있어도 ★이메일+비밀번호 경로는 그것을 지나지 않는다★.
-  //     콘솔은 두 길을 다 열어 두었으므로, 약한 길이 하나라도 있으면 그 길로 들어온다.
-  //   [어떻게] Supabase 의 TOTP(인증 앱 6자리). 등록하면 서버가 aal2 를 요구한다.
-  //   ★authFetch 와 다르다★ — 이 요청들은 ★내 토큰★ 을 함께 보내야 한다(누가 등록하는지).
-  function authFetchTok(path, body, method){
-    var sess = getSess() || {};
-    return fetch(SUPA + "/auth/v1/" + path, {
-      method: method || "POST",
-      headers: {
-        "apikey": ANON,
-        "Authorization": "Bearer " + (sess.access_token || ""),
-        "Content-Type": "application/json",
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    }).then(function(r){ return r.text().then(function(t){
-      var j=null; try { j = t ? JSON.parse(t) : null; } catch(e){}
-      return { ok: r.ok, status: r.status, body: j };
-    }); })
-    // ★★네트워크가 끊기면 then 이 아예 안 돈다 → 버튼은 잠긴 채 "준비하는 중"에서 멈춘다.
-    //   ★조용히 멈추는 것이 가장 나쁘다★ — 사람은 무엇이 잘못됐는지 알 수가 없다.
-    //   실패도 ★값으로★ 돌려주어 부르는 쪽이 반드시 말하게 한다(대표 실측으로 찾은 결함).
-    .catch(function(e){
-      return { ok: false, status: 0, body: { msg: "연결 실패: " + String(e && e.message || e) } };
-    });
-  }
-  /** 서버가 준 실패 사유를 사람 말로. ★모르면 모른다고 하되 원문을 함께 보인다.★ */
-  function authErr(r){
-    var b = r && r.body || {};
-    var raw = b.msg || b.error_description || b.error || b.message || "";
-    return "실패(" + (r && r.status) + ")" + (raw ? " — " + raw : "");
-  }
-
   function loginWithPassword(){
     var email = el("emailInput").value.trim(), pw = el("pwInput").value;
     if (!email || !pw) { showLogin("이메일과 비밀번호를 입력해 주세요."); return; }
@@ -348,10 +315,14 @@
           return r.json().then(function(j){
             // ★(S534) 403 이 두 가지 뜻을 갖게 됐다 — 가르지 않으면 2단계가 필요한 사람에게
             //   "당신은 관리자가 아닙니다"라고 거짓말을 하고 ★세션까지 날려 버린다★.
-            if (j && j.reason === "mfa_required") {
-              // ★세션을 지우지 않는다★ — 1단계는 통과했고 2단계만 남았다. 지우면 처음부터다.
-              showMfaPrompt(null);
-              throw new Error("mfa_required");
+            if (j && j.reason === "password_login_blocked") {
+              // ★(S534) 비밀번호로는 이 콘솔을 열지 않는다★ — "권한 없음"과 다른 사유다.
+              //   ★세션을 지운다★ — 이 방법으로는 어차피 못 들어오니 다시 고르셔야 한다.
+              setSess(null);
+              showLogin("이 콘솔은 <b>구글·카카오 로그인</b>으로만 열립니다." +
+                        "<br><span style='color:#5b7078'>비밀번호로 들어오는 길은 그 계정의 2단계 인증을 " +
+                        "지나지 않아, 그 길만 닫아 두었습니다.</span>");
+              throw new Error("not_admin");
             }
             setSess(null);
             showLogin("이 계정(" + esc(j.email || "") + ")은 관리자로 등록되어 있지 않습니다.<br>" +
@@ -375,7 +346,7 @@
       })
       .catch(function(e){
         var m = String(e.message || "");
-        if (m === "not_admin" || m === "mfa_required") return;
+        if (m === "not_admin") return;
         if (m === "session_expired" || m === "no_session") {
           setSess(null); showLogin("로그인 시간이 만료됐습니다. 다시 로그인해 주세요."); return;
         }
@@ -1137,92 +1108,36 @@
     if (sess()) load(); else showLogin(null);
   });
   // ══════════════════════════════════════════════════════════════════════
-  // ★★(S534) 보안 화면 — 2단계 인증 + 열람 기록 (대표 지시)
+  // ★★(S534) 보안 화면 — 로그인 방식 + 열람 기록 (대표 지시)
   // ══════════════════════════════════════════════════════════════════════
-  //   ★두 가지를 한 화면에 둔다★: "못 들어오게 하는 것"(2단계)과 "들어온 것을
-  //   남기는 것"(열람 기록)은 짝이다 — 앞은 막고, 뒤는 뚫린 뒤에 답한다.
+  //   ★두 가지를 한 화면에 둔다★: "못 들어오게 하는 것"과 "들어온 것을 남기는 것"은
+  //   짝이다 — 앞은 막고, 뒤는 뚫린 뒤에 답한다.
   //
-  //   ★왜 구글 2단계로 충분하지 않은가★ — 콘솔은 소셜(구글)과 이메일+비밀번호
-  //   ★두 길★ 을 다 열어 두었다. 구글에 2단계가 걸려 있어도 ★비밀번호 길은 그것을
-  //   지나지 않는다★. 약한 길이 하나라도 있으면 공격자는 그 길로 들어온다.
+  //   ★막으려던 것★ = 콘솔이 소셜(구글)과 이메일+비밀번호 ★두 길★ 을 다 열어 두었고,
+  //   ★비밀번호 길은 구글의 2단계를 지나지 않는다★. 약한 길 하나면 그리로 들어온다.
   //
-  //   ★단계적으로 켠다★ — 서버는 ★등록한 계정에만★ aal2 를 요구한다. 그래야
-  //   등록하기도 전에 자기 콘솔에서 잠기는 일이 없다. 대신 ★등록해 두고 건너뛰는
-  //   길은 없다★ — 그것이 이 게이트의 값이다.
-
-  var MFA = { factorId: null };
-
-  /** 등록된 요소 목록(형식이 버전마다 달라 세 모양을 다 받아 준다). */
-  function mfaFactors(body){
-    var list = body && (body.totp || body.all || body);
-    if (!Array.isArray(list)) list = [];
-    return list.filter(function(x){ return x && x.status === "verified"; });
-  }
-
-  /** 2단계 코드 입력 — 1단계는 통과했고 두 번째만 남은 상태에서 부른다. */
-  function showMfaPrompt(msg){
-    if (timer) { clearInterval(timer); timer = null; }   // 자동 갱신이 이 화면을 덮지 않게
-    el("login").style.display = "none";
-    el("app").style.display = "block";
-    el("view").innerHTML =
-      '<section><h2>2단계 인증</h2>' +
-      '<div class="desc">이 계정은 2단계 인증이 켜져 있습니다. 인증 앱에 뜨는 <b>6자리 숫자</b>를 넣어 주세요.</div>' +
-      (msg ? '<div style="color:#b91c1c;margin-bottom:8px">' + esc(msg) + "</div>" : "") +
-      '<div class="row"><input id="mfaCode" type="text" inputmode="numeric" maxlength="6" ' +
-      'placeholder="000000" style="width:150px;font-size:20px;letter-spacing:4px;text-align:center">' +
-      '<button class="primary" id="mfaGo">확인</button></div>' +
-      '<div id="mfaMsg" style="font-size:13px;margin-top:8px"></div></section>';
-    var go = el("mfaGo"), code = el("mfaCode");
-    function submit(){
-      var v = (code.value || "").replace(/[^0-9]/g, "");
-      if (v.length !== 6) { el("mfaMsg").textContent = "6자리 숫자를 넣어 주세요."; return; }
-      go.disabled = true; el("mfaMsg").textContent = "확인하는 중…";
-      mfaVerifyLogin(v, function(err){
-        go.disabled = false;
-        if (err) { el("mfaMsg").textContent = err; return; }
-        load();                     // ★새 토큰(aal2)으로 다시 받아 온다★
-      });
-    }
-    go.addEventListener("click", submit);
-    code.addEventListener("keydown", function(e){ if (e.key === "Enter") submit(); });
-    code.focus();
-  }
-
-  /** challenge → verify. 성공하면 ★서버가 주는 새 토큰이 aal2★ 이므로 반드시 갈아 낀다. */
-  function mfaVerifyLogin(code, done){
-    authFetchTok("factors", null, "GET").then(function(r){
-      var f = mfaFactors(r.body)[0];
-      if (!f) { done("등록된 2단계 요소를 찾지 못했습니다. " + authErr(r)); return; }
-      authFetchTok("factors/" + f.id + "/challenge", {}).then(function(c){
-        if (!c.ok || !c.body || !c.body.id) { done("확인 요청이 실패했습니다. " + authErr(c)); return; }
-        authFetchTok("factors/" + f.id + "/verify", { challenge_id: c.body.id, code: code })
-          .then(function(v){
-            if (!v.ok || !v.body || !v.body.access_token) { done("코드가 맞지 않습니다. " + authErr(v)); return; }
-            setSess({ access_token: v.body.access_token, refresh_token: v.body.refresh_token });
-            done(null);
-          });
-      });
-    });
-  }
+  //   ★처방이 바뀐 이력(같은 세션 안에서)★ — 처음엔 콘솔에 TOTP(인증 앱 6자리)를
+  //   붙였다. 맞는 길이지만 ★사람이 등록이라는 일을 해야 했고 그 흐름이 실제로 막혔다★
+  //   (대표 실측). ★약한 길을 아예 닫으면 대표가 이미 쓰시는 구글 2단계가 그대로
+  //   콘솔을 지킨다★ — 등록도, 인증 앱도, 6자리도 필요 없다.
+  //   ★더 적은 부품으로 같은 것을 막는다.★
+  //   판정은 서버(get-effect-dashboard)가 하고 이 화면은 ★그 사실을 보여 줄 뿐★ 이다
+  //   — 화면이 스스로 판정하면 두 곳의 규칙이 갈라진다.
 
   function renderSecurity(){
-    var enrolled = DATA && DATA.mfa_enrolled === true;
+    var prov = (DATA && DATA.login_provider) || "";
     var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "보안" }]);
 
-    html += '<section><div class="sechead"><div><h2>2단계 인증' +
-      '<span class="tag">' + (enrolled ? "켜짐" : "꺼짐") + "</span></h2>" +
-      '<div class="desc">비밀번호만으로는 이 콘솔이 열리지 않게 합니다. 인증 앱(Google Authenticator 등)의 6자리 숫자를 함께 요구합니다.<br>' +
-      '<b>구글 계정의 2단계와는 다른 것입니다</b> — 이메일·비밀번호로 들어오는 길은 구글을 지나지 않기 때문입니다.</div></div></div>';
-
-    if (enrolled) {
-      html += '<div class="desc">이 계정은 2단계 인증이 <b>켜져 있습니다</b>. 로그인할 때마다 코드가 필요합니다.</div>' +
-              '<button class="danger" id="mfaOff">2단계 인증 끄기</button>';
-    } else {
-      html += '<div class="desc"><b>아직 켜지 않으셨습니다.</b> 켜기 전까지는 비밀번호만으로 이 콘솔이 열립니다.</div>' +
-              '<button class="primary" id="mfaStart">2단계 인증 켜기</button>' +
-              '<div id="mfaSetup" style="margin-top:12px"></div>';
-    }
-    html += '<div id="mfaSetMsg" style="font-size:13px;margin-top:8px"></div></section>';
+    html += '<section><div class="sechead"><div><h2>로그인' +
+      '<span class="tag">비밀번호 차단</span></h2>' +
+      '<div class="desc">이 콘솔은 <b>구글·카카오 로그인</b>으로만 열립니다. ' +
+      '비밀번호로 들어오는 길만 닫았습니다 — 그 길은 소셜 계정의 2단계 인증을 지나지 않기 때문입니다.<br>' +
+      '따라서 <b>그 계정의 2단계 인증이 곧 이 콘솔의 자물쇠</b>입니다 — ' +
+      '콘솔에 따로 등록하실 것은 없습니다.</div></div></div>' +
+      '<div class="desc">지금 로그인: <b>' + esc(DATA && DATA.viewer || "") + '</b>' +
+      (prov ? ' <span class="muted">· ' + esc(prov) + '</span>' : "") + "</div>" +
+      '<div class="desc" style="margin-top:10px">★ 이 방어는 <b>그 소셜 계정이 2단계로 지켜지고 있다</b>에 ' +
+      '기댑니다. 그 계정이 뚫리면 이 콘솔도 함께 뚫립니다.</div></section>';
 
     html += '<section><div class="sechead"><div><h2>열람 기록' +
       '<span class="whose">최근 200줄</span></h2>' +
@@ -1233,7 +1148,6 @@
 
     el("view").innerHTML = html;
     bindGo();
-    bindSecurity();
     loadAudit();
   }
 
@@ -1254,63 +1168,6 @@
              '<td class="muted" style="font-family:monospace;font-size:11px">' + esc(a.ip || "") + "</td></tr>";
       });
       box.innerHTML = h + "</table></div>";
-    });
-  }
-
-  function bindSecurity(){
-    var start = el("mfaStart"), off = el("mfaOff"), msg = el("mfaSetMsg");
-    function say(t, ok){ if (msg) { msg.textContent = t; msg.style.color = ok ? "#0e7490" : "#b91c1c"; } }
-
-    if (start) start.addEventListener("click", function(){
-      start.disabled = true; say("준비하는 중…", true);
-      authFetchTok("factors", { factor_type: "totp", friendly_name: "telos-console" })
-        .then(function(r){
-          start.disabled = false;
-          if (!r.ok || !r.body || !r.body.id) { say("2단계 인증을 시작하지 못했습니다. " + authErr(r), false); return; }
-          MFA.factorId = r.body.id;
-          var t = r.body.totp || {};
-          // ★비밀 열쇠를 글자로도 띄운다★ — QR 을 못 읽는 자리가 있고, 이 콘솔은 PC 전용이다.
-          el("mfaSetup").innerHTML =
-            '<div class="desc">인증 앱에서 <b>QR 을 찍거나</b>, 아래 열쇠를 손으로 넣으세요.</div>' +
-            (t.qr_code ? '<div style="margin:10px 0;max-width:220px">' + t.qr_code + "</div>" : "") +
-            '<div style="font-family:monospace;font-size:14px;word-break:break-all;margin:8px 0">' +
-              esc(t.secret || "") + "</div>" +
-            '<div class="row"><input id="mfaSetCode" type="text" inputmode="numeric" maxlength="6" ' +
-            'placeholder="000000" style="width:150px;font-size:20px;letter-spacing:4px;text-align:center">' +
-            '<button class="primary" id="mfaSetGo">켜기</button></div>';
-          el("mfaSetGo").addEventListener("click", function(){
-            var v = (el("mfaSetCode").value || "").replace(/[^0-9]/g, "");
-            if (v.length !== 6) { say("6자리 숫자를 넣어 주세요.", false); return; }
-            say("확인하는 중…", true);
-            authFetchTok("factors/" + MFA.factorId + "/challenge", {}).then(function(c){
-              if (!c.ok || !c.body || !c.body.id) { say("확인 요청이 실패했습니다. " + authErr(c), false); return; }
-              authFetchTok("factors/" + MFA.factorId + "/verify",
-                           { challenge_id: c.body.id, code: v }).then(function(vr){
-                if (!vr.ok || !vr.body || !vr.body.access_token) { say("코드가 맞지 않습니다. " + authErr(vr), false); return; }
-                // ★검증하면 서버가 새 토큰(aal2)을 준다 — 갈아 끼워야 이어서 볼 수 있다.
-                setSess({ access_token: vr.body.access_token, refresh_token: vr.body.refresh_token });
-                say("2단계 인증을 켰습니다. 다음 로그인부터 코드가 필요합니다.", true);
-                load();
-              });
-            });
-          });
-        });
-    });
-
-    if (off) off.addEventListener("click", function(){
-      // ★한 번 더 묻는다★ — 끄는 것은 방어를 내리는 일이라 실수로 눌리면 안 된다.
-      if (!window.confirm("2단계 인증을 끄면 비밀번호만으로 이 콘솔이 열립니다. 정말 끄시겠습니까?")) return;
-      off.disabled = true; say("끄는 중…", true);
-      authFetchTok("factors", null, "GET").then(function(r){
-        var f = mfaFactors(r.body)[0];
-        if (!f) { off.disabled = false; say("등록된 요소를 찾지 못했습니다. " + authErr(r), false); return; }
-        authFetchTok("factors/" + f.id, null, "DELETE").then(function(d){
-          off.disabled = false;
-          if (!d.ok) { say("끄지 못했습니다. " + authErr(d), false); return; }
-          say("2단계 인증을 껐습니다.", true);
-          load();
-        });
-      });
     });
   }
 
