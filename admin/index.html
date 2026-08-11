@@ -137,14 +137,14 @@
   <h2>텔로스 케어 관리자 콘솔</h2>
   <p>회사 계정으로 로그인하세요. 관리자로 등록된 분만 열람할 수 있습니다.</p>
   <div id="loginErr"></div>
+  <!-- ★★(S534) 들어오는 길은 ★구글 하나★ 다 — 대표 지시.
+       카카오·이메일 버튼을 지운 것은 꾸밈이 아니라 ★공격면을 줄인 것★ 이다:
+       길이 셋이면 가장 약한 길의 안전이 곧 이 콘솔의 안전이 된다.
+       ★비밀번호 길은 소셜 계정의 2단계 인증을 지나지 않는다★ — 서버도 amr 로 막는다
+       (get-effect-dashboard). 화면에서 지우는 것만으로는 부족하고, ★둘 다 해야 한다★. -->
   <div class="social">
     <button class="btn-google" id="googleBtn">구글 계정으로 로그인</button>
-    <button class="btn-kakao" id="kakaoBtn">카카오 계정으로 로그인</button>
   </div>
-  <div class="divider">또는 이메일로</div>
-  <input id="emailInput" type="email" placeholder="이메일" autocomplete="username">
-  <input id="pwInput" type="password" placeholder="비밀번호" autocomplete="current-password">
-  <button class="primary" id="loginBtn">로그인</button>
 </div>
 
 <div id="app">
@@ -233,19 +233,6 @@
       body: JSON.stringify(body),
     }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, body: j }; }); });
   }
-  function loginWithPassword(){
-    var email = el("emailInput").value.trim(), pw = el("pwInput").value;
-    if (!email || !pw) { showLogin("이메일과 비밀번호를 입력해 주세요."); return; }
-    authFetch("token?grant_type=password", { email: email, password: pw }).then(function(r){
-      if (!r.ok || !r.body.access_token) {
-        showLogin("로그인하지 못했습니다. 이메일·비밀번호를 확인해 주세요.<br>" +
-                  "<span style='color:#5b7078'>구글·카카오로 가입한 계정은 위의 소셜 버튼을 쓰세요(비밀번호가 없습니다).</span>");
-        return;
-      }
-      setSess({ access_token: r.body.access_token, refresh_token: r.body.refresh_token });
-      load();
-    }).catch(function(){ showLogin("네트워크 오류입니다. 잠시 후 다시 시도해 주세요."); });
-  }
   function socialLogin(provider){
     var back = location.origin + location.pathname;
     location.href = SUPA + "/auth/v1/authorize?provider=" + provider + "&redirect_to=" + encodeURIComponent(back);
@@ -319,9 +306,9 @@
               // ★(S534) 비밀번호로는 이 콘솔을 열지 않는다★ — "권한 없음"과 다른 사유다.
               //   ★세션을 지운다★ — 이 방법으로는 어차피 못 들어오니 다시 고르셔야 한다.
               setSess(null);
-              showLogin("이 콘솔은 <b>구글·카카오 로그인</b>으로만 열립니다." +
-                        "<br><span style='color:#5b7078'>비밀번호로 들어오는 길은 그 계정의 2단계 인증을 " +
-                        "지나지 않아, 그 길만 닫아 두었습니다.</span>");
+              showLogin("이 콘솔은 <b>구글 로그인</b>으로만 열립니다." +
+                        "<br><span style='color:#5b7078'>비밀번호로 들어오는 길은 구글의 2단계 인증을 " +
+                        "지나지 않아 닫아 두었습니다.</span>");
               throw new Error("not_admin");
             }
             setSess(null);
@@ -1129,14 +1116,14 @@
     var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "보안" }]);
 
     html += '<section><div class="sechead"><div><h2>로그인' +
-      '<span class="tag">비밀번호 차단</span></h2>' +
-      '<div class="desc">이 콘솔은 <b>구글·카카오 로그인</b>으로만 열립니다. ' +
-      '비밀번호로 들어오는 길만 닫았습니다 — 그 길은 소셜 계정의 2단계 인증을 지나지 않기 때문입니다.<br>' +
-      '따라서 <b>그 계정의 2단계 인증이 곧 이 콘솔의 자물쇠</b>입니다 — ' +
+      '<span class="tag">구글 전용</span></h2>' +
+      '<div class="desc">이 콘솔은 <b>구글 로그인</b>으로만 열립니다. ' +
+      '카카오·비밀번호로 들어오던 길은 닫았습니다 — 길이 여럿이면 <b>가장 약한 길의 안전</b>이 곧 이 콘솔의 안전이 됩니다.<br>' +
+      '따라서 <b>구글 계정의 2단계 인증이 곧 이 콘솔의 자물쇠</b>입니다 — ' +
       '콘솔에 따로 등록하실 것은 없습니다.</div></div></div>' +
       '<div class="desc">지금 로그인: <b>' + esc(DATA && DATA.viewer || "") + '</b>' +
       (prov ? ' <span class="muted">· ' + esc(prov) + '</span>' : "") + "</div>" +
-      '<div class="desc" style="margin-top:10px">★ 이 방어는 <b>그 소셜 계정이 2단계로 지켜지고 있다</b>에 ' +
+      '<div class="desc" style="margin-top:10px">★ 이 방어는 <b>구글 계정이 2단계로 지켜지고 있다</b>에 ' +
       '기댑니다. 그 계정이 뚫리면 이 콘솔도 함께 뚫립니다.</div></section>';
 
     html += '<section><div class="sechead"><div><h2>열람 기록' +
@@ -2242,10 +2229,7 @@
   }
 
   // ── 이벤트 ───────────────────────────────────────────────────────────
-  el("loginBtn").addEventListener("click", loginWithPassword);
-  el("pwInput").addEventListener("keydown", function(e){ if (e.key === "Enter") loginWithPassword(); });
   el("googleBtn").addEventListener("click", function(){ socialLogin("google"); });
-  el("kakaoBtn").addEventListener("click", function(){ socialLogin("kakao"); });
   el("refreshBtn").addEventListener("click", load);
   el("homeBtn").addEventListener("click", function(){ go({ view: "overview" }); });
   el("secBtn").addEventListener("click", function(){ go({ view: "security" }); });
