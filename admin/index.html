@@ -251,7 +251,19 @@
     }).then(function(r){ return r.text().then(function(t){
       var j=null; try { j = t ? JSON.parse(t) : null; } catch(e){}
       return { ok: r.ok, status: r.status, body: j };
-    }); });
+    }); })
+    // ★★네트워크가 끊기면 then 이 아예 안 돈다 → 버튼은 잠긴 채 "준비하는 중"에서 멈춘다.
+    //   ★조용히 멈추는 것이 가장 나쁘다★ — 사람은 무엇이 잘못됐는지 알 수가 없다.
+    //   실패도 ★값으로★ 돌려주어 부르는 쪽이 반드시 말하게 한다(대표 실측으로 찾은 결함).
+    .catch(function(e){
+      return { ok: false, status: 0, body: { msg: "연결 실패: " + String(e && e.message || e) } };
+    });
+  }
+  /** 서버가 준 실패 사유를 사람 말로. ★모르면 모른다고 하되 원문을 함께 보인다.★ */
+  function authErr(r){
+    var b = r && r.body || {};
+    var raw = b.msg || b.error_description || b.error || b.message || "";
+    return "실패(" + (r && r.status) + ")" + (raw ? " — " + raw : "");
   }
 
   function loginWithPassword(){
@@ -1091,6 +1103,11 @@
     //   사라진다★. 창구에서 여러 명을 등록할 때 60초마다 이것을 겪으면 못 쓴다.
     //   ★다음 주기에 그리면 된다★ — 데이터는 이미 받아 두었으므로 잃는 것이 없다.
     if (replace && typingInView()) return;
+    // ★★(S534) 보안 화면은 자동 갱신이 다시 그리지 않는다.
+    //   이 화면은 처음부터 끝까지 사람이 손으로 다루는 자리다(QR·비밀 열쇠·6자리 코드).
+    //   60초마다 갈아 끼우면 ★등록하던 것이 통째로 사라진다★ — 대표가 실제로 겪었다
+    //   ("준비하는 중"이 한참 있다가 그냥 원래 화면으로 돌아간다).
+    if (replace && route && route.view === "security") return;
     // ★다시 그리면 스크롤이 스스로 튄다(내용이 통째로 바뀌므로) → 그리기 전에 적어 두고
     //   그린 뒤에 되돌린다. 옮긴 것일 때는 종전대로 맨 위로.
     var keep = replace ? (window.pageYOffset || document.documentElement.scrollTop || 0) : 0;
@@ -1175,12 +1192,12 @@
   function mfaVerifyLogin(code, done){
     authFetchTok("factors", null, "GET").then(function(r){
       var f = mfaFactors(r.body)[0];
-      if (!f) { done("등록된 2단계 요소를 찾지 못했습니다."); return; }
+      if (!f) { done("등록된 2단계 요소를 찾지 못했습니다. " + authErr(r)); return; }
       authFetchTok("factors/" + f.id + "/challenge", {}).then(function(c){
-        if (!c.ok || !c.body || !c.body.id) { done("확인 요청이 실패했습니다."); return; }
+        if (!c.ok || !c.body || !c.body.id) { done("확인 요청이 실패했습니다. " + authErr(c)); return; }
         authFetchTok("factors/" + f.id + "/verify", { challenge_id: c.body.id, code: code })
           .then(function(v){
-            if (!v.ok || !v.body || !v.body.access_token) { done("코드가 맞지 않습니다."); return; }
+            if (!v.ok || !v.body || !v.body.access_token) { done("코드가 맞지 않습니다. " + authErr(v)); return; }
             setSess({ access_token: v.body.access_token, refresh_token: v.body.refresh_token });
             done(null);
           });
@@ -1249,7 +1266,7 @@
       authFetchTok("factors", { factor_type: "totp", friendly_name: "telos-console" })
         .then(function(r){
           start.disabled = false;
-          if (!r.ok || !r.body || !r.body.id) { say("2단계 인증을 시작하지 못했습니다.", false); return; }
+          if (!r.ok || !r.body || !r.body.id) { say("2단계 인증을 시작하지 못했습니다. " + authErr(r), false); return; }
           MFA.factorId = r.body.id;
           var t = r.body.totp || {};
           // ★비밀 열쇠를 글자로도 띄운다★ — QR 을 못 읽는 자리가 있고, 이 콘솔은 PC 전용이다.
@@ -1266,10 +1283,10 @@
             if (v.length !== 6) { say("6자리 숫자를 넣어 주세요.", false); return; }
             say("확인하는 중…", true);
             authFetchTok("factors/" + MFA.factorId + "/challenge", {}).then(function(c){
-              if (!c.ok || !c.body || !c.body.id) { say("확인 요청이 실패했습니다.", false); return; }
+              if (!c.ok || !c.body || !c.body.id) { say("확인 요청이 실패했습니다. " + authErr(c), false); return; }
               authFetchTok("factors/" + MFA.factorId + "/verify",
                            { challenge_id: c.body.id, code: v }).then(function(vr){
-                if (!vr.ok || !vr.body || !vr.body.access_token) { say("코드가 맞지 않습니다.", false); return; }
+                if (!vr.ok || !vr.body || !vr.body.access_token) { say("코드가 맞지 않습니다. " + authErr(vr), false); return; }
                 // ★검증하면 서버가 새 토큰(aal2)을 준다 — 갈아 끼워야 이어서 볼 수 있다.
                 setSess({ access_token: vr.body.access_token, refresh_token: vr.body.refresh_token });
                 say("2단계 인증을 켰습니다. 다음 로그인부터 코드가 필요합니다.", true);
@@ -1286,10 +1303,10 @@
       off.disabled = true; say("끄는 중…", true);
       authFetchTok("factors", null, "GET").then(function(r){
         var f = mfaFactors(r.body)[0];
-        if (!f) { off.disabled = false; say("등록된 요소를 찾지 못했습니다.", false); return; }
+        if (!f) { off.disabled = false; say("등록된 요소를 찾지 못했습니다. " + authErr(r), false); return; }
         authFetchTok("factors/" + f.id, null, "DELETE").then(function(d){
           off.disabled = false;
-          if (!d.ok) { say("끄지 못했습니다.", false); return; }
+          if (!d.ok) { say("끄지 못했습니다. " + authErr(d), false); return; }
           say("2단계 인증을 껐습니다.", true);
           load();
         });
