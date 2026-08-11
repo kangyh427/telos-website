@@ -1058,14 +1058,40 @@
   //   이제 화면을 옮길 때마다 이력을 하나 쌓고, 뒤로 가기는 그 이력을 되짚는다.
   //   ★replace=true 는 이력을 쌓지 않는다★ — 첫 그림과 데이터 재적재처럼 "옮긴 것이
   //   아닌" 경우에 쓴다. 안 그러면 새로고침마다 이력이 늘어 뒤로 가기가 제자리걸음한다.
+  // ★★(S534) 대표 지적 — "60초마다 갑자기 맨 위로 올라가서 중간을 못 읽는다".
+  //   [원인] 한 함수가 ★두 가지 뜻★ 을 겸하고 있었다: "화면을 옮겼다"와 "같은 화면을
+  //     다시 그렸다". 맨 위로 가는 것은 ★옮겼을 때만★ 옳은데, 60초 자동 갱신도 같은
+  //     문을 지나느라 읽던 자리를 매번 빼앗았다.
+  //   [처방] 뜻을 가른다 — ★replace=true 는 "다시 그린 것"이므로 스크롤을 건드리지
+  //     않는다★. 이 값의 의미는 위 주석이 이미 "옮긴 것이 아닌 경우"라고 적어 두었고,
+  //     스크롤만 그 뜻을 안 따르고 있었다.
+  //   ★replace=true 호출부는 60초 갱신 하나뿐이고 첫 그림도 그 경로를 지난다★ —
+  //     첫 그림은 이미 맨 위라 보존해도 보이는 것이 같다.
   function go(r, replace){
     route = r;
     try {
       if (replace) history.replaceState(r, "", location.pathname);
       else history.pushState(r, "", location.pathname);
     } catch(e){}
+    // ★★(S534) 적는 중이면 아예 다시 그리지 않는다.
+    //   다시 그리기는 화면을 통째로 갈아 끼우므로, 가명을 적던 중이면 ★적던 글자가
+    //   사라진다★. 창구에서 여러 명을 등록할 때 60초마다 이것을 겪으면 못 쓴다.
+    //   ★다음 주기에 그리면 된다★ — 데이터는 이미 받아 두었으므로 잃는 것이 없다.
+    if (replace && typingInView()) return;
+    // ★다시 그리면 스크롤이 스스로 튄다(내용이 통째로 바뀌므로) → 그리기 전에 적어 두고
+    //   그린 뒤에 되돌린다. 옮긴 것일 때는 종전대로 맨 위로.
+    var keep = replace ? (window.pageYOffset || document.documentElement.scrollTop || 0) : 0;
     renderRoute();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, keep);
+  }
+  /** 지금 사람이 화면 안의 입력칸에 손을 대고 있는가(자동 갱신이 빼앗으면 안 되는 상태). */
+  function typingInView(){
+    var a = document.activeElement;
+    if (!a) return false;
+    var t = (a.tagName || "").toUpperCase();
+    if (t !== "INPUT" && t !== "TEXTAREA" && t !== "SELECT") return false;
+    var v = el("view");
+    return !!(v && v.contains(a));
   }
   window.addEventListener("popstate", function(e){
     route = (e.state && e.state.view) ? e.state : { view: "overview" };
