@@ -374,10 +374,6 @@
     var n = Number(w.connection_obv);
     return n > 0 ? "up" : (n < 0 ? "down" : "flat");
   }
-  function noteOf(id){
-    var n = (DATA.notes || []).filter(function(r){ return r.elderly_id === id; })[0];
-    return n ? (n.note || "") : "";
-  }
 
   // ── 기기 상태 (S508) ─────────────────────────────────────────────────
   //  ★이 블록이 답하는 질문은 나머지와 다르다: "어르신이 어떻게 지내시는가"가 아니라
@@ -587,9 +583,6 @@
     for (var i = 0; i < rows.length; i++) if (rows[i].elderly_id === id) return rows[i];
     return null;
   }
-  function eventsOf(id){
-    return (DATA.console_events || []).filter(function(e){ return e.elderly_id === id; });
-  }
   function alertLogOf(id){
     return (DATA.console_alerts || []).filter(function(a){ return a.elderly_id === id; });
   }
@@ -639,7 +632,7 @@
     var rs = roster();
     return Object.keys(rs).map(function(id){
       var s = statusOf(id) || {};
-      var out = { id: id, alias: rs[id].alias, region: rs[id].region, note: noteOf(id) };
+      var out = { id: id, alias: rs[id].alias, region: rs[id].region };
       Object.keys(s).forEach(function(k){ out[k] = s[k]; });
       // ★(S525 정정) 정본 척도는 일간 OBV 다 — 마지막 관측일의 값을 붙인다.
       var o = obvLatest(id);
@@ -962,15 +955,6 @@
                   o.connection_vs_prev_pct, o.connection_vs_base7_pct, o.connection_obv,
                   o.relational_obv, o.conversation_obv, o.mobility_obv, o.valid_axis_count];
         }));
-    } else if (kind === "events") {
-      // ★(S525) 사건 로그 — 표⑤ 개인 사례 카드의 주석. ★운영자 자유 입력이 담긴다★.
-      downloadCsv("텔로스_사건로그_" + today() + ".csv",
-        ["가명", "동네", "날짜", "내용", "적은 사람", "적은 때"],
-        (DATA.console_events || []).map(function(e){
-          var m = rs[e.elderly_id];
-          return [m ? m.alias : e.elderly_id, m ? m.region : null,
-                  e.event_date, e.note, e.created_by, String(e.created_at || "").slice(0, 16).replace("T", " ")];
-        }));
     } else if (kind === "alerts") {
       // ★(S525) 경보 이력 — 표⑥("며칠 만에 잡았다"). 발견과 확인 사이가 이 파일의 값이다.
       downloadCsv("텔로스_경보이력_" + today() + ".csv",
@@ -1021,11 +1005,11 @@
         }));
     } else if (kind === "week") {
       downloadCsv("텔로스_" + arg + "주_어르신별_" + today() + ".csv",
-        ["주 시작", "가명", "동네", "메모", "기록일", "관계망 접촉(분)", "미디어(분)", "사용시간(분)",
+        ["주 시작", "가명", "동네", "기록일", "관계망 접촉(분)", "미디어(분)", "사용시간(분)",
          "어르신 발화(건)", "대화 세션(회)", "이동거리(m)", "기분평균"],
         (DATA.elderly || []).filter(function(r){ return r.week_start === arg; }).map(function(r){
           var m3 = rs[r.elderly_id];
-          return [r.week_start, m3 ? m3.alias : r.elderly_id, m3 ? m3.region : null, noteOf(r.elderly_id),
+          return [r.week_start, m3 ? m3.alias : r.elderly_id, m3 ? m3.region : null,
                   r.days_reported, r.relational_contact_min, r.media_min, r.usage_minutes,
                   r.elder_utterances, r.conversation_sessions, r.travel_distance_m, r.mood_avg];
         }));
@@ -1033,13 +1017,13 @@
       // 전체 원지표(선택 기간) — 어르신별 일별 전량. IR·분석용 한 방 내려받기.
       downloadCsv("텔로스_전체원지표_최근" + (DATA.range_days || 14) + "일_" + today() + ".csv",
         // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
-        ["가명", "동네", "메모", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
+        ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
          "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
-          return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, noteOf(r.elderly_id), r.metric_date,
+          return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, r.metric_date,
                   r.face_to_face_minutes, r.phone_call_minutes, r.media_minutes, r.absence_minutes,
                   r.elder_utterance_seconds, r.elder_utterance_minutes,
                   r.active_span_minutes, r.travel_distance_m, r.away_from_home_minutes, r.outing_count,
@@ -1291,7 +1275,6 @@
       '<tr><td><b>전체 원지표</b> <span class="muted">어르신별 일별 전량 · ' + rangeLabel() + "</span></td><td>" + csvBtn("all") + "</td></tr>" +
       '<tr><td><b>어르신 상태판</b> <span class="muted">어제·평소 대비 + OBV + 혼자 비율</span></td><td>' + csvBtn("elders") + "</td></tr>" +
       '<tr><td><b>일간 OBV 전량</b> <span class="muted">개인별 추세선 원재료(표①②의 정본 척도)</span></td><td>' + csvBtn("obv") + "</td></tr>" +
-      '<tr><td><b>사건 로그</b> <span class="muted">날짜별 특이사항(표⑤ 재료)</span></td><td>' + csvBtn("events") + "</td></tr>" +
       '<tr><td><b>경보 이력</b> <span class="muted">발견 → 확인까지(표⑥ 재료)</span></td><td>' + csvBtn("alerts") + "</td></tr>" +
       '<tr><td><b>회사 주간 집계</b> <span class="muted">전원 합계</span></td><td>' + csvBtn("company") + "</td></tr>" +
       '<tr><td><b>연구 주차 자료</b> <span class="muted">가명·주차 지표(연구자 전달용)</span></td><td>' + csvBtn("study_weeks") + "</td></tr>" +
@@ -1374,17 +1357,6 @@
             (me.region ? ' <span class="muted" style="font-size:14px">· ' + esc(me.region) + "</span>" : "") + "</h2>";
     html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">가명·동네만 표시합니다. 실명·전화번호·대화 원문·정확한 위치는 이 콘솔에 오지 않습니다.</div>';
 
-    // ★이름표(메모) — 가명만으로는 누구인지 떠올리기 어려워서 운영자가 자기 말로 단다.
-    html += '<section><h2>이름표<span class="tag">이 콘솔에만 보입니다</span></h2>' +
-      '<div class="desc">가명("' + esc(me.alias) + '")만으로 기억하기 어려울 때 쓰는 메모입니다. ' +
-      '어르신 앱·보호자 앱·복지사 화면에는 나오지 않습니다.<br>' +
-      '<b>★실명·전화번호는 적지 마세요</b> — 적는 순간 가명으로 지켜 온 경계가 깨집니다(200자까지).</div>' +
-      '<div class="row"><input id="noteInput" type="text" maxlength="200" placeholder="예: 종촌동 첫 시범 · 딸이 보호자 · 화요일 경로당" ' +
-      'style="flex:1;min-width:280px" value="' + esc(noteOf(id)) + '">' +
-      '<button class="primary" id="saveNoteBtn">저장</button>' +
-      '<button id="clearNoteBtn">지우기</button></div>' +
-      '<div id="noteMsg" style="font-size:13px;margin-top:8px"></div></section>';
-
     html += '<div class="cards">' +
       cardHtml("이번 주 추세", w && w.connection_obv !== null ? (Number(w.connection_obv) > 0 ? "+" : "") + Math.round(Number(w.connection_obv)) : "측정 중",
                w ? w.week_index + "주차 · 비교된 축 " + (w.valid_axis_count || 0) + "/3" : "주차 미산출") +
@@ -1420,31 +1392,6 @@
           deltaCell(pp.alone_pct_delta) + "</td></tr>" +
         "</table></div></section>";
     }
-
-    // ★★(S525) 사건 로그 — 표⑤ 개인 사례 카드의 주석("9/3 딸과 통화 재개").
-    //   ★이름표(위)와 다른 물건이다★: 이름표는 1칸이고 덮어쓰지만 여기는 날짜별로 쌓인다.
-    //   12주 곡선 옆에 붙일 이야기가 이 표에서 나온다 — ★그때 안 적으면 영영 못 만든다.★
-    var evs = eventsOf(id);
-    html += '<section><div class="sechead"><div><h2>사건 기록' +
-      '<span class="whose">' + esc(me.alias) + " · 날짜별로 쌓입니다</span></h2>" +
-      '<div class="desc">그날 무슨 일이 있었는지 한 줄로 적어 둡니다(예: “딸과 통화 재개” · “복지관 첫 방문” · “요양사 방문 확인”). ' +
-      '12주 뒤 이 어르신의 곡선 옆에 붙일 <b>이야기</b>가 여기서 나옵니다.<br>' +
-      '<b>★실명·전화번호는 적지 마세요</b> — 이름표와 같은 경계입니다(200자까지).</div></div></div>' +
-      '<div class="row" style="margin-bottom:12px">' +
-      '<input id="evDate" type="date" value="' + esc(today()) + '" max="' + esc(today()) + '">' +
-      '<input id="evNote" type="text" maxlength="200" placeholder="예: 딸과 통화 재개 · 복지관 첫 방문" style="flex:1;min-width:300px">' +
-      '<button class="primary" id="evAdd">기록</button></div>' +
-      '<div id="evMsg" style="font-size:13px;margin-bottom:10px"></div>' +
-      '<div class="tablewrap"><table><tr><th>날짜</th><th>내용</th><th>적은 사람</th><th></th></tr>';
-    if (!evs.length) html += '<tr><td colspan="4" class="muted">아직 적어 둔 사건이 없습니다</td></tr>';
-    evs.forEach(function(e){
-      // ★min-width 를 준다 — 없으면 창이 좁을 때 한 글자씩 세로로 무너진다(미리보기 실측).
-      html += "<tr><td><b>" + esc(e.event_date) + "</b></td>" +
-        '<td style="text-align:left;white-space:normal;min-width:300px">' + esc(e.note) + "</td>" +
-        '<td class="muted">' + esc(e.created_by || "") + "</td>" +
-        '<td><button class="danger evDel" data-ev="' + esc(String(e.id)) + '">지우기</button></td></tr>';
-    });
-    html += "</table></div></section>";
 
     // ★★(S525) 경보 이력 — 표⑥ "며칠 만에 잡았다".
     //   ★확인(ack)은 되돌리지 않는다★ — 최초 확인 시각이 곧 "발견에서 대응까지"의 오른쪽 끝이라
@@ -1545,45 +1492,7 @@
     }
 
     el("view").innerHTML = html;
-    bindGo(); bindCsv(); bindNote(id); bindEvents(id); bindAck();
-  }
-
-  /**
-   * ★(S525) 사건 기록 등록·삭제.
-   * ★서버가 판정한다★ — 앞날·빈 값·200자 초과는 RPC 가 거부하고 화면은 그 말을 옮긴다
-   * (같은 규칙을 화면에도 쓰면 두 곳이 갈라진다 · bindPendingRegister 와 같은 결).
-   * ★성공하면 목록을 손으로 고치지 않고 다시 받아 온다★ — 화면이 서버보다 앞서가면
-   * 실패했는데 저장된 것처럼 보일 수 있다.
-   */
-  function bindEvents(id){
-    var add = el("evAdd"), note = el("evNote"), date = el("evDate"), msg = el("evMsg");
-    function say(t, ok){ if (msg) { msg.textContent = t; msg.style.color = ok ? "#0e7490" : "#b91c1c"; } }
-    if (add && note && date) {
-      var submit = function(){
-        var text = note.value.trim();
-        if (!text) { say("무슨 일이 있었는지 한 줄 적어 주세요.", false); return; }
-        add.disabled = true; say("기록하는 중…", true);
-        rpc("console_add_elderly_event", {
-          p_elderly_id: id, p_event_date: date.value, p_note: text,
-        }).then(function(r){
-          add.disabled = false;
-          if (!r.ok) { say(rpcReason(r), false); return; }
-          note.value = ""; say("기록했습니다.", true); load();
-        });
-      };
-      add.addEventListener("click", submit);
-      note.addEventListener("keydown", function(e){ if (e.key === "Enter") submit(); });
-    }
-    Array.prototype.forEach.call(el("view").querySelectorAll(".evDel"), function(b){
-      b.addEventListener("click", function(){
-        b.disabled = true;
-        rpc("console_delete_elderly_event", { p_id: Number(b.getAttribute("data-ev")) }).then(function(r){
-          b.disabled = false;
-          if (!r.ok) { say(rpcReason(r), false); return; }
-          load();
-        });
-      });
-    });
+    bindGo(); bindCsv(); bindAck();
   }
 
   /** ★(S525) 경보 확인. 메모는 선택 — 없어도 "언제 확인했는지"는 남는다. */
@@ -1602,32 +1511,6 @@
         });
       });
     });
-  }
-
-  // 이름표 저장/지우기 — 저장 후 데이터를 다시 받아 목록·CSV 에도 즉시 반영한다.
-  function bindNote(id){
-    var save = el("saveNoteBtn"), clear = el("clearNoteBtn"), input = el("noteInput");
-    if (!save || !input) return;
-    function put(text){
-      rpc("console_set_elderly_note", { p_elderly_id: id, p_note: text }).then(function(r){
-        var msg = el("noteMsg"); if (!msg) return;
-        if (r.ok) {
-          msg.style.color = "#0e7490";
-          msg.textContent = text ? "저장했습니다." : "지웠습니다.";
-          load();   // 서버에서 다시 받아 목록·CSV 에도 반영
-        } else {
-          var raw = (r.body && (r.body.message || r.body.hint)) || r.raw || "";
-          msg.style.color = "#b91c1c";
-          msg.textContent = raw.indexOf("NOTE_TOO_LONG") >= 0 ? "메모가 너무 깁니다(200자까지)."
-                          : raw.indexOf("NOT_CONSOLE_ADMIN") >= 0 ? "권한이 없습니다."
-                          : "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-        }
-        setTimeout(function(){ if (msg) msg.textContent = ""; }, 5000);
-      });
-    }
-    save.addEventListener("click", function(){ put(input.value.trim()); });
-    input.addEventListener("keydown", function(e){ if (e.key === "Enter") put(input.value.trim()); });
-    if (clear) clear.addEventListener("click", function(){ input.value = ""; put(""); });
   }
 
   // ── 화면 4: 연구 (S513) ──────────────────────────────────────────────
@@ -1939,7 +1822,7 @@
     return "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
 
-  // 배정·철회 — 성공하면 데이터를 다시 받아 표에 즉시 반영한다(bindNote 와 같은 결).
+  // 배정·철회 — 성공하면 데이터를 다시 받아 표에 즉시 반영한다(성공 후 다시 받아 오는 결).
   function bindStudy(){
     var reason = rpcReason;
 
@@ -2073,16 +1956,14 @@
     html += '<section><div class="sechead"><div><h2>어르신별 내역' + '<span class="whose">' + esc(weekStart) + " 주</span></h2>" +
       '<div class="desc">한 줄을 누르면 그 어르신의 전체 상세로 들어갑니다.</div></div>' +
       csvBtn("week", weekStart) + "</div>" +
-      '<div class="tablewrap"><table><tr><th>어르신</th><th>메모</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
+      '<div class="tablewrap"><table><tr><th>어르신</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
       "<th>사용시간</th><th>대화 세션</th><th>이동거리</th><th>기분평균</th></tr>";
-    if (!rows.length) html += '<tr><td colspan="9" class="muted">이 주에는 기록이 없습니다</td></tr>';
+    if (!rows.length) html += '<tr><td colspan="8" class="muted">이 주에는 기록이 없습니다</td></tr>';
     rows.forEach(function(r){
-      var m = rs[r.elderly_id], nt = noteOf(r.elderly_id);
+      var m = rs[r.elderly_id];
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.elderly_id })) + "'>" +
         "<td><b>" + esc(m ? m.alias : String(r.elderly_id).slice(0,8)) + "</b>" +
         (m && m.region ? ' <span class="muted">· ' + esc(m.region) + "</span>" : "") + "</td>" +
-        '<td style="text-align:left;white-space:normal;max-width:220px">' +
-          (nt ? esc(nt) : '<span class="muted">—</span>') + "</td>" +
         "<td>" + fmt(r.days_reported, "일") + "</td><td>" + fmt(r.relational_contact_min, "분") + "</td><td>" +
         fmt(r.media_min, "분") + "</td><td>" + fmt(r.usage_minutes, "분") + "</td><td>" +
         fmt(r.conversation_sessions, "회") + "</td><td>" + fmt(r.travel_distance_m, "m") + "</td><td>" +
