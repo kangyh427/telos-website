@@ -1487,7 +1487,7 @@
       cardHtml("이번 주 추세", w && w.connection_obv !== null ? (Number(w.connection_obv) > 0 ? "+" : "") + Math.round(Number(w.connection_obv)) : "측정 중",
                w ? w.week_index + "주차 · 비교된 축 " + (w.valid_axis_count || 0) + "/3" : "주차 미산출") +
       cardHtml("그 주 기록", w ? w.observed_days + "일" : "—", "기록일이 적으면 얇은 근거") +
-      cardHtml("관계망 접촉", w ? (num(w.relational_min_avg) === null ? "측정 중" : Math.round(num(w.relational_min_avg) * 10) / 10 + "분/일") : "—", "대면+통화 하루 평균") +
+      cardHtml("관계망 접촉", w ? (num(w.relational_min_avg) === null ? "측정 중" : Math.round(num(w.relational_min_avg) * 10) / 10 + "분/일") : "—", "대면·통화와 함께 계신 시간 중 큰 쪽 · 하루 평균") +
       cardHtml("최근 데이터", ds.length ? ds[ds.length - 1].metric_date : "없음", ds.length + "일치 유입") +
       "</div>";
 
@@ -1569,7 +1569,7 @@
 
     // 이 사람만의 일별
     html += '<section><div class="sechead"><div><h2>' + rangeLabel() + ' · 일별 기록' + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-      '<div class="desc">진한 색 = 대면+통화(관계망), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님).</div></div>' +
+      '<div class="desc">진한 색 = 관계망(대면·통화와 동석 중 큰 쪽), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님).</div></div>' +
       csvBtn("elderDaily", id) + "</div>" +
       dailySvg(ds) +
       // ★★(S525) "어르신 발화"를 ★초★ 로 보여 준다 — 분은 이 축을 통째로 삼키고 있었다.
@@ -2083,7 +2083,7 @@
     if (comp) {
       html += '<div class="cards">' +
         cardHtml("어르신", fmtPlainNum(comp.elderly_count) + "명", "이 주에 기록이 있던 분") +
-        cardHtml("관계망 접촉 합", fmtPlainNum(comp.total_relational_contact_min) + "분", "대면+통화 전원 합계") +
+        cardHtml("관계망 접촉 합", fmtPlainNum(comp.total_relational_contact_min) + "분", "대면+통화 전원 합계(동석 미포함)") +
         cardHtml("사용시간 합", fmtPlainNum(comp.total_usage_minutes) + "분", "전원 합계") +
         cardHtml("이동거리 합", fmtPlainNum(comp.total_travel_distance_m) + "m", "전원 합계") +
         "</div>";
@@ -2165,7 +2165,7 @@
   // 한 사람의 축별 OBV(무엇이 오르고 내렸는지)
   function elderAxisSvg(ws){
     var axes = [
-      { key: "relational_obv", name: "관계망(대면+통화)", c: COLORS[0] },
+      { key: "relational_obv", name: "관계망(대면·통화·동석)", c: COLORS[0] },
       { key: "conversation_obv", name: "대화", c: COLORS[1] },
       { key: "mobility_obv", name: "이동", c: COLORS[2] },
       { key: "connection_obv", name: "종합", c: "#111827" },
@@ -2260,7 +2260,7 @@
       out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' + esc(String(r.metric_date).slice(5)) + "</text>";
     });
     out += "</svg>";
-    out += '<div class="legend"><span><i style="background:#17857A"></i>대면+통화</span>' +
+    out += '<div class="legend"><span><i style="background:#17857A"></i>관계망(대면·통화·동석)</span>' +
            '<span><i style="background:#c9e2de"></i>미디어(TV 등) 노출</span></div>';
     return out;
   }
