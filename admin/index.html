@@ -457,6 +457,24 @@
       out.push({ sev: "low", t: "집 좌표 없음",
         d: "말 걸기는 정상입니다. 다만 밖에 계실 때 삼가는 것과 외출 지표는 주소가 있어야 잡힙니다(댁에서 저장해야 합니다)." });
     }
+    // ★★(S541) 목소리 등록 — 2026-08-14 p04 어르신에서 나온 경보★★
+    //   그 어르신은 8/11 설치 뒤 ★나흘간 목소리가 한 번도 본인으로 안 붙었다★.
+    //   소리는 계속 듣고 있었는데(동석·미디어·이동 정상) "어르신"이라는 라벨만 0건이었고,
+    //   ★그 사실이 화면 어디에도 없어 나흘이 지나서야 자료를 손으로 파 보고 알았다★.
+    //   ★이것이 "위험"인 이유★ = 성문이 없으면 불러도 대답하지 못하고 자료도 안 쌓인다.
+    //   어르신 눈에는 ★그냥 켜져 있는 기계★ 이고, 몇 번 불러 보시다 그만두신다.
+    //   ★null 은 경보로 만들지 않는다★ — 옛 앱은 이 사실을 안 보내므로 "모른다"이고,
+    //   모르는 것을 빨간불로 띄우면 멀쩡한 어르신께 거짓 경보가 뜬다(S508 규율).
+    if (h.voiceprint_enrolled === false) {
+      out.push({ sev: "hi", t: "목소리 등록 안 됨",
+        d: "불러도 대답하지 못하고 대화 기록도 쌓이지 않습니다. 어르신 앱에서 목소리를 등록해 주세요(조용한 곳에서 하셔야 합니다)." });
+    }
+    // ★등록은 됐지만 시끄러운 자리에서 뜬 경우★ — 마이크는 목소리와 배경음을 하나로 합쳐
+    //   받으므로(S488) 그 성문에는 소음이 섞여 굳는다. 조용한 댁에서 말씀하시면 안 맞는다.
+    if (h.voiceprint_noisy_enrollment === true) {
+      out.push({ sev: "mid", t: "시끄러운 곳에서 목소리를 등록함",
+        d: "그 등록은 소음이 섞여 있어 어르신 목소리를 잘 못 알아볼 수 있습니다. 조용한 곳에서 다시 등록해 주세요." });
+    }
     return out;
   }
 
@@ -1335,7 +1353,9 @@
     html += '<section><div class="sechead"><div><h2>기기 상태' +
       '<span class="whose">어르신이 아니라 기기를 봅니다</span></h2></div></div>' +
       '<div class="tablewrap"><table><tr><th>어르신</th><th>마지막 보고</th><th>상태</th>' +
-      '<th>마지막으로 들은 때</th><th>오늘 마이크 죽음</th><th>집 좌표</th></tr>';
+      // ★(S541) "목소리" 칸 신설 — 성문이 없으면 불러도 대답 못 하고 자료도 안 쌓인다.
+      //   ★상태 칸(경보 요약)과 ★같은 사실★ 을 다르게 말하지 않도록 같은 h 에서 읽는다.
+      '<th>마지막으로 들은 때</th><th>오늘 마이크 죽음</th><th>목소리</th><th>집 좌표</th></tr>';
     ids.forEach(function(id){
       var h = latestHealth(id), probs = deviceProblems(h);
       var gap = h ? daysBetween(h.metric_date) : null;
@@ -1353,6 +1373,15 @@
         // ★들은 적이 없으면 0분 전이 아니라 ★없음★ 이다(정반대의 뜻을 섞지 않는다).
         "<td>" + (heard ? esc(heard) : '<span class="warn">없음</span>') + "</td>" +
         "<td>" + (h && num(h.mic_death_count) !== null ? num(h.mic_death_count) + "회" : '<span class="muted">—</span>') + "</td>" +
+        // ★(S541) 목소리 등록. ★null(옛 앱이라 안 보냄)은 "—"★ 로 둔다 — "등록 안 됨"으로
+        //   적으면 멀쩡히 쓰고 계신 어르신을 문제로 만든다(모르는 것은 모른다고 적는다).
+        "<td>" + (!h || h.voiceprint_enrolled === null || h.voiceprint_enrolled === undefined
+                    ? '<span class="muted">—</span>'
+                    : (h.voiceprint_enrolled === false
+                        ? '<span class="warn">등록 안 됨</span>'
+                        : (h.voiceprint_noisy_enrollment === true
+                            ? '<span class="warn">시끄러운 곳</span>'
+                            : '<span class="muted">있음</span>'))) + "</td>" +
         "<td>" + (!h ? '<span class="muted">—</span>'
                      : (h.home_location_known === false ? '<span class="muted">없음</span>'
                         : (h.home_location_known === true ? '<span class="muted">있음</span>' : '<span class="muted">—</span>'))) + "</td></tr>";
