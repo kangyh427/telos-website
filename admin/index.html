@@ -1577,9 +1577,12 @@
       //   자(尺)가 틀렸다. 분 칸은 서버에 그대로 두되(연구 스냅샷이 읽는다) 화면은 초를 쓴다.
       // ★(S525) "외출" 열 신설 — 집 반경 밖 구간의 수. ★좌표는 서버에 오지 않는다★
       //   (단말이 안/밖 판정만으로 세고 그 수만 올린다 · docs/60 §8 삭제 확정은 그대로).
-      '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th><th>미디어</th>' +
+      '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th>' +
+      // ★(S541) "함께" = 동석 신호(성문 무의존). 대면·통화가 "측정 중"인 날에도 이 칸은 값이
+      //   나올 수 있다 — 그것이 이 칸을 만든 이유다(화자귀속 0.75% · sql 063).
+      "<th>함께</th><th>미디어</th>" +
       "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="11" class="muted">기록 없음</td></tr>';
+    if (!ds.length) html += '<tr><td colspan="12" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
       //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
@@ -1587,8 +1590,15 @@
       var utter = num(r.elder_utterance_seconds) !== null
         ? fmt(r.elder_utterance_seconds, "초")
         : fmt(r.elder_utterance_minutes, "분");
+      var together = companionMin(r);   // ★(S541) null = 그날 볼 창이 없었다(미측정)
+      // ★(S541) 통화는 ★사실★(real_call_minutes)을 먼저 쓴다. 옛 phone_call_minutes 는
+      //   소리로 맞힌 추론값이라 반증됐다 — 구 APK 가 올린 행에만 남아 있으므로 그때만 쓴다
+      //   (S525 발화 초/분 과 같은 관례: 새 값이 있으면 새 값, 없으면 옛 값).
+      var callMin = num(r.real_call_minutes) !== null ? r.real_call_minutes : r.phone_call_minutes;
       html += "<tr><td>" + esc(r.metric_date) + "</td><td>" + fmt(r.face_to_face_minutes, "분") + "</td><td>" +
-        fmt(r.phone_call_minutes, "분") + "</td><td>" + fmt(r.media_minutes, "분") + "</td><td>" +
+        fmt(callMin, "분") + "</td><td>" +
+        (together === null ? '<span class="muted">측정 중</span>' : Math.round(together) + "분") + "</td><td>" +
+        fmt(r.media_minutes, "분") + "</td><td>" +
         utter + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
         fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.away_from_home_minutes, "분") + "</td><td>" +
         fmt(r.outing_count, "회") + "</td><td>" +
@@ -2195,13 +2205,40 @@
   }
 
   // 한 사람의 일별 막대
+  //
+  // ★(S541) 미측정(null)은 ★막대를 그리지 않는다★ — 0 분 막대로 그리지 않는다.
+  //   이 그림의 설명문은 진작부터 "막대가 없는 날은 기록이 없는 날입니다(0이 아님)"라고
+  //   약속하고 있었는데, 코드가 `|| 0` 으로 null 을 0 으로 접어 ★약속을 어기고 있었다★.
+  //   서버가 이제 미측정을 null 로 내려주므로(sql 062) 여기서 접으면 그 사실이 다시 지워진다.
+  // ★(S541) 동석(companion) 기반 "함께 있던 시간"(분). ★성문에 기대지 않는 신호★ —
+  //   피치 갈래 수로만 세므로 화자귀속이 0.75% 인 현 상태에서도 동작한다(sql 063 헤더).
+  //   ★네 칸의 합이 0 이면 미측정이다★(notObserved 가 넷을 전부 0 으로 만든다) — 그 날을
+  //   "혼자 계셨다"로 읽으면 안 된다.
+  function companionMin(r){
+    var a = num(r.companion_alone_windows), o = num(r.companion_one_windows),
+        m = num(r.companion_multiple_windows), u = num(r.companion_undetermined_windows);
+    var total = (a || 0) + (o || 0) + (m || 0) + (u || 0);
+    if (!total) return null;
+    return ((o || 0) + (m || 0)) * (num(r.window_seconds) || 600) / 60;
+  }
+  // 관계망 = 접촉(대면+통화)과 동석 중 ★큰 쪽★ — 더하면 같은 창을 두 번 센다(sql 063 과 동일 규칙).
+  function relOf(r){
+    // ★서버 뷰 connection_relational_daily 와 ★같은 식★ 이어야 한다 — 어긋나면 화면과
+    //   지수가 다른 말을 한다(S540 에서 대표가 잡아내신 결함이 정확히 그 부류였다).
+    var f = num(r.face_to_face_minutes), p = num(r.phone_call_minutes), rc = num(r.real_call_minutes);
+    var contact = (f === null && rc === null) ? null : (f || 0) + (p || 0) + (rc || 0);
+    var comp = companionMin(r);
+    if (contact === null) return comp;   // 그날 접촉 판정이 없었다 → 동석만으로 본다
+    if (comp === null) return contact;
+    return Math.max(contact, comp);
+  }
   function dailySvg(ds){
     if (!ds.length) return '<div class="muted" style="font-size:13px">이 기간에는 기록이 없습니다</div>';
     var maxV = 10;
     ds.forEach(function(r){
-      var rel = (num(r.face_to_face_minutes) || 0) + (num(r.phone_call_minutes) || 0);
-      var med = num(r.media_minutes) || 0;
-      if (Math.max(rel, med) > maxV) maxV = Math.max(rel, med);
+      var rel = relOf(r), med = num(r.media_minutes);
+      if (rel !== null && rel > maxV) maxV = rel;
+      if (med !== null && med > maxV) maxV = med;
     });
     var W = 1000, H = 210, L = 46, R = 10, T = 12, B = 30;
     var bw = (W - L - R) / ds.length;
@@ -2209,11 +2246,17 @@
     var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
     out += '<text x="4" y="' + (T + 10) + '" font-size="11" fill="#5b7078">' + Math.round(maxV) + "분</text>";
     ds.forEach(function(r, i){
-      var rel = (num(r.face_to_face_minutes) || 0) + (num(r.phone_call_minutes) || 0);
-      var med = num(r.media_minutes) || 0;
+      var rel = relOf(r), med = num(r.media_minutes);
       var x0 = L + i * bw;
-      out += '<rect x="' + (x0 + bw * 0.12) + '" y="' + y(med) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(med)) + '" fill="#c9e2de"/>';
-      out += '<rect x="' + (x0 + bw * 0.52) + '" y="' + y(rel) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(rel)) + '" fill="#17857A"/>';
+      // ★null 이면 그 막대를 아예 그리지 않는다★ — 0 높이 막대와 "그림 없음"은 화면에서
+      //   같아 보이므로, 미측정인 날은 ★자리만 비워 두고★ 아래 날짜 라벨은 그대로 둔다
+      //   (라벨까지 지우면 그날이 존재하지 않은 것처럼 보인다).
+      if (med !== null) {
+        out += '<rect x="' + (x0 + bw * 0.12) + '" y="' + y(med) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(med)) + '" fill="#c9e2de"/>';
+      }
+      if (rel !== null) {
+        out += '<rect x="' + (x0 + bw * 0.52) + '" y="' + y(rel) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(rel)) + '" fill="#17857A"/>';
+      }
       out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' + esc(String(r.metric_date).slice(5)) + "</text>";
     });
     out += "</svg>";
