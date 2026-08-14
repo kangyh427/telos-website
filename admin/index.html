@@ -1008,7 +1008,7 @@
     } else if (kind === "elderWeeks") {
       var m = rs[arg];
       downloadCsv("텔로스_" + (m ? m.alias : "어르신") + "_주차_" + today() + ".csv",
-        ["가명", "주차", "주 시작", "주 끝", "기록일", "관계망(분/일)", "관계망 변화%", "대화(분/일)", "대화 변화%",
+        ["가명", "주차", "주 시작", "주 끝", "기록일", "관계망(분/일)", "관계망 변화%", "대화-어르신발화(초/일)", "대화 변화%",
          "이동(m/일)", "이동 변화%", "누적 추세(OBV)", "비교된 축"],
         weeksOf(arg).map(function(r){
           return [m ? m.alias : arg, r.week_index, r.week_start, r.week_end, r.observed_days,
@@ -1585,7 +1585,7 @@
       '<div class="desc">각 축의 하루 평균과, 직전 주 대비 변화율입니다. “—”는 비교할 지난주 값이 없었다는 뜻입니다.</div></div>' +
       csvBtn("elderWeeks", id) + "</div>" +
       '<div class="tablewrap"><table><tr><th>주차</th><th>기간</th><th>기록일</th>' +
-      "<th>관계망(분/일)</th><th>변화</th><th>대화(분/일)</th><th>변화</th><th>이동(m/일)</th><th>변화</th><th>누적 추세</th></tr>";
+      "<th>관계망(분/일)</th><th>변화</th><th>대화<br><span class='muted' style='font-weight:400'>어르신 발화(초/일)</span></th><th>변화</th><th>이동(m/일)</th><th>변화</th><th>누적 추세</th></tr>";
     if (!ws.length) html += '<tr><td colspan="10" class="muted">아직 주차 데이터가 없습니다</td></tr>';
     ws.slice().reverse().forEach(function(r){
       html += "<tr><td><b>" + r.week_index + "주차</b></td><td>" + esc(r.week_start) + "</td><td>" + r.observed_days + "일</td>" +
@@ -2195,7 +2195,7 @@
   function elderAxisSvg(ws){
     var axes = [
       { key: "relational_obv", name: "관계망(대면·통화·동석)", c: COLORS[0] },
-      { key: "conversation_obv", name: "대화", c: COLORS[1] },
+      { key: "conversation_obv", name: "대화(어르신 발화)", c: COLORS[1] },
       { key: "mobility_obv", name: "이동", c: COLORS[2] },
       { key: "connection_obv", name: "종합", c: "#111827" },
     ];
