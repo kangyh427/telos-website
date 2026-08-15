@@ -1022,13 +1022,18 @@
         //   연구 스냅샷도 분을 읽는다. 두 칸을 나란히 두면 받는 사람이 단위를 헷갈리지 않는다.
         ["가명", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)", "사용시간(분)",
-         "이동거리(m)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+        // ★(S545) 걷기·탈것 병기 — ★총 칸은 그대로 둔다★(자를 바꾸면 옛 자료와 못 견준다).
+        //   ★총 >= 걷기 + 탈것 이 정상이다★ — 판정 못 한 홉(측위 간격 2시간 초과 등)은 어느
+        //   쪽에도 안 들어간다. 그 차이를 손실이나 결함으로 읽지 말 것.
+        //   ★빈 칸 = 못 쟀다★(옛 앱은 이 두 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
+         "이동거리(m)", "걷기(m)", "탈것(m)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
                   r.media_minutes, r.absence_minutes,
                   r.elder_utterance_seconds, r.elder_utterance_minutes, r.active_span_minutes,
-                  r.travel_distance_m, r.away_from_home_minutes, r.outing_count,
+                  r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m,
+                  r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio,
                   r.companion_alone_windows, r.companion_one_windows, r.companion_multiple_windows,
@@ -1050,14 +1055,15 @@
         // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
         ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
           return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, r.metric_date,
                   r.face_to_face_minutes, r.phone_call_minutes, r.media_minutes, r.absence_minutes,
                   r.elder_utterance_seconds, r.elder_utterance_minutes,
-                  r.active_span_minutes, r.travel_distance_m, r.away_from_home_minutes, r.outing_count,
+                  r.active_span_minutes, r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m,
+                  r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
                   r.companion_multiple_windows, r.companion_undetermined_windows,
@@ -1617,8 +1623,14 @@
       // ★(S541) "함께" = 동석 신호(성문 무의존). 대면·통화가 "측정 중"인 날에도 이 칸은 값이
       //   나올 수 있다 — 그것이 이 칸을 만든 이유다(화자귀속 0.75% · sql 063).
       "<th>함께</th><th>미디어</th>" +
-      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="12" class="muted">기록 없음</td></tr>';
+      // ★(S545) "걷기" 열 신설 — 연결지수의 이동 축이 보는 값이 ★이것★ 이다(sql 069).
+      //   실측 p04 08-14 = 이동거리 243km(자동차)가 이동 축 100% 를 찍어 발화 0·관계망 0 인
+      //   날의 지수를 3배로 올렸다. ★이동거리 칸은 그대로 두고 옆에 걷기를 나란히 둔다★ —
+      //   둘이 크게 다른 날이 곧 "차로 다녀오신 날"이고, 그 사실 자체가 돌봄 정보다.
+      //   ★탈것은 CSV 에만 둔다★(화면이 좁다 · 내려받기에는 세 칸이 다 있다).
+      //   ★"측정 중" = 못 쟀다★(옛 앱은 이 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
+      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="13" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
       //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
@@ -1636,7 +1648,8 @@
         (together === null ? '<span class="muted">측정 중</span>' : Math.round(together) + "분") + "</td><td>" +
         fmt(r.media_minutes, "분") + "</td><td>" +
         utter + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
-        fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.away_from_home_minutes, "분") + "</td><td>" +
+        fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.walk_distance_m, "m") + "</td><td>" +
+        fmt(r.away_from_home_minutes, "분") + "</td><td>" +
         fmt(r.outing_count, "회") + "</td><td>" +
         // ★(S527) 권유 = 그날 넛지 재료를 실제로 실은 횟수(표⑧ 퍼널의 분모 · sql 037).
         //   ★0 과 "측정 중"이 화면에서 갈린다★ — 0(쟀고 한 번도 안 권했다)과
