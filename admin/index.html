@@ -833,40 +833,82 @@
     var dates = {};
     drawn.forEach(function(s){ s.rows.forEach(function(r){ dates[r.metric_date] = 1; }); });
     var xs = Object.keys(dates).sort();
+    // ★★(S547 · 대표 지시 "주식차트처럼 만들어줘 · 너무 큼직큼직하게 할 필요 없어")★★
+    //   ★여기는 노인앱이 아니라 PC 관리자 콘솔이다★ — 큰 글씨·성근 여백이 아니라
+    //   ★한 화면에 많이, 조밀하게★ 가 맞다. 그래서 주식차트 관례를 그대로 따른다:
+    //     · 위 = 누적선(주가) · 아래 = 그 날의 변화 막대(거래량)
+    //     · 가로 격자 + 0 기준선 · 작은 글씨(10~11px) · 얇은 선
+    //     · ★한국 주식 관례색 = 오르면 빨강, 내리면 파랑★(초록/빨강은 서양 관례라
+    //       국내 사용자가 정반대로 읽는다)
+    //   ★바뀐 것은 그리는 방식뿐이고 값은 한 글자도 안 바꿨다★(같은 obvRowsOf).
     var maxAbs = 20;
     drawn.forEach(function(s){ s.rows.forEach(function(r){
       var v = Math.abs(num(r.connection_obv)); if (v > maxAbs) maxAbs = v;
     }); });
-    var W = 1000, H = 250, L = 50, R = 20, T = 16, B = 34;
+    // 아래 칸(거래량)의 눈금은 ★위 칸과 따로★ 잡는다 — 누적과 일간은 크기가 다르다.
+    var volMax = 10;
+    drawn.forEach(function(s){ s.rows.forEach(function(r){
+      var v = Math.abs(num(r.connection_vs_prev_pct) || 0); if (v > volMax) volMax = v;
+    }); });
+    var W = 1000, T = 12, L = 46, R = 14;
+    var PH = 168, GAP = 10, VH = 58, B = 24;          // 가격칸 · 틈 · 거래량칸 · 날짜칸
+    var H = T + PH + GAP + VH + B;
     var x = function(dt){ var i = xs.indexOf(dt);
       return xs.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (xs.length - 1); };
-    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
-    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
-    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) +
-      '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
-    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0 (시작)</text>';
-    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
-    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
+    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * PH; };
+    var vy0 = T + PH + GAP + VH / 2;                   // 거래량칸의 0 선
+    var vy = function(v){ return vy0 - (v / volMax) * (VH / 2); };
+    var UP = "#d64545", DOWN = "#2f6fb0";              // 상승 빨강 · 하락 파랑(국내 관례)
+    var out = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto">';
+    // ── 격자(주식차트의 눈금선) ──
+    [1, 0.5, 0, -0.5, -1].forEach(function(f){
+      var v = maxAbs * f, yy = y(v);
+      out += '<line x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy +
+        '" stroke="' + (f === 0 ? "#94a3a0" : "#e3e9e7") + '"' + (f === 0 ? ' stroke-dasharray="4 4"' : "") + "/>";
+      out += '<text x="' + (L - 6) + '" y="' + (yy + 3.5) + '" font-size="10" fill="#5b7078" text-anchor="end">' +
+        (v > 0 ? "+" : "") + Math.round(v) + "</text>";
+    });
+    out += '<text x="4" y="' + (T + 9) + '" font-size="10" fill="#5b7078">누적</text>';
+    // ── 거래량칸 0 선 ──
+    out += '<line x1="' + L + '" y1="' + vy0 + '" x2="' + (W - R) + '" y2="' + vy0 + '" stroke="#94a3a0"/>';
+    out += '<text x="4" y="' + (T + PH + GAP + 9) + '" font-size="10" fill="#5b7078">일간</text>';
+    // ── 거래량 막대(어르신별로 나란히) ──
+    var slot = xs.length > 1 ? (W - L - R) / (xs.length - 1) : 40;
+    var bw = Math.max(1.5, Math.min(5, (slot * 0.7) / Math.max(1, drawn.length)));
+    drawn.forEach(function(s, i){
+      s.rows.forEach(function(r){
+        var dv = num(r.connection_vs_prev_pct);
+        if (dv === null) return;                        // ★null 은 0 막대로 그리지 않는다★
+        var bx = x(r.metric_date) - (drawn.length * bw) / 2 + i * bw;
+        var top = dv >= 0 ? vy(dv) : vy0, hgt = Math.max(1, Math.abs(vy(dv) - vy0));
+        out += '<rect x="' + bx + '" y="' + top + '" width="' + bw + '" height="' + hgt +
+          '" fill="' + (dv >= 0 ? UP : DOWN) + '" opacity="0.85"><title>' +
+          esc(label(s.id) + " · " + r.metric_date + " · 어제 대비 " + dv) + "</title></rect>";
+      });
+    });
+    // ── 누적선 ──
     drawn.forEach(function(s, i){
       var c = COLORS[i % COLORS.length];
       var d = s.rows.map(function(r, j){ return (j ? "L" : "M") + x(r.metric_date) + " " + y(num(r.connection_obv)); }).join(" ");
-      if (s.rows.length > 1) out += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2.5"/>';
+      if (s.rows.length > 1) out += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="1.6"/>';
       s.rows.forEach(function(r){
-        out += '<circle cx="' + x(r.metric_date) + '" cy="' + y(num(r.connection_obv)) + '" r="3.5" fill="' + c + '"><title>' +
+        out += '<circle cx="' + x(r.metric_date) + '" cy="' + y(num(r.connection_obv)) + '" r="2" fill="' + c + '"><title>' +
           esc(label(s.id) + " · " + r.metric_date + " · 누적 " + r.connection_obv +
               " · 어제 대비 " + (r.connection_vs_prev_pct === null ? "—" : r.connection_vs_prev_pct)) + "</title></circle>";
       });
     });
-    var step = Math.max(1, Math.ceil(xs.length / 8));
+    var step = Math.max(1, Math.ceil(xs.length / 14));
     xs.forEach(function(dt, i){
       if (i % step) return;
-      out += '<text x="' + x(dt) + '" y="' + (H - 10) + '" font-size="11" fill="#5b7078" text-anchor="middle">' +
+      out += '<text x="' + x(dt) + '" y="' + (H - 8) + '" font-size="10" fill="#5b7078" text-anchor="middle">' +
         esc(dt.slice(5)) + "</text>";
     });
     out += "</svg>";
-    out += '<div class="legend">' + drawn.map(function(s, i){
+    out += '<div class="legend" style="font-size:11.5px">' + drawn.map(function(s, i){
       return '<span><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(label(s.id)) + "</span>";
-    }).join("") + '<span class="muted">0 위 = 시작보다 나아진 쪽</span></div>';
+    }).join("") +
+      '<span class="muted">위=누적(0 위면 시작보다 나아진 쪽) · 아래=그 날 변화(' +
+      '<b style="color:' + UP + '">빨강 오름</b> / <b style="color:' + DOWN + '">파랑 내림</b>) · 빈 칸=못 잼</span></div>';
     return out + noteHtml;
   }
 
