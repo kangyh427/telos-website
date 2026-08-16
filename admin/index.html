@@ -838,8 +838,14 @@
     //   ★한 화면에 많이, 조밀하게★ 가 맞다. 그래서 주식차트 관례를 그대로 따른다:
     //     · 위 = 누적선(주가) · 아래 = 그 날의 변화 막대(거래량)
     //     · 가로 격자 + 0 기준선 · 작은 글씨(10~11px) · 얇은 선
-    //     · ★한국 주식 관례색 = 오르면 빨강, 내리면 파랑★(초록/빨강은 서양 관례라
-    //       국내 사용자가 정반대로 읽는다)
+    //   ★★(S547 정정 · 대표 지시 "콘솔도 요양사 앱과 색 통일")★★
+    //     처음에 국내 주식 관례(오름=빨강)로 칠했는데 ★그것이 두 곳과 어긋났다★:
+    //       ① 이 콘솔 자신의 표 = `.pos`(▲ 오름) → var(--good) ★청록★ /
+    //          `.neg`(▼ 내림) → var(--amber). ★같은 화면 안에서 표와 그래프가 반대였다.★
+    //       ② 요양사 앱 = 좋아짐 브랜드 청록 / 나빠짐 Warn700.
+    //     ★빨강은 이 제품 전체에서 이미 "나쁨"이다★(경보 위험 · obv<0 · WATCH) —
+    //     한 그래프만 뒤집으면 흘깃 보는 사람이 반대로 읽는다.
+    //     → ★형태는 주식차트, 색은 제품의 뜻(오름=청록 · 내림=앰버)★.
     //   ★바뀐 것은 그리는 방식뿐이고 값은 한 글자도 안 바꿨다★(같은 obvRowsOf).
     var maxAbs = 20;
     drawn.forEach(function(s){ s.rows.forEach(function(r){
@@ -858,7 +864,8 @@
     var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * PH; };
     var vy0 = T + PH + GAP + VH / 2;                   // 거래량칸의 0 선
     var vy = function(v){ return vy0 - (v / volMax) * (VH / 2); };
-    var UP = "#d64545", DOWN = "#2f6fb0";              // 상승 빨강 · 하락 파랑(국내 관례)
+    // ★오름 = --good(청록) · 내림 = --amber★ — 이 화면의 ▲▼ 표·요양사 앱과 같은 뜻.
+    var UP = "#0e7490", DOWN = "#b45309";
     var out = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto">';
     // ── 격자(주식차트의 눈금선) ──
     [1, 0.5, 0, -0.5, -1].forEach(function(f){
@@ -908,7 +915,7 @@
       return '<span><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(label(s.id)) + "</span>";
     }).join("") +
       '<span class="muted">위=누적(0 위면 시작보다 나아진 쪽) · 아래=그 날 변화(' +
-      '<b style="color:' + UP + '">빨강 오름</b> / <b style="color:' + DOWN + '">파랑 내림</b>) · 빈 칸=못 잼</span></div>';
+      '<b style="color:' + UP + '">오름</b> / <b style="color:' + DOWN + '">내림</b>) · 빈 칸=못 잼</span></div>';
     return out + noteHtml;
   }
 
