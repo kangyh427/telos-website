@@ -1010,11 +1010,14 @@
                   a.acknowledged_by, a.ack_note];
         }));
     } else if (kind === "company") {
+      // ★(S547) OBV 추세 4칸 추가 — 빈 칸은 "견줄 지난 주가 없다"이지 0 이 아니다.
       downloadCsv("텔로스_회사주간집계_" + today() + ".csv",
-        ["주 시작", "어르신 수", "관계망 접촉 합(분)", "미디어 합(분)", "부재 합(분)", "사용시간 합(분)", "대화 세션 합(회)", "이동거리 합(m)"],
+        ["주 시작", "어르신 수", "관계망 접촉 합(분)", "미디어 합(분)", "부재 합(분)", "사용시간 합(분)", "대화 세션 합(회)", "이동거리 합(m)",
+         "OBV 잰 사람(명)", "나아진 사람(명)", "나빠진 사람(명)", "주간이동 중앙값"],
         (DATA.company || []).map(function(r){
           return [r.week_start, r.elderly_count, r.total_relational_contact_min, r.total_media_min,
-                  r.total_absence_min, r.total_usage_minutes, r.total_conversation_sessions, r.total_travel_distance_m];
+                  r.total_absence_min, r.total_usage_minutes, r.total_conversation_sessions, r.total_travel_distance_m,
+                  r.obv_measured_count, r.obv_improved_count, r.obv_declined_count, r.obv_weekly_move_median];
         }));
     } else if (kind === "elderWeeks") {
       var m = rs[arg];
@@ -1427,14 +1430,23 @@
     html += '<section><div class="sechead"><div><h2>회사 전체 · 주간 집계' + '<span class="whose">달력 주(월요일 시작) · 전원 합계</span></h2></div>' +
       csvBtn("company") + "</div>" +
       '<div class="tablewrap"><table><tr><th>주 시작</th><th>어르신</th><th>관계망 접촉 합</th>' +
-      "<th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th></tr>";
+      "<th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th>" +
+      // ★★(S547) 추세 칸 — 대표 확인 "OBV 형태로 나타내라고 했던거 아니야?"★★
+      //   종전엔 이 표에 ★합계만★ 있어 "연결이 나아지고 있는가"가 한 칸도 없었다.
+      //   ★사람끼리 절대값을 평균내지 않는다★(sql 012·S525) → 수와 중앙값으로 말한다.
+      "<th>연결 추세<span class='muted'> 나아짐/나빠짐</span></th><th>주간이동 중앙값</th></tr>";
     var comp = (DATA.company || []).slice().reverse();
-    if (!comp.length) html += '<tr><td colspan="6" class="muted">아직 데이터가 없습니다</td></tr>';
+    if (!comp.length) html += '<tr><td colspan="8" class="muted">아직 데이터가 없습니다</td></tr>';
     comp.forEach(function(r){
+      // ★잰 사람이 없으면 0 이 아니라 "견줄 것이 없다"★ — 첫 주는 지난 주가 없어 null 이다.
+      var up = num(r.obv_improved_count), dn = num(r.obv_declined_count);
+      var trend = (up === null && dn === null) ? '<span class="muted">견줄 주 없음</span>'
+                : (up || 0) + "명 / " + (dn || 0) + "명";
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "week", weekStart: r.week_start })) + "'>" +
         "<td><b>" + esc(r.week_start) + "</b></td><td>" + fmt(r.elderly_count, "명") + "</td><td>" +
         fmt(r.total_relational_contact_min, "분") + "</td><td>" + fmt(r.total_usage_minutes, "분") + "</td><td>" +
-        fmt(r.total_conversation_sessions, "회") + "</td><td>" + fmt(r.total_travel_distance_m, "m") + "</td></tr>";
+        fmt(r.total_conversation_sessions, "회") + "</td><td>" + fmt(r.total_travel_distance_m, "m") + "</td><td>" +
+        trend + "</td><td>" + fmt(r.obv_weekly_move_median, "") + "</td></tr>";
     });
     html += "</table></div></section>";
 
