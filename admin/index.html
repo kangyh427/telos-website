@@ -1090,7 +1090,7 @@
         //   쪽에도 안 들어간다. 그 차이를 손실이나 결함으로 읽지 말 것.
         //   ★빈 칸 = 못 쟀다★(옛 앱은 이 두 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
          "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
-         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
+         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "유보-TV때문(창)", "유보-재료부족(창)", "운율 발화수", "운율 저활력"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
                   r.media_minutes, r.absence_minutes,
@@ -1109,7 +1109,10 @@
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio,
                   r.companion_alone_windows, r.companion_one_windows, r.companion_multiple_windows,
-                  r.companion_undetermined_windows, r.prosody_utterance_count, r.prosody_low_activation];
+                  r.companion_undetermined_windows,
+                  // ★(S565) 유보의 갈래 — ★"TV 때문"과 "조용해서"는 전혀 다른 말이다★.
+                  r.companion_media_undetermined_windows, r.companion_insufficient_undetermined_windows,
+                  r.prosody_utterance_count, r.prosody_low_activation];
         }));
     } else if (kind === "week") {
       downloadCsv("텔로스_" + arg + "주_어르신별_" + today() + ".csv",
@@ -1128,7 +1131,7 @@
         ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
          "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
-         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
+         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "유보-TV때문(창)", "유보-재료부족(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
           return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, r.metric_date,
@@ -1148,6 +1151,7 @@
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
                   r.companion_multiple_windows, r.companion_undetermined_windows,
+                  r.companion_media_undetermined_windows, r.companion_insufficient_undetermined_windows,
                   r.prosody_utterance_count, r.prosody_low_activation];
         }));
     }
@@ -1712,7 +1716,15 @@
       '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th>' +
       // ★(S541) "함께" = 동석 신호(성문 무의존). 대면·통화가 "측정 중"인 날에도 이 칸은 값이
       //   나올 수 있다 — 그것이 이 칸을 만든 이유다(화자귀속 0.75% · sql 063).
-      "<th>함께</th><th>미디어</th>" +
+      "<th>함께</th>" +
+      // ★(S565 · T1-3(나)) "못 가린 까닭" 열 신설 — ★정직한 분모★.
+      //   S565 전수 실측: ★소리 있던 창의 79%(태블릿)·72%(폰)가 "TV 창이라 유보"★ 였고
+      //   나머지의 74%는 재료 부족 유보라 ★판정까지 간 창이 5.5%★ 였다.
+      //   ★그런데 종전 화면은 그 셋을 "유보" 한 덩어리로만 보였다.★
+      //   ★"TV 때문에 못 쟀다"는 기계의 한계이고, "조용해서 못 쟀다"는 어르신에 대한
+      //   신호일 수 있다★ — 뭉뚱그리면 "온종일 혼자 계셨다"로 오독할 여지가 남는다.
+      //   ★값을 고치는 것이 아니라 값을 정직하게 만드는 것이다★(판정 규칙 무접촉).
+      "<th>못 가린 까닭</th><th>미디어</th>" +
       // ★(S545) "걷기" 열 신설 — 연결지수의 이동 축이 보는 값이 ★이것★ 이다(sql 069).
       //   실측 p04 08-14 = 이동거리 243km(자동차)가 이동 축 100% 를 찍어 발화 0·관계망 0 인
       //   날의 지수를 3배로 올렸다. ★이동거리 칸은 그대로 두고 옆에 걷기를 나란히 둔다★ —
@@ -1749,7 +1761,7 @@
       //   원본을 내려받을 길은 반드시 남긴다).
       //   ★"측정 중" = 그 날 24칸을 못 쟀다★ · ★0개 = 쟀고 안 걸으셨다(사실)★.
       "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>산책</th><th>걸음</th><th>걸음 고름</th><th>밤 움직임</th><th>활동 시간대</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="18" class="muted">기록 없음</td></tr>';
+    if (!ds.length) html += '<tr><td colspan="19" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
       //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
@@ -1765,6 +1777,9 @@
       html += "<tr><td>" + esc(r.metric_date) + "</td><td>" + fmt(r.face_to_face_minutes, "분") + "</td><td>" +
         fmt(callMin, "분") + "</td><td>" +
         (together === null ? '<span class="muted">측정 중</span>' : Math.round(together) + "분") + "</td><td>" +
+        // ★(S565) 못 가린 까닭 — TV 때문 / 재료 부족을 갈라 적는다.
+        //   ★둘 다 0 이면 "다 가림"★(그 날은 유보가 없었다) · ★옛 앱 행은 "-"★.
+        undeterminedWhy(r) + "</td><td>" +
         fmt(r.media_minutes, "분") + "</td><td>" +
         utter + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
         fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.walk_distance_m, "m") + "</td><td>" +
@@ -2407,6 +2422,20 @@
   //   피치 갈래 수로만 세므로 화자귀속이 0.75% 인 현 상태에서도 동작한다(sql 063 헤더).
   //   ★네 칸의 합이 0 이면 미측정이다★(notObserved 가 넷을 전부 0 으로 만든다) — 그 날을
   //   "혼자 계셨다"로 읽으면 안 된다.
+  // ★(S565 · T1-3(나)) 동석을 못 가린 까닭 — "TV 때문"과 "조용해서"를 갈라 적는다.
+  //   ★기계의 한계와 어르신에 대한 신호를 같은 말로 부르지 않는다.★
+  //   ★옛 앱(S565 이전)이 올린 행은 두 칸이 null 이라 "-" 로 둔다★ — 0 으로 적으면
+  //   "그런 창이 없었다"가 되어 없는 사실을 만든다.
+  function undeterminedWhy(r){
+    var tv = num(r.companion_media_undetermined_windows),
+        low = num(r.companion_insufficient_undetermined_windows);
+    if (tv === null && low === null) return '<span class="muted">-</span>';
+    if (!(tv || 0) && !(low || 0)) return '<span class="muted">다 가림</span>';
+    var parts = [];
+    if (tv) parts.push("TV " + tv);
+    if (low) parts.push("조용 " + low);
+    return parts.join(" · ") + '<span class="muted">창</span>';
+  }
   function companionMin(r){
     var a = num(r.companion_alone_windows), o = num(r.companion_one_windows),
         m = num(r.companion_multiple_windows), u = num(r.companion_undetermined_windows);
