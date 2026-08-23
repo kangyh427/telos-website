@@ -1089,7 +1089,7 @@
         //   ★총 >= 걷기 + 탈것 이 정상이다★ — 판정 못 한 홉(측위 간격 2시간 초과 등)은 어느
         //   쪽에도 안 들어간다. 그 차이를 손실이나 결함으로 읽지 말 것.
         //   ★빈 칸 = 못 쟀다★(옛 앱은 이 두 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
-         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
@@ -1099,6 +1099,8 @@
                   r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
                   // ★(S565) 보행 규칙성 3칸 — ★표본 수를 반드시 함께 내려받는다★.
                   r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
+                  // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
+                  r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
                   r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio,
@@ -1121,7 +1123,7 @@
         // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
         ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
@@ -1132,6 +1134,8 @@
                   r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
                   // ★(S565) 보행 규칙성 3칸 — ★표본 수를 반드시 함께 내려받는다★.
                   r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
+                  // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
+                  r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
                   r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
@@ -1721,8 +1725,15 @@
       //   ★안 걸으신 날이 가장 건강한 날로 뒤집힌다.★
       //   ★학술 기준(건강 성인 2~3%)을 여기 대지 말 것★ — 스마트폰 걸음 감지기의 자라
       //   눈금이 다르다(대표 폰 실측 28.0%가 정상 범위다). 판단은 개인 baseline 이 한다.
-      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>산책</th><th>걸음</th><th>걸음 고름</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="16" class="muted">기록 없음</td></tr>';
+            // ★(S565) "밤 움직임" 열 신설 — 노쇠 축 T3-2.
+      //   ★★"수면"이 아니다★★ — 폰이 밤(어제 22시~오늘 6시)에 얼마나 움직였나일 뿐이다.
+      //   ★밤 걸음 0 은 "잘 주무셨다"가 아니다★ — 폰을 거실에 두고 주무셨을 수도 있다.
+      //   ★그래서 이 열에 "수면"이라 적지 않고 경보도 걸지 않는다★(개인 baseline 만이
+      //   읽을 수 있다 — 늘 책상 위인 폰은 늘 0 이라 평소와 같고 거짓 경보가 안 난다).
+      //   ★괄호 안은 조용했던 가장 긴 시간대★ — ★걸음 수만 보면 "새벽에 한 번"과
+      //   "밤새 뒤척임"이 같아 보인다★. 그래서 두 값을 한 칸에 함께 둔다.
+      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>산책</th><th>걸음</th><th>걸음 고름</th><th>밤 움직임</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="17" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
       //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
@@ -1751,6 +1762,13 @@
           ? '<span class="muted">측정 중</span>'
           : (Math.round(r.gait_cv_percent * 10) / 10) + "% <span class=\"muted\">(" +
             (num(r.gait_interval_samples) === null ? "?" : r.gait_interval_samples) + ")</span>") + "</td><td>" +
+        // ★(S565) 밤 움직임 — 걸음 수 + 조용했던 가장 긴 시간대. ★"측정 중" = 두 날 중
+        //   하나를 못 쟀다★(밤은 자정을 넘어 두 날이 있어야 완성된다).
+        (num(r.night_steps) === null
+          ? '<span class="muted">측정 중</span>'
+          : r.night_steps + "보 <span class=\"muted\">(조용 " +
+            (num(r.night_longest_quiet_hours) === null ? "?" : r.night_longest_quiet_hours) +
+            "시간)</span>") + "</td><td>" +
         fmt(r.away_from_home_minutes, "분") + "</td><td>" +
         fmt(r.outing_count, "회") + "</td><td>" +
         // ★(S527) 권유 = 그날 넛지 재료를 실제로 실은 횟수(표⑧ 퍼널의 분모 · sql 037).
