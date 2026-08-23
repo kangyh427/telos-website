@@ -1089,7 +1089,7 @@
         //   ★총 >= 걷기 + 탈것 이 정상이다★ — 판정 못 한 홉(측위 간격 2시간 초과 등)은 어느
         //   쪽에도 안 들어간다. 그 차이를 손실이나 결함으로 읽지 말 것.
         //   ★빈 칸 = 못 쟀다★(옛 앱은 이 두 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
-         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
@@ -1101,6 +1101,10 @@
                   r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
                   // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
                   r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
+                  // ★(S565) 활동 시간대 4칸 — ★분포 원본까지 함께 내려받는다★
+                  //   (요약은 되돌릴 수 없다 · 24칸이 있어야 나중에 다른 질문을 할 수 있다).
+                  r.active_hour_count, r.first_active_hour, r.last_active_hour,
+                  r.hourly_step_profile,
                   r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio,
@@ -1123,7 +1127,7 @@
         // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
         ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
@@ -1136,6 +1140,10 @@
                   r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
                   // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
                   r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
+                  // ★(S565) 활동 시간대 4칸 — ★분포 원본까지 함께 내려받는다★
+                  //   (요약은 되돌릴 수 없다 · 24칸이 있어야 나중에 다른 질문을 할 수 있다).
+                  r.active_hour_count, r.first_active_hour, r.last_active_hour,
+                  r.hourly_step_profile,
                   r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
                   r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
@@ -1732,8 +1740,16 @@
       //   읽을 수 있다 — 늘 책상 위인 폰은 늘 0 이라 평소와 같고 거짓 경보가 안 난다).
       //   ★괄호 안은 조용했던 가장 긴 시간대★ — ★걸음 수만 보면 "새벽에 한 번"과
       //   "밤새 뒤척임"이 같아 보인다★. 그래서 두 값을 한 칸에 함께 둔다.
-      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>산책</th><th>걸음</th><th>걸음 고름</th><th>밤 움직임</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="17" class="muted">기록 없음</td></tr>';
+            // ★(S565) "활동 시간대" 열 신설 — 노쇠 축 T3-5.
+      //   ★하루가 언제 열리고 언제 닫히나★ = 활동 창. ★창이 좁아지는 것은 노쇠·우울에서
+      //   먼저 나타나는 변화다★. ★그러나 창만 보면 속는다★ — 아침 7시에 한 번, 밤 21시에
+      //   한 번 움직이신 날도 "7~21시"라 넓어 보인다 → ★괄호 안의 시간대 수가 그것을
+      //   바로잡는다★(2개와 15개는 같은 창이어도 전혀 다른 하루다).
+      //   ★분포 원본 24칸은 CSV 에만 둔다★(표에 넣기엔 넓다 · 요약은 되돌릴 수 없으므로
+      //   원본을 내려받을 길은 반드시 남긴다).
+      //   ★"측정 중" = 그 날 24칸을 못 쟀다★ · ★0개 = 쟀고 안 걸으셨다(사실)★.
+      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>산책</th><th>걸음</th><th>걸음 고름</th><th>밤 움직임</th><th>활동 시간대</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="18" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
       //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
@@ -1769,6 +1785,14 @@
           : r.night_steps + "보 <span class=\"muted\">(조용 " +
             (num(r.night_longest_quiet_hours) === null ? "?" : r.night_longest_quiet_hours) +
             "시간)</span>") + "</td><td>" +
+        // ★(S565) 활동 시간대 — 창 + ★그 창이 실제로 차 있었나(칸 수)★.
+        //   ★칸 수 0 은 사실이다★(쟀고 안 걸으셨다) — 그때는 창이 없으므로 칸 수만 적는다.
+        (num(r.active_hour_count) === null
+          ? '<span class="muted">측정 중</span>'
+          : (num(r.first_active_hour) === null
+              ? '0개 <span class="muted">(안 걸으심)</span>'
+              : r.first_active_hour + "~" + r.last_active_hour + "시 " +
+                '<span class="muted">(' + r.active_hour_count + "개)</span>")) + "</td><td>" +
         fmt(r.away_from_home_minutes, "분") + "</td><td>" +
         fmt(r.outing_count, "회") + "</td><td>" +
         // ★(S527) 권유 = 그날 넛지 재료를 실제로 실은 횟수(표⑧ 퍼널의 분모 · sql 037).
