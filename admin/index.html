@@ -1089,13 +1089,13 @@
         //   ★총 >= 걷기 + 탈것 이 정상이다★ — 판정 못 한 홉(측위 간격 2시간 초과 등)은 어느
         //   쪽에도 안 들어간다. 그 차이를 손실이나 결함으로 읽지 말 것.
         //   ★빈 칸 = 못 쟀다★(옛 앱은 이 두 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
-         "이동거리(m)", "걷기(m)", "탈것(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
                   r.media_minutes, r.absence_minutes,
                   r.elder_utterance_seconds, r.elder_utterance_minutes, r.active_span_minutes,
-                  r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m,
+                  r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m, r.stroll_distance_m,
                   r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
                   r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
@@ -1119,14 +1119,14 @@
         // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
         ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "운율 발화수", "운율 저활력"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
           return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, r.metric_date,
                   r.face_to_face_minutes, r.phone_call_minutes, r.media_minutes, r.absence_minutes,
                   r.elder_utterance_seconds, r.elder_utterance_minutes,
-                  r.active_span_minutes, r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m,
+                  r.active_span_minutes, r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m, r.stroll_distance_m,
                   r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
                   r.away_from_home_minutes, r.outing_count,
                   r.nudge_served_count,
@@ -1703,8 +1703,13 @@
       //   둘이 크게 다른 날이 곧 "차로 다녀오신 날"이고, 그 사실 자체가 돌봄 정보다.
       //   ★탈것은 CSV 에만 둔다★(화면이 좁다 · 내려받기에는 세 칸이 다 있다).
       //   ★"측정 중" = 못 쟀다★(옛 앱은 이 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
-      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>걸음</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="14" class="muted">기록 없음</td></tr>';
+      // ★(S564) "산책" 열 신설 — ★대표 지시로 이동 축이 산책이 됐다★(차량 제외 ·
+      //   걷는 속도 AND 그 구간 걸음 20보 이상 · S563). ★걷기 칸은 그대로 둔다★ —
+      //   걷기는 GPS 만 보고 산책은 걸음까지 함께 본다. 두 칸이 다른 날이 곧
+      //   "걸음 센서가 못 따라온 날"이고, 그 차이 자체가 재료다.
+      //   ★"측정 중" = 못 쟀다★(옛 앱·걸음 센서 없음) — 0(재었고 산책이 없었다)과 다르다.
+      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>산책</th><th>걸음</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="15" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
       //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
@@ -1723,6 +1728,8 @@
         fmt(r.media_minutes, "분") + "</td><td>" +
         utter + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
         fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.walk_distance_m, "m") + "</td><td>" +
+        // ★(S564) 산책 — 걷기 중에서 ★그 구간에 실제 걸음이 있던★ 홉만 더한 값(S563).
+        fmt(r.stroll_distance_m, "m") + "</td><td>" +
         // ★(S562) 걸음 — 서버에 S556 부터 쌓이는데 콘솔이 안 읽던 칸(요양사 앱과 쌍 규율).
         //   ★"측정 중" = 못 쟀다★(옛 앱·센서 없음) — 0(재었고 안 걸으셨다)과 다르다.
         fmt(r.step_count, "보") + "</td><td>" +
