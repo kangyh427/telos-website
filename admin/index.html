@@ -1046,6 +1046,17 @@
                   o.connection_vs_prev_pct, o.connection_vs_base7_pct, o.connection_obv,
                   o.relational_obv, o.conversation_obv, o.mobility_obv, o.valid_axis_count];
         }));
+    } else if (kind === "notable") {
+      // ★★(S575) 특이사항 — ★화면에 보이는 것만★ 내보낸다.
+      //   [왜] 걸러진 것(그만두신 어르신·시험기기)을 파일에 실으면 ★거른 의미가 없다★.
+      //   파일은 밖으로 나간다(메일·USB) — 화면보다 넓게 담아서는 안 된다.
+      //   ★기기 번호는 넣지 않는다★ — 가명과 device_id 가 한 파일에 같이 담기면
+      //   그 파일 하나가 되짚기 열쇠가 된다(S513 이 연구 배정 대장에서 세운 규율과 같다).
+      downloadCsv("텔로스_특이사항_" + today() + ".csv",
+        ["가명", "동네", "주간 시작", "주간 끝", "날짜", "내용"],
+        (DATA.console_notable || []).map(function(r){
+          return [r.alias, r.region, r.period_start, r.period_end, r.event_date, r.event_text];
+        }));
     } else if (kind === "alerts") {
       // ★(S525) 경보 이력 — 표⑥("며칠 만에 잡았다"). 발견과 확인 사이가 이 파일의 값이다.
       downloadCsv("텔로스_경보이력_" + today() + ".csv",
@@ -1525,6 +1536,40 @@
     });
     html += "</table></div></section>";
 
+    // ★★(S575) 특이사항 — 대표 지시 2026-08-26 "회사 콘솔에 보호자 특이사항 내용들이
+    //   수집되지는 않고 있지? 가능하게 수정해야 할것 같아"★★
+    //   [실측] 서버 report 에는 ★이미 쌓이고 있었다★. 콘솔이 그 테이블을 안 봤을 뿐이다.
+    //   ★근거 = 동의 문구 v1.12 "열. 서비스를 낫게 하는 데 쓰는 것"★(같은 날 함께 넣었다).
+    //
+    //   ★★제외 건수를 반드시 함께 적는다 — 0 이 "없다"인지 "걸렀다"인지 말해야 한다★★
+    //   2026-08-26 실측에서 이 목록이 ★0건★ 이었다. 결함이 아니라 사실이었고(49문장이
+    //   전부 시험·데모 기기), ★그때 "0건"만 뜨면 운영자는 고장으로 읽는다.★
+    //   이 저장소가 여러 번 밟은 자리다(S571 거짓 0 · S494 "로그 없음"을 "동작 안 함"으로).
+    var nx = DATA.console_notable_excluded || {};
+    var nrows = DATA.console_notable || [];
+    html += '<section><div class="sechead"><div><h2>특이사항' +
+      '<span class="whose">어르신 말씀에서 뽑은 짧은 기록 · 주간 리포트</span></h2></div>' +
+      '<div>' + csvBtn("notable") + '</div></div>';
+    if (!nrows.length) {
+      html += '<p class="muted" style="margin:6px 0 10px">보이는 특이사항이 없습니다.</p>';
+    } else {
+      html += '<div class="tablewrap"><table>' +
+        '<tr><th>가명</th><th>동네</th><th>주간</th><th>날짜</th><th>내용</th></tr>';
+      nrows.forEach(function(r){
+        html += "<tr><td>" + esc(r.alias || "") + "</td><td>" + esc(r.region || "") +
+          "</td><td>" + esc((r.period_start || "") + " ~ " + (r.period_end || "")) +
+          "</td><td>" + esc(r.event_date || "") + "</td><td>" + esc(r.event_text || "") + "</td></tr>";
+      });
+      html += "</table></div>";
+    }
+    // ★걸러진 것을 숨기지 않는다★ — 무엇을 왜 뺐는지 화면이 스스로 말한다.
+    html += '<div class="tablewrap" style="margin-top:8px"><table>' +
+      '<tr><td><b>보이는 것</b></td><td>' + fmt(nx.shown_sentences, "건") + '</td></tr>' +
+      '<tr><td>서버에 쌓인 전체</td><td>' + fmt(nx.total_sentences, "건") + '</td></tr>' +
+      '<tr><td>제외됨 <span class="muted">시험·통계제외 기기 · 미등록 기기 · 그만두신 어르신</span></td><td>' +
+      fmt(nx.excluded_sentences, "건") + ' <span class="muted">(기기 ' + fmt(nx.excluded_device_count, "대") + ')</span></td></tr>' +
+      '</table></div></section>';
+
     // ★★(S523) 데이터 내려받기 허브 — 대표 지시 "데이터 뽑아야해".
     //   회사 자산으로 나가는 파일을 ★한 자리★ 에 모은다(종전엔 화면 곳곳에 흩어져
     //   어떤 데이터가 뽑히는지 한눈에 알 수 없었다). 빈 칸 = 측정 못 함(0 아님).
@@ -1535,6 +1580,7 @@
       '<tr><td><b>어르신 상태판</b> <span class="muted">어제·평소 대비 + OBV + 혼자 비율</span></td><td>' + csvBtn("elders") + "</td></tr>" +
       '<tr><td><b>일간 OBV 전량</b> <span class="muted">개인별 추세선 원재료(표①②의 정본 척도)</span></td><td>' + csvBtn("obv") + "</td></tr>" +
       '<tr><td><b>경보 이력</b> <span class="muted">발견 → 확인까지(표⑥ 재료)</span></td><td>' + csvBtn("alerts") + "</td></tr>" +
+      '<tr><td><b>특이사항</b> <span class="muted">어르신 말씀에서 뽑은 짧은 기록(걸러진 것은 빠짐)</span></td><td>' + csvBtn("notable") + "</td></tr>" +
       '<tr><td><b>회사 주간 집계</b> <span class="muted">전원 합계</span></td><td>' + csvBtn("company") + "</td></tr>" +
       '<tr><td><b>연구 주차 자료</b> <span class="muted">가명·주차 지표(연구자 전달용)</span></td><td>' + csvBtn("study_weeks") + "</td></tr>" +
       '<tr><td><b>연구 설문 점수</b> <span class="muted">SGDS 등 대면 설문</span></td><td>' + csvBtn("study_survey") + "</td></tr>" +
