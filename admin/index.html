@@ -1309,6 +1309,52 @@
 
   var KIND_LABEL = { gov: "지자체", insurer: "보험사", free_pilot: "무료실증", internal: "내부", other: "기타" };
 
+  // ★무료 기간 임계 = 12개월★ — IR 18p STEP 2 가 약속한 "무료 12개월 운영"이 근거다.
+  var FREE_MONTHS_LIMIT = 12;
+  // ★어르신 1인당 월 LLM 원가 상한(원)★ — S578 실측(하루 10분 = 월 1,000~1,540원)의
+  //   ★윗값★ 을 쓴다. 적게 잡으면 청구서가 넘고, 이 칸은 "각오할 금액"을 보는 자리다.
+  var COST_PER_SEAT_MONTH = 1540;
+
+  function isFreeKind(kind){ return kind === "free_pilot" || kind === "other"; }
+
+  /** 시작일로부터 지난 개월 수(정수 · 모르면 null). */
+  function monthsSince(iso){
+    if (!iso) return null;
+    var t = Date.parse(String(iso));
+    if (isNaN(t)) return null;
+    var days = (Date.now() - t) / 86400000;
+    if (days < 0) return 0;
+    return Math.floor(days / 30.44);
+  }
+
+  /** 좌석 수 → 월 부담(원). ★0석이면 0원이라 적는다★ — "—"로 두면 모르는 것처럼 읽힌다. */
+  function monthlyCostText(seats){
+    var n = Number(seats) || 0;
+    return "약 " + (n * COST_PER_SEAT_MONTH).toLocaleString("ko-KR") + "원";
+  }
+
+  /**
+   * 기간·좌석 고치기.
+   * ★연장은 계약과 좌석을 함께 고친다★ — 서버 console_update_contract 가 그 계약의
+   * 켜진 좌석 만료까지 같이 갱신한다(계약만 늘리면 어르신 쪽은 옛 날짜로 잠긴다).
+   * ★무기한으로 되돌리는 것은 이 화면에서 하지 않는다★ — 되돌릴 일이 드물고,
+   * 실수로 눌러 만료를 지우면 유료 계약이 영구 무료가 된다.
+   */
+  function extendContract(id){
+    var months = prompt("기간을 몇 개월로 할까요? (지금부터 · 비우면 기간은 그대로)", "");
+    if (months === null) return;
+    var seats = prompt("좌석 수를 몇 개로 할까요? (비우면 그대로)", "");
+    if (seats === null) return;
+    var args = { p_contract_id: id };
+    if (String(months).trim() !== "") args.p_months = Number(months);
+    if (String(seats).trim() !== "") args.p_seat_total = Number(seats);
+    if (args.p_months == null && args.p_seat_total == null) return;
+    rpc("console_update_contract", args).then(function(r){
+      if (r.ok) { loadContracts(); loadSeats(); }
+      else alert("고치지 못했습니다: " + (r.raw || ""));
+    });
+  }
+
   function renderSeats(){
     var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "계약·좌석" }]);
 
@@ -1363,18 +1409,42 @@
         });
       }
       if (!r.body.length) { box.textContent = "아직 계약이 없습니다. 아래에서 첫 계약을 만드세요."; return; }
-      var h = '<div class="tablewrap"><table><tr><th>이름</th><th>종류</th><th>좌석</th>' +
-              "<th>기관 가입코드</th><th>혜택코드</th><th>만료</th><th></th></tr>";
+      // ★(S580) 무료로 오래 쓰는 계약을 먼저 알린다★ — 무기한 계약은 잊히기 쉽고,
+      //   그 사이 LLM 비용은 우리가 낸다. IR 18p 가 약속한 무료 기간이 12개월이라
+      //   그것을 임계로 삼는다(근거 있는 값 · 임의의 숫자가 아니다).
+      var aged = r.body.filter(function(c){
+        return isFreeKind(c.kind) && monthsSince(c.starts_at) >= FREE_MONTHS_LIMIT;
+      });
+      var h = "";
+      if (aged.length) {
+        h += '<div class="desc" style="margin-bottom:10px"><span class="warn">' +
+             "무료로 " + FREE_MONTHS_LIMIT + "개월 넘게 쓰는 계약 " + aged.length + "건" +
+             "</span> — 유료 전환이나 종료를 정하실 때입니다. " +
+             '<span class="muted">그대로 두면 아래 "월 부담"이 계속 나갑니다.</span></div>';
+      }
+      h += '<div class="tablewrap"><table><tr><th>이름</th><th>종류</th><th>좌석</th>' +
+           "<th>쓴 기간</th><th>월 부담</th>" +
+           "<th>기관 가입코드</th><th>혜택코드</th><th>만료</th><th></th></tr>";
       r.body.forEach(function(c){
+        var months = monthsSince(c.starts_at);
+        var old = isFreeKind(c.kind) && months >= FREE_MONTHS_LIMIT;
         h += "<tr><td>" + esc(c.name) + "</td>" +
              "<td>" + esc(KIND_LABEL[c.kind] || c.kind) + "</td>" +
              "<td>" + esc(c.seats_used) + " / " + esc(c.seat_total) + "</td>" +
+             "<td" + (old ? ' class="warn"' : "") + ">" +
+               (months == null ? "—" : esc(months) + "개월") + "</td>" +
+             "<td>" + monthlyCostText(c.seats_used) + "</td>" +
              "<td style='font-family:monospace'>" + (c.join_code ? esc(c.join_code) : "—") + "</td>" +
              "<td>" + (c.benefit_total > 0 ? esc(c.benefit_redeemed) + " / " + esc(c.benefit_total) + " 사용" : "—") + "</td>" +
              "<td>" + (c.ends_at ? esc(String(c.ends_at).slice(0, 10)) : "무기한") + "</td>" +
-             "<td>" + (c.join_code ? '<button class="link" data-rotate="' + esc(c.id) + '">코드 재발급</button>' : "") + "</td></tr>";
+             '<td><button class="link" data-extend="' + esc(c.id) + '">기간·좌석</button>' +
+               (c.join_code ? ' <button class="link" data-rotate="' + esc(c.id) + '">코드 재발급</button>' : "") +
+             "</td></tr>";
       });
       box.innerHTML = h + "</table></div>";
+      Array.prototype.forEach.call(box.querySelectorAll("[data-extend]"), function(b){
+        b.addEventListener("click", function(){ extendContract(b.getAttribute("data-extend")); });
+      });
       Array.prototype.forEach.call(box.querySelectorAll("[data-rotate]"), function(b){
         b.addEventListener("click", function(){
           if (!confirm("가입코드를 새로 만듭니다. 이미 소속된 요양사는 그대로 유지되고, 옛 코드는 더 이상 통하지 않습니다.")) return;
