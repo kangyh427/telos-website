@@ -161,6 +161,7 @@
     <option value="180">최근 180일</option>
   </select>
   <span class="who" id="whoText"></span>
+  <button id="seatBtn" title="지자체·보험사 계약과 좌석 현황">계약·좌석</button>
   <button id="secBtn" title="2단계 인증 · 열람 기록">보안</button>
   <button id="refreshBtn">지금 새로고침</button>
   <button id="logoutBtn" title="로그인 상태는 이 브라우저에 유지됩니다. 공용 PC 에서는 반드시 로그아웃하세요.">로그아웃</button>
@@ -1203,7 +1204,7 @@
     //   이 화면은 처음부터 끝까지 사람이 손으로 다루는 자리다(QR·비밀 열쇠·6자리 코드).
     //   60초마다 갈아 끼우면 ★등록하던 것이 통째로 사라진다★ — 대표가 실제로 겪었다
     //   ("준비하는 중"이 한참 있다가 그냥 원래 화면으로 돌아간다).
-    if (replace && route && route.view === "security") return;
+    if (replace && route && (route.view === "security" || route.view === "seats")) return;
     // ★다시 그리면 스크롤이 스스로 튄다(내용이 통째로 바뀌므로) → 그리기 전에 적어 두고
     //   그린 뒤에 되돌린다. 옮긴 것일 때는 종전대로 맨 위로.
     var keep = replace ? (window.pageYOffset || document.documentElement.scrollTop || 0) : 0;
@@ -1296,9 +1297,168 @@
     });
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // ★★(S580) 계약·좌석 — "파는 것은 앱이 아니라 좌석"의 관리 화면
+  // ══════════════════════════════════════════════════════════════════════
+  //   앱은 스토어에 하나뿐이고(무료), 좌석 스위치(sql 092)가 기능을 가른다.
+  //   대표의 유일한 수동 = 여기서 계약을 만들고 코드를 전달하는 것.
+  //   · 기관 가입코드 → 요양사가 앱에 1회 입력 → 이후 연동마다 좌석 자동(sql 093)
+  //   · 혜택코드 묶음 → 보험사가 자녀에게 → 자녀가 앱에 입력(1회용 · 기간 내장)
+  //   화면은 RPC(console_* · sql 094)만 부른다 — 판정·잠금은 전부 서버에 있다.
+  //   자동 갱신이 이 화면을 다시 그리지 않는 것은 보안 화면과 같은 이유다(적는 화면).
+
+  var KIND_LABEL = { gov: "지자체", insurer: "보험사", free_pilot: "무료실증", internal: "내부", other: "기타" };
+
+  function renderSeats(){
+    var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "계약·좌석" }]);
+
+    html += '<section><div class="sechead"><div><h2>계약' +
+      '<span class="whose">지자체 · 보험사 · 무료실증</span></h2>' +
+      '<div class="desc">파는 것은 앱이 아니라 <b>좌석</b>입니다. 계약을 만들면 <b>기관 가입코드</b>가 나오고, ' +
+      '요양사가 그 코드를 앱에 한 번 입력하면 그 뒤 어르신 연동마다 좌석이 자동으로 차감·켜집니다.<br>' +
+      '보험사 계약은 가입코드 대신 <b>혜택코드 묶음</b>을 발급해 전달합니다(1개 1회용 · 기간 내장).</div></div></div>' +
+      '<div id="contractBox" class="desc">불러오는 중…</div>' +
+      '<div class="desc" style="margin-top:12px"><b>새 계약</b> — ' +
+      '<input id="scName" placeholder="이름 (예: ○○시-2027)" style="width:180px"> ' +
+      '<select id="scKind"><option value="gov">지자체</option><option value="insurer">보험사</option>' +
+      '<option value="free_pilot">무료실증</option><option value="other">기타</option></select> ' +
+      '좌석 <input id="scTotal" type="number" min="1" value="100" style="width:70px">개 · ' +
+      '기간 <input id="scMonths" type="number" min="1" placeholder="무기한" style="width:70px">개월 ' +
+      '<button id="scCreate">만들기</button> <span id="scMsg" class="muted"></span></div></section>';
+
+    html += '<section><div class="sechead"><div><h2>혜택코드 발급' +
+      '<span class="whose">보험사 · B2C 무료체험</span></h2>' +
+      '<div class="desc">발급한 개수가 곧 그 계약의 좌석 상한입니다. 발급 결과는 아래에 한 번만 표시되니 복사해 전달하세요.</div></div></div>' +
+      '<div class="desc"><select id="bcContract"></select> ' +
+      '<input id="bcCount" type="number" min="1" max="10000" value="10" style="width:80px">개 · ' +
+      '기간 <input id="bcDays" type="number" min="1" value="180" style="width:70px">일 ' +
+      '<button id="bcIssue">발급</button> <span id="bcMsg" class="muted"></span></div>' +
+      '<textarea id="bcOut" readonly style="width:100%;margin-top:8px;display:none;height:120px;font-family:monospace"></textarea></section>';
+
+    html += '<section><div class="sechead"><div><h2>어르신별 좌석' +
+      '<span class="whose">가명 · 재원 · 만료</span></h2>' +
+      '<div class="desc">끄기는 지우기가 아닙니다 — 라벨과 이력은 정산 근거로 남습니다. ' +
+      '수동 켜기는 예외 처리용입니다(정상 경로는 계약 코드).</div></div></div>' +
+      '<div id="seatBox" class="desc">불러오는 중…</div></section>';
+
+    el("view").innerHTML = html;
+    bindGo();
+    loadContracts();
+    loadSeats();
+    el("scCreate").addEventListener("click", createContract);
+    el("bcIssue").addEventListener("click", issueBenefit);
+  }
+
+  function loadContracts(){
+    rpc("console_list_contracts", {}).then(function(r){
+      var box = el("contractBox"); if (!box) return;
+      if (!r.ok || !Array.isArray(r.body)) { box.textContent = "불러오지 못했습니다: " + (r.raw || ""); return; }
+      var sel = el("bcContract");
+      if (sel) {
+        sel.innerHTML = "";
+        r.body.forEach(function(c){
+          var o = document.createElement("option");
+          o.value = c.id; o.textContent = c.name + " (" + (KIND_LABEL[c.kind] || c.kind) + ")";
+          sel.appendChild(o);
+        });
+      }
+      if (!r.body.length) { box.textContent = "아직 계약이 없습니다. 아래에서 첫 계약을 만드세요."; return; }
+      var h = '<div class="tablewrap"><table><tr><th>이름</th><th>종류</th><th>좌석</th>' +
+              "<th>기관 가입코드</th><th>혜택코드</th><th>만료</th><th></th></tr>";
+      r.body.forEach(function(c){
+        h += "<tr><td>" + esc(c.name) + "</td>" +
+             "<td>" + esc(KIND_LABEL[c.kind] || c.kind) + "</td>" +
+             "<td>" + esc(c.seats_used) + " / " + esc(c.seat_total) + "</td>" +
+             "<td style='font-family:monospace'>" + (c.join_code ? esc(c.join_code) : "—") + "</td>" +
+             "<td>" + (c.benefit_total > 0 ? esc(c.benefit_redeemed) + " / " + esc(c.benefit_total) + " 사용" : "—") + "</td>" +
+             "<td>" + (c.ends_at ? esc(String(c.ends_at).slice(0, 10)) : "무기한") + "</td>" +
+             "<td>" + (c.join_code ? '<button class="link" data-rotate="' + esc(c.id) + '">코드 재발급</button>' : "") + "</td></tr>";
+      });
+      box.innerHTML = h + "</table></div>";
+      Array.prototype.forEach.call(box.querySelectorAll("[data-rotate]"), function(b){
+        b.addEventListener("click", function(){
+          if (!confirm("가입코드를 새로 만듭니다. 이미 소속된 요양사는 그대로 유지되고, 옛 코드는 더 이상 통하지 않습니다.")) return;
+          rpc("console_rotate_join_code", { p_contract_id: b.getAttribute("data-rotate") }).then(function(rr){
+            if (rr.ok) loadContracts(); else alert("실패: " + (rr.raw || ""));
+          });
+        });
+      });
+    });
+  }
+
+  function createContract(){
+    var name = el("scName").value.trim();
+    var kind = el("scKind").value;
+    var total = Number(el("scTotal").value);
+    var months = Number(el("scMonths").value) || null;
+    var msg = el("scMsg");
+    if (!name) { msg.textContent = "이름을 적어 주세요."; return; }
+    if (!(total > 0)) { msg.textContent = "좌석 수를 적어 주세요."; return; }
+    msg.textContent = "만드는 중…";
+    rpc("console_create_contract", { p_name: name, p_kind: kind, p_seat_total: total, p_months: months })
+      .then(function(r){
+        if (!r.ok || !Array.isArray(r.body) || !r.body.length) { msg.textContent = "실패: " + (r.raw || ""); return; }
+        var row = r.body[0];
+        msg.textContent = row.join_code ? ("만들었습니다 · 가입코드 " + row.join_code) : "만들었습니다";
+        el("scName").value = "";
+        loadContracts();
+      });
+  }
+
+  function issueBenefit(){
+    var cid = el("bcContract").value;
+    var cnt = Number(el("bcCount").value);
+    var days = Number(el("bcDays").value);
+    var msg = el("bcMsg");
+    if (!cid) { msg.textContent = "계약을 먼저 만들어 주세요."; return; }
+    if (!(cnt > 0)) { msg.textContent = "개수를 적어 주세요."; return; }
+    msg.textContent = "발급 중…";
+    rpc("console_issue_benefit_codes", { p_contract_id: cid, p_count: cnt, p_duration_days: days || 180 })
+      .then(function(r){
+        if (!r.ok || !Array.isArray(r.body)) { msg.textContent = "실패: " + (r.raw || ""); return; }
+        var codes = r.body.map(function(x){ return x.code; });
+        var out = el("bcOut");
+        out.value = codes.join(String.fromCharCode(10));
+        out.style.display = "block";
+        msg.textContent = codes.length + "개 발급 — 아래에서 복사하세요.";
+        loadContracts();
+      });
+  }
+
+  function loadSeats(){
+    rpc("console_list_seats", {}).then(function(r){
+      var box = el("seatBox"); if (!box) return;
+      if (!r.ok || !Array.isArray(r.body)) { box.textContent = "불러오지 못했습니다: " + (r.raw || ""); return; }
+      if (!r.body.length) { box.textContent = "어르신이 없습니다."; return; }
+      var h = '<div class="tablewrap"><table><tr><th>가명</th><th>동네</th><th>좌석</th>' +
+              "<th>재원</th><th>만료</th><th></th></tr>";
+      r.body.forEach(function(s){
+        h += "<tr><td>" + esc(s.alias || "") + (s.is_internal ? ' <span class="muted">(내부)</span>' : "") + "</td>" +
+             "<td>" + esc(s.region || "") + "</td>" +
+             "<td>" + (s.seat_active ? "<b>켜짐</b>" : '<span class="muted">꺼짐</span>') + "</td>" +
+             "<td>" + esc(s.contract_name || s.seat_funded_by || "—") + "</td>" +
+             "<td>" + (s.seat_valid_until ? esc(String(s.seat_valid_until).slice(0, 10)) : "—") + "</td>" +
+             '<td><button class="link" data-seat="' + esc(s.elderly_id) + '" data-on="' + (s.seat_active ? "0" : "1") + '">' +
+             (s.seat_active ? "끄기" : "켜기") + "</button></td></tr>";
+      });
+      box.innerHTML = h + "</table></div>";
+      Array.prototype.forEach.call(box.querySelectorAll("[data-seat]"), function(b){
+        b.addEventListener("click", function(){
+          var on = b.getAttribute("data-on") === "1";
+          if (!confirm(on ? "이 어르신 좌석을 수동으로 켭니다(무기한 · 라벨 manual)." :
+                            "이 어르신 좌석을 끕니다. 대화가 하루 예비분(약 10턴)으로 줄어듭니다.")) return;
+          rpc("console_set_seat", { p_elderly_id: b.getAttribute("data-seat"), p_active: on }).then(function(rr){
+            if (rr.ok) { loadSeats(); loadContracts(); } else alert("실패: " + (rr.raw || ""));
+          });
+        });
+      });
+    });
+  }
+
   function renderRoute(){
     if (!DATA) return;
     if (route.view === "security") renderSecurity();
+    else if (route.view === "seats") renderSeats();
     else if (route.view === "elder") renderElder(route.id);
     else if (route.view === "week") renderWeek(route.weekStart);
     else if (route.view === "study") renderStudy();
@@ -2613,6 +2773,7 @@
   el("refreshBtn").addEventListener("click", load);
   el("homeBtn").addEventListener("click", function(){ go({ view: "overview" }); });
   el("secBtn").addEventListener("click", function(){ go({ view: "security" }); });
+  el("seatBtn").addEventListener("click", function(){ go({ view: "seats" }); });
   el("logoutBtn").addEventListener("click", function(){ setSess(null); showLogin(null); });
   el("rangeSelect").value = String(rangeDays());
   el("rangeSelect").addEventListener("change", function(){
