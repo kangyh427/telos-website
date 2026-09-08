@@ -507,6 +507,107 @@
     var t = new Date(); t.setHours(0, 0, 0, 0);
     return Math.round((t - d) / 86400000);
   }
+  // ══════════════════════════════════════════════════════════════════════
+  // ★★(S604) 걷기 지표 — 이 콘솔이 걷기 앱을 보는 눈★★
+  // ══════════════════════════════════════════════════════════════════════
+  //   대표 물음(2026-09-08) = "이동거리와 걸음수를 추적하면 될까? 개별 노인별
+  //   걷기 추세를 확인하는 것만 하면 될까?" → ★아니다★. 서버에는 이미
+  //   보행 질·야간·생활 리듬까지 쌓이고 있는데 화면이 그것을 하나도 안 보여
+  //   주고 있었다(발화·대화 세션·기분 같은 ★대화 앱 시절 열★ 이 자리를 차지했다).
+  //
+  //   ★여기서 세는 것과 그 근거★
+  //     · 걸음·산책 거리    = 얼마나 걸으셨나(활동량)
+  //     · 보행 속도(m/s)    = ★노쇠·사망률·인지저하를 가장 잘 예측하는 단일 지표★.
+  //                           흔히 쓰는 경계는 0.8 m/s 이고, 그 아래를 노쇠 쪽으로 본다.
+  //                           ★우리는 판정하지 않는다★ — 값과 경계를 나란히 보여 줄 뿐이다.
+  //     · 보행 변동(CV%)    = 걸음 간격이 얼마나 들쭉날쭉한가 = ★낙상 위험★ 의 표준 지표.
+  //     · 최고 박자         = 낼 수 있는 최고 속도(보행 능력의 천장).
+  //     · 집밖 시간·외출    = 칩거 여부.
+  //     · 첫·끝 활동 시각   = ★생활 리듬★. 늦게 일어나고 일찍 멈추는 것은 우울의 신호로 읽힌다.
+  //     · 야간 걸음·최장 정적 = 밤에 깨어 계신가 / 오래 안 움직이셨나.
+  //     · ★안 걸으신 날수★  = 이 콘솔에서 가장 중요한 한 줄이다(아래 참조).
+  //
+  //   ★★"며칠째 안 걸으셨나"가 첫 화면에 와야 하는 까닭★★
+  //     추세 그래프는 ★지나간 일★ 을 말하고, 이 숫자는 ★오늘 해야 할 일★ 을 말한다.
+  //     그래프를 아무리 잘 그려도 "오늘 누구에게 전화할까"에는 답하지 못한다.
+  //
+  //   ★정직한 한계★
+  //     · 보행 속도는 ★산책으로 인정된 거리 ÷ 보행 구간 시간★ 이다. 차 이동이 섞이면
+  //       사람이 낼 수 없는 값이 나온다(대표 폰 실측 3.25 m/s) → [WALK.speedMax] 위는
+  //       ★버린다★. 지우는 것이 아니라 ★그 날의 속도를 모른다고 두는 것★ 이다.
+  //     · 값이 없는 날은 0 으로 접지 않는다 — ★못 잰 것과 안 걸으신 것은 다르다★.
+  var WALK = {
+    days: 7,           // 최근 며칠로 평균을 내는가
+    speedMin: 0.4,     // 이보다 느리면 측정 잡음으로 본다(m/s)
+    speedMax: 2.0,     // 이보다 빠르면 사람이 아니라 탈것이다(m/s)
+    speedFrail: 0.8,   // 널리 쓰이는 노쇠 경계(m/s) — ★판정이 아니라 참고선★
+    cvHigh: 30,        // 보행 변동이 이 위면 눈에 띄게 불안정(%)
+    idleDays: 3,       // 이만큼 걸음이 0 이면 살펴볼 때
+    idleDaysHigh: 5    // 이만큼이면 급하다
+  };
+  function avgOf(arr){
+    var v = arr.filter(function(x){ return x !== null && x !== undefined && !isNaN(x); });
+    if (!v.length) return null;
+    var t = 0; v.forEach(function(x){ t += x; });
+    return t / v.length;
+  }
+  /** 하루치 행에서 보행 속도(m/s). 낼 수 없으면 null(0 이 아니다). */
+  function daySpeed(r){
+    if (!r) return null;
+    var m = r.walk_distance_m, min = r.walking_bout_minutes;
+    if (!m || !min || min <= 0) return null;
+    var v = m / (min * 60);
+    if (v < WALK.speedMin || v > WALK.speedMax) return null;   // 탈것·잡음은 버린다
+    return v;
+  }
+  /**
+   * 그 어르신의 걷기 요약. ★상태판·경보·CSV 가 모두 이 함수 하나를 쓴다.★
+   */
+  function walkStats(id){
+    var ds = dailyOf(id);
+    if (!ds.length) return null;
+    var recent = ds.slice(-WALK.days);
+    var stepDays = ds.filter(function(r){ return r.step_count !== null && r.step_count !== undefined; });
+
+    // ★안 걸으신 날수★ — 마지막으로 "한 걸음이라도" 있었던 날로부터 며칠인가.
+    //   ★기록이 아예 없는 날은 세지 않는다★(못 잰 것과 안 걸으신 것은 다르다).
+    var lastWalked = null;
+    for (var i = stepDays.length - 1; i >= 0; i--) {
+      if (stepDays[i].step_count > 0) { lastWalked = stepDays[i].metric_date; break; }
+    }
+    var idleDays = lastWalked ? daysBetween(lastWalked) : null;
+
+    // 평소(직전 7일 이전 14일) 대비 걸음 변화 — 그분 자신이 기준이다.
+    var base = ds.slice(-(WALK.days * 3), -WALK.days);
+    var stepNow = avgOf(recent.map(function(r){ return r.step_count; }));
+    var stepBase = avgOf(base.map(function(r){ return r.step_count; }));
+    var stepDrop = (stepNow !== null && stepBase !== null && stepBase > 0)
+      ? Math.round((stepNow - stepBase) / stepBase * 100) : null;
+
+    return {
+      days: recent.length,
+      lastWalked: lastWalked,
+      idleDays: idleDays,
+      steps: stepNow === null ? null : Math.round(stepNow),
+      stepDrop: stepDrop,
+      walkM: avgOf(recent.map(function(r){ return r.walk_distance_m; })),
+      strollM: avgOf(recent.map(function(r){ return r.stroll_distance_m; })),
+      vehicleM: avgOf(recent.map(function(r){ return r.vehicle_distance_m; })),
+      speed: avgOf(recent.map(daySpeed)),
+      cv: avgOf(recent.map(function(r){ return r.gait_cv_percent; })),
+      cadence: avgOf(recent.map(function(r){ return r.peak_cadence_steps_per_min; })),
+      boutCount: avgOf(recent.map(function(r){ return r.walking_bout_count; })),
+      boutMin: avgOf(recent.map(function(r){ return r.walking_bout_minutes; })),
+      awayMin: avgOf(recent.map(function(r){ return r.away_from_home_minutes; })),
+      outing: avgOf(recent.map(function(r){ return r.outing_count; })),
+      firstHour: avgOf(recent.map(function(r){ return r.first_active_hour; })),
+      lastHour: avgOf(recent.map(function(r){ return r.last_active_hour; })),
+      nightSteps: avgOf(recent.map(function(r){ return r.night_steps; })),
+      quietHours: avgOf(recent.map(function(r){ return r.night_longest_quiet_hours; })),
+      activeHours: avgOf(recent.map(function(r){ return r.active_hour_count; }))
+    };
+  }
+
   function buildAlerts(){
     var rs = roster(), out = [];
     Object.keys(rs).forEach(function(id){
@@ -540,6 +641,55 @@
             : "기록 " + (w.observed_days || 0) + "일 · 비교된 축 " + (w.valid_axis_count || 0) +
               "/3 로 비교했습니다. 어떤 축이 줄었는지 상세에서 확인해 보세요.",
         });
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // ★★(S604) 걷기 경보 넷 — 이 콘솔이 걷기 앱을 보는 눈★★
+      // ══════════════════════════════════════════════════════════════
+      //   ★기기가 보고 중일 때만 본다★ — 보고가 끊긴 경우는 ②가 이미 알렸고,
+      //   옛 값으로 "안 걸으신다"고 말하면 그것은 사실이 아니라 침묵이다.
+      var ws = (gap !== null && gap < ALERT.silentDays) ? walkStats(id) : null;
+      if (ws) {
+        // ① ★안 걸으신 날수★ — 이 콘솔에서 가장 급한 한 줄.
+        if (ws.idleDays !== null && ws.idleDays >= WALK.idleDays) {
+          out.push({
+            sev: ws.idleDays >= WALK.idleDaysHigh ? "hi" : "mid", id: id,
+            r: "안 걸으심",
+            t: name + " — " + ws.idleDays + "일째 걸음이 없습니다",
+            d: "마지막으로 걸으신 날이 " + ws.lastWalked + " 입니다. 몸이 편찮으시거나 " +
+               "폰을 두고 지내시는 경우가 많습니다. 안부 전화를 권합니다."
+          });
+        }
+        // ② ★평소보다 걸음 급감★ — 기준은 그분의 지난 2주다.
+        if (ws.stepDrop !== null && ws.stepDrop <= -40 && ws.steps !== null) {
+          out.push({
+            sev: ws.days >= 5 ? "mid" : "low", id: id,
+            r: "걸음 급감",
+            t: name + " — 걸음이 평소보다 " + Math.abs(ws.stepDrop) + "% 줄었습니다",
+            d: "최근 " + ws.days + "일 평균 " + ws.steps + "걸음입니다(그 앞 2주와 비교)." +
+               (ws.days < 5 ? " 잰 날이 적어 근거가 얇습니다." : "")
+          });
+        }
+        // ③ ★보행이 불안정★ — 걸음 간격의 들쭉날쭉함(낙상 위험 지표).
+        if (ws.cv !== null && ws.cv >= WALK.cvHigh) {
+          out.push({
+            sev: "mid", id: id,
+            r: "보행 불안정",
+            t: name + " — 걸음이 고르지 않습니다(변동 " + ws.cv.toFixed(0) + "%)",
+            d: "걸음과 걸음 사이 간격이 들쭉날쭉합니다. 낙상 위험을 보는 지표로 쓰입니다. " +
+               "다만 이것만으로 진단하지 않습니다 — 방문 시 걸음걸이를 함께 살펴 주세요."
+          });
+        }
+        // ④ ★집 밖에 안 나가심★ — 걸음은 있는데 집 안에서만 도는 경우.
+        if (ws.awayMin !== null && ws.awayMin < 10 && ws.days >= 5) {
+          out.push({
+            sev: "low", id: id,
+            r: "집밖 활동 없음",
+            t: name + " — 최근 " + ws.days + "일 집 밖 활동이 거의 없습니다",
+            d: "하루 평균 집 밖 " + Math.round(ws.awayMin) + "분입니다. " +
+               "집 안에서만 지내시는 상태가 이어지면 근력과 기분이 함께 떨어집니다."
+          });
+        }
       }
 
       // ④ ★(S508) 기기가 스스로 알려 온 고장 — 안전망.
@@ -663,11 +813,26 @@
     //   ★가장 최근 한 건★ 이다. 종전에는 그것이 화면 어디에도 없어 "발화 89회"를
     //   어제 것으로 읽을 수 있었다(hint 칸은 이미 있었는데 이 넷만 비어 있었다).
     //   ★8/18 이후 실제 어르신 자료를 이 표로 읽는다 — 그때 잘못 읽으면 판단이 어긋난다.★
-    { k: "alone",   t: "혼자 비율",   hint: "최근 7일", v: function(r){ return num(r.alone_pct_7d); } },
-    { k: "utter",   t: "발화",        hint: "최근 7일 합", v: function(r){ return num(r.utter_7d); } },
-    { k: "sess",    t: "대화 세션",   hint: "최근 7일 합", v: function(r){ return num(r.sessions_7d); } },
-    { k: "away",    t: "집밖",        hint: "최근 7일 평균", v: function(r){ return num(r.away_avg_7d); } },
-    { k: "mood",    t: "안부(기분)",  hint: "가장 최근", v: function(r){ return num(r.mood_last); } },
+    // ★★(S604) 여기부터 걷기다 — 발화·대화 세션·안부(기분) 세 열을 걷어냈다★★
+    //   그 셋은 걷기 판에서 ★영원히 빈 칸★ 이다(마이크를 열지 않는다).
+    //   ★빈 칸을 남겨 두면 운영자는 "아직 안 쌓였나 보다"라고 읽고 기다린다★ —
+    //   기다려도 오지 않는다. 자리를 비우는 대신 ★실제로 쌓이는 것★ 을 놓는다.
+    { k: "idle",    t: "안 걸음",     hint: "며칠째", v: function(r){ return num(r.w_idle); } },
+    { k: "steps",   t: "걸음",        hint: "최근 7일 평균", v: function(r){ return num(r.w_steps); } },
+    { k: "drop",    t: "걸음 변화",   hint: "앞 2주 대비 %", v: function(r){ return num(r.w_drop); } },
+    { k: "walkm",   t: "산책",        hint: "최근 7일 평균 m", v: function(r){ return num(r.w_walkm); } },
+    // ★보행 속도★ = 노쇠·사망률·인지저하를 가장 잘 예측하는 단일 지표.
+    //   흔히 쓰는 경계는 0.8 m/s 다. ★우리는 판정하지 않는다★ — 값만 보여 준다.
+    { k: "speed",   t: "보행 속도",   hint: "m/s · 참고선 0.8", v: function(r){ return num(r.w_speed); } },
+    // ★보행 변동★ = 걸음 간격의 들쭉날쭉함. 낙상 위험을 보는 표준 지표.
+    { k: "cv",      t: "보행 변동",   hint: "% · 낮을수록 고름", v: function(r){ return num(r.w_cv); } },
+    { k: "away",    t: "집밖",        hint: "최근 7일 평균 분", v: function(r){ return num(r.w_away); } },
+    // ★생활 리듬★ = 하루를 언제 여시고 언제 닫으시는가. 늦게 열고 일찍 닫는 것이
+    //   이어지면 우울의 신호로 읽힌다(그 자체가 진단은 아니다).
+    { k: "rhythm",  t: "활동 시각",   hint: "첫~끝(시)", txt: true, v: function(r){
+        if (r.w_first === null || r.w_first === undefined) return "";
+        return Math.round(r.w_first) + "~" + Math.round(r.w_last);
+      } },
     { k: "arrived", t: "도착",        hint: "7일 중", v: function(r){ return num(r.days_arrived_7d); } },
     { k: "note",    t: "메모",        txt: true,  v: function(r){ return r.note || ""; } }
   ];
@@ -679,6 +844,19 @@
       Object.keys(s).forEach(function(k){ out[k] = s[k]; });
       // ★(S525 정정) 정본 척도는 일간 OBV 다 — 마지막 관측일의 값을 붙인다.
       var o = obvLatest(id);
+      // ★★(S604) 걷기 값을 여기서 붙인다 — 표는 값을 만들지 않고 고르기만 한다★★
+      //   ★walkStats 하나에서만 센다★ — 경보·CSV 도 같은 함수를 쓴다.
+      //   세 곳에서 따로 세면 "표는 괜찮은데 경보는 뜨는" 일이 반드시 생긴다.
+      var ws = walkStats(id);
+      out.w_idle  = ws ? ws.idleDays : null;
+      out.w_steps = ws ? ws.steps : null;
+      out.w_drop  = ws ? ws.stepDrop : null;
+      out.w_walkm = ws && ws.walkM !== null ? Math.round(ws.walkM) : null;
+      out.w_speed = ws && ws.speed !== null ? Math.round(ws.speed * 100) / 100 : null;
+      out.w_cv    = ws && ws.cv !== null ? Math.round(ws.cv * 10) / 10 : null;
+      out.w_away  = ws && ws.awayMin !== null ? Math.round(ws.awayMin) : null;
+      out.w_first = ws ? ws.firstHour : null;
+      out.w_last  = ws ? ws.lastHour : null;
       out.vsPrev  = o ? o.connection_vs_prev_pct  : null;
       out.vsBase7 = o ? o.connection_vs_base7_pct : null;
       out.obv     = o ? o.connection_obv          : null;
@@ -1105,7 +1283,10 @@
         //   ★총 >= 걷기 + 탈것 이 정상이다★ — 판정 못 한 홉(측위 간격 2시간 초과 등)은 어느
         //   쪽에도 안 들어간다. 그 차이를 손실이나 결함으로 읽지 말 것.
         //   ★빈 칸 = 못 쟀다★(옛 앱은 이 두 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
-         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)",
+        // ★(S604) 보행 속도 — 노쇠·사망률·인지저하를 가장 잘 예측하는 단일 지표.
+        //   ★빈 칸은 "못 쟀다"이지 0 이 아니다★(탈것이 섞였거나 보행 시간이 없는 날).
+         "보행속도(m/s)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "유보-소리때문(창)", "유보-재료부족(창)", "운율 발화수", "운율 저활력", "기기 재생(분)"],
         dailyOf(arg).map(function(r){
           return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
@@ -1113,6 +1294,7 @@
                   r.elder_utterance_seconds, r.elder_utterance_minutes, r.active_span_minutes,
                   r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m, r.stroll_distance_m,
                   r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
+                  daySpeed(r),   // ★(S604) 화면과 같은 자로 미리 계산해 넣는다
                   // ★(S565) 보행 규칙성 3칸 — ★표본 수를 반드시 함께 내려받는다★.
                   r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
                   // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
@@ -1148,7 +1330,10 @@
         // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
         ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
          "어르신 발화(초)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
+         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)",
+        // ★(S604) 보행 속도 — 노쇠·사망률·인지저하를 가장 잘 예측하는 단일 지표.
+        //   ★빈 칸은 "못 쟀다"이지 0 이 아니다★(탈것이 섞였거나 보행 시간이 없는 날).
+         "보행속도(m/s)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
          "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "유보-소리때문(창)", "유보-재료부족(창)", "운율 발화수", "운율 저활력", "기기 재생(분)"],
         (DATA.daily || []).map(function(r){
           var m4 = rs[r.elderly_id];
@@ -1157,6 +1342,7 @@
                   r.elder_utterance_seconds, r.elder_utterance_minutes,
                   r.active_span_minutes, r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m, r.stroll_distance_m,
                   r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
+                  daySpeed(r),   // ★(S604) 화면과 같은 자로 미리 계산해 넣는다
                   // ★(S565) 보행 규칙성 3칸 — ★표본 수를 반드시 함께 내려받는다★.
                   r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
                   // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
