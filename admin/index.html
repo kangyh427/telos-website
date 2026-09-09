@@ -97,24 +97,6 @@
        border-radius:6px;padding:2px 8px;font-size:12px;margin-left:6px;vertical-align:middle}
   select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;
          font-family:inherit;background:var(--card);color:var(--ink);cursor:pointer}
-  /* 경보 */
-  .alerts{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
-  .alert{display:flex;gap:12px;align-items:flex-start;border-radius:10px;padding:13px 16px;
-         border:1px solid;cursor:pointer}
-  .alert:hover{filter:brightness(0.985)}
-  .alert.hi{background:#fdf2f2;border-color:#f0cccc}
-  .alert.mid{background:#fff8ec;border-color:#f0e0c0}
-  .alert.low{background:#f4f7f8;border-color:#dde5e8}
-  .alert .badge{flex:0 0 auto;font-size:11.5px;font-weight:700;border-radius:6px;padding:3px 9px;
-                margin-top:1px;white-space:nowrap}
-  .alert.hi .badge{background:#b91c1c;color:#fff}
-  .alert.mid .badge{background:#b45309;color:#fff}
-  .alert.low .badge{background:#7a8f96;color:#fff}
-  .alert .body{flex:1;min-width:0}
-  .alert .t{font-size:14px;font-weight:600;margin-bottom:2px}
-  .alert .d{font-size:12.5px;color:var(--sub);line-height:1.55}
-  .ok-banner{background:#eef8f4;border:1px solid #cde8db;color:#166534;border-radius:10px;
-             padding:13px 16px;font-size:13.5px;margin-bottom:20px}
   #login{max-width:420px;margin:10vh auto;background:var(--card);border:1px solid var(--line);
          border-radius:14px;padding:30px}
   #login h2{color:var(--teal);font-size:19px;margin-bottom:6px}
@@ -211,11 +193,6 @@
   function num(v){ return (v === null || v === undefined || v === "") ? null : Number(v); }
   function fmt(v, unit){ var n = num(v); return n === null ? '<span class="muted">측정 중</span>'
     : esc(Math.round(n*10)/10) + (unit || ""); }
-  function fmtSigned(v){ var n = num(v); if (n === null) return '<span class="muted">측정 중</span>';
-    var r = Math.round(n);
-    return r > 0 ? '<span class="pos">+' + r + '</span>'
-         : r < 0 ? '<span class="neg">' + r + '</span>'
-                 : '<span class="muted">0 (변화 없음)</span>'; }
 
   // ── 로그인 ───────────────────────────────────────────────────────────
   function showLogin(msg){
@@ -349,30 +326,9 @@
     (DATA.roster || []).forEach(function(r){ m[r.id] = { id: r.id, alias: r.alias || "이름 없음", region: r.region || "" }; });
     return m;
   }
-  function label(id){
-    var r = roster()[id];
-    return r ? (r.alias + (r.region ? " · " + r.region : "")) : String(id).slice(0, 8);
-  }
-  function weeksOf(id){
-    return (DATA.weekly_obv || []).filter(function(w){ return w.elderly_id === id; })
-      .sort(function(a,b){ return a.week_index - b.week_index; });
-  }
-  function latestWeek(id){
-    var ws = weeksOf(id);
-    return ws.length ? ws[ws.length - 1] : null;
-  }
   function dailyOf(id){
     return (DATA.daily || []).filter(function(r){ return r.elderly_id === id; })
       .sort(function(a,b){ return a.metric_date < b.metric_date ? -1 : 1; });
-  }
-  function effectOf(id){
-    return (DATA.elderly || []).filter(function(r){ return r.elderly_id === id; })
-      .sort(function(a,b){ return a.week_start < b.week_start ? -1 : 1; });
-  }
-  function trendBucket(w){
-    if (!w || w.connection_obv === null || w.connection_obv === undefined) return "unknown";
-    var n = Number(w.connection_obv);
-    return n > 0 ? "up" : (n < 0 ? "down" : "flat");
   }
 
   // ── 기기 상태 (S508) ─────────────────────────────────────────────────
@@ -385,7 +341,6 @@
   //    단말에도 같은 규칙의 판정기가 있지만 그것은 기기 자신의 로그용이고, ★정본은 이쪽★ 이다.
   //  ★들어오는 값에 대화 내용·좌표는 없다 — 집 좌표는 있다/없다 한 칸뿐이다.
   var DEVICE = {
-    deafMinutes: 24 * 60,   // 이만큼 아무것도 못 들었으면 듣고 있지 않다고 본다
     staleDays: 2,           // 기기 상태 보고가 이 일수 이상 없으면 신호 자체가 끊긴 것
   };
   function healthOf(id){
@@ -396,111 +351,31 @@
     var h = healthOf(id);
     return h.length ? h[h.length - 1] : null;
   }
-  function agoLabel(minutes){
-    var m = num(minutes);
-    if (m === null) return null;
-    if (m < 60) return m + "분 전";
-    if (m < 60 * 48) return Math.floor(m / 60) + "시간 전";
-    return Math.floor(m / 1440) + "일 전";
-  }
   // ★한 원인이 나머지를 설명하면 나머지를 문제라 부르지 않는다 —
   //   동의를 안 하셨으면 청취가 꺼진 것이 정상이고, 청취를 꺼 두셨으면 안 들리는 것이 정상이다.
   //   나란히 나열하면 기기 하나에 빨간불이 넷 켜지고 ★진짜 고장이 묻힌다★.
+  //   ★★(S606) 소리 관련 판정을 전량 걷어냈다 — 대표 지시 2026-09-09★★
+  //     "소리 듣기 관련 경고, 데이터 등 모두 아예 완전히 삭제해버려."
+  //     걷어낸 것 = 청취 꺼짐 · 들은 적 없음 · 오래 못 들음 · 마이크 죽음 ·
+  //     목소리 등록 안 됨 · 시끄러운 곳 등록. ★이 앱은 이제 마이크를 열지 않는다★
+  //     (2026-09-03 상시 청취 종료) — 열지 않는 것을 고장이라 부르면 ★정상 상태가
+  //     매일 위험으로 뜬다★. 2026-09-09 실측: 위험 13건 중 9건이 "청취 꺼짐"이었다.
+  //   ★남긴 둘★ = 동의 없음(동의를 안 하시면 ★걷기 측정 자체가 안 뜬다★) ·
+  //     집 좌표 없음(걸음은 세어지지만 외출·걸어서 닿은 범위는 못 잰다).
   function deviceProblems(h){
     if (!h) return [];
     if (h.consent_granted === false) {
       return [{ sev: "hi", t: "동의 없음",
-        d: "동의 화면에서 멈춰 있어 청취가 시작되지 않습니다. 어르신께 동의 절차를 안내해 주세요." }];
-    }
-    // ★(S514) "청취 꺼짐"이 ★무엇을 멈추고 무엇을 안 멈추는지★ 를 적는다.
-    //   [왜 고쳤나] 종전 문구는 "듣기를 끄셨습니다"까지만 말해, 화면을 보는 사람이
-    //     ★아무것도 안 모이는 상태★ 로 읽었다(2026-08-04 실제로 그렇게 오해가 났다).
-    //   ★사실은 다르다★ — 듣기 종료는 서비스를 끄지 않고 ★모드만★ 바꾼다
-    //     (MainActivity.switchToMetadataOnly · S494 대표 결정 · docs/60 §4).
-    //     계속되는 것: 소리의 물리량(observation)·접촉 상태(contact_state)·이동 →
-    //     ★연결지수의 재료는 그대로 쌓인다★. 폰 실측(2026-08-04, 듣기 OFF 상태):
-    //     observation 651행 · contact_state 124행이 그날에도 쌓였다.
-    //     멈추는 것: 전사·호명 응답·선제 발화 = ★어르신이 불러도 대답하지 않는다★.
-    //   ★그래도 등급은 '위험'으로 둔다★ — 돌봄의 본체(먼저 말 걸기·부르면 대답하기)가
-    //     멈춘 것이고, 음성으로 119 를 부르는 길도 함께 닫히기 때문이다.
-    //     ★단 "측정이 멈췄다"고 오해하게 두지는 않는다 — 그것은 사실이 아니다.
-    if (h.listening_desired === false) {
-      return [{ sev: "hi", t: "청취 꺼짐",
-        d: "어르신이 듣기를 꺼 두셨습니다. 불러도 대답하지 않고 먼저 말을 걸지도 않습니다" +
-           "(음성으로 119를 부르는 것도 안 됩니다). 앱에서 다시 켜 드려야 합니다. " +
-           "다만 연결 측정에 쓰는 기록(소리의 물리량·접촉 상태·이동)은 계속 쌓이고 있습니다." }];
+        d: "동의 화면에서 멈춰 있어 걷기 측정이 시작되지 않습니다. 어르신께 동의 절차를 안내해 주세요." }];
     }
     var out = [];
-    // ★null 을 괜찮음으로 접지 않는다 — 관측이 한 건도 없다는 것은 들은 적이 없다는 뜻이다.
-    var m = num(h.minutes_since_observation);
-    if (m === null) {
-      out.push({ sev: "hi", t: "들은 적이 없음",
-        d: "관측 기록이 한 건도 없습니다. 마이크 권한과 청취 서비스를 확인해 주세요." });
-    } else if (m > DEVICE.deafMinutes) {
-      // ★(S547) r = 숫자를 뺀 고정 문구 · 숫자는 t(화면)와 d(상세)로★ — recordAlerts 규율.
-      out.push({ sev: "hi", r: "오래 아무것도 못 들음",
-        t: Math.floor(m / 60) + "시간째 아무것도 못 들음",
-        d: "마지막으로 무언가를 들은 지 " + Math.floor(m / 60) + "시간이 지났습니다. " +
-           "사람이 계신 집에서 하루 내내 아무 소리도 안 잡히는 일은 없습니다. 마이크가 죽었을 수 있어요." });
-    }
-    var deaths = num(h.mic_death_count);
-    if (deaths !== null && deaths > 0) {
-      // ★(S547) 종전엔 t 에만 있었고 그 t 가 그대로 reason 이 됐다 → 횟수가 바뀔 때마다
-      //   ★다른 사유★ 로 기록돼 "같은 사유는 하루 1행" 억제가 무력화됐다(실측 9종).
-      out.push({ sev: "mid", r: "마이크가 죽었다 살아남",
-        t: "마이크가 " + deaths + "번 죽었다 살아남",
-        d: "오늘 " + deaths + "번 죽었다가 앱이 스스로 되살렸습니다. " +
-           "그동안은 돌봄이 멈춰 있었습니다. 다른 앱이 마이크를 자주 가져가는지 확인해 주세요." });
-    }
-    // ★★(S538) 경보에서 내렸다 — 대표 지적으로 앱을 고쳤기 때문이다★★
-    //   종전 = 주소가 없으면 선제 발화가 ★통째로 멈췄고★ 그래서 "주의"가 맞았다.
-    //   지금 = ★주소가 없어도 말을 건다★(AtHomePresence.HOME_UNSET 를 게이트가 통과시킨다).
-    //          못 하는 것은 "밖에 계실 때 삼가는 것"과 외출·이동성 지표뿐이다.
-    //   ★두 가지 이유로 경보가 아니다★
-    //     ① 그 문구가 이제 ★거짓★ 이다(행동을 바꾸면 그것을 말하는 자리도 함께 고친다 · S533 §5-4).
-    //     ② 대표 판단 = "노인 80% 이상이 주소 입력 안할텐데" → ★대다수가 매일 뜨는 경보는
-    //        경보가 아니라 소음이고, 그 사이에서 진짜 고장이 묻힌다★(S508 이 세운 규율).
-    //   ★사실 자체는 안 지웠다★ — 아래 기기 상태 표의 "집 좌표" 칸에 그대로 보인다.
     if (h.home_location_known === false) {
       out.push({ sev: "low", t: "집 좌표 없음",
-        d: "말 걸기는 정상입니다. 다만 밖에 계실 때 삼가는 것과 외출 지표는 주소가 있어야 잡힙니다(댁에서 저장해야 합니다)." });
-    }
-    // ★★(S541) 목소리 등록 — 2026-08-14 p04 어르신에서 나온 경보★★
-    //   그 어르신은 8/11 설치 뒤 ★나흘간 목소리가 한 번도 본인으로 안 붙었다★.
-    //   소리는 계속 듣고 있었는데(동석·미디어·이동 정상) "어르신"이라는 라벨만 0건이었고,
-    //   ★그 사실이 화면 어디에도 없어 나흘이 지나서야 자료를 손으로 파 보고 알았다★.
-    //   ★이것이 "위험"인 이유★ = 성문이 없으면 불러도 대답하지 못하고 자료도 안 쌓인다.
-    //   어르신 눈에는 ★그냥 켜져 있는 기계★ 이고, 몇 번 불러 보시다 그만두신다.
-    //   ★null 은 경보로 만들지 않는다★ — 옛 앱은 이 사실을 안 보내므로 "모른다"이고,
-    //   모르는 것을 빨간불로 띄우면 멀쩡한 어르신께 거짓 경보가 뜬다(S508 규율).
-    if (h.voiceprint_enrolled === false) {
-      out.push({ sev: "hi", t: "목소리 등록 안 됨",
-        d: "불러도 대답하지 못하고 대화 기록도 쌓이지 않습니다. 어르신 앱에서 목소리를 등록해 주세요(조용한 곳에서 하셔야 합니다)." });
-    }
-    // ★등록은 됐지만 시끄러운 자리에서 뜬 경우★ — 마이크는 목소리와 배경음을 하나로 합쳐
-    //   받으므로(S488) 그 성문에는 소음이 섞여 굳는다. 조용한 댁에서 말씀하시면 안 맞는다.
-    if (h.voiceprint_noisy_enrollment === true) {
-      out.push({ sev: "mid", t: "시끄러운 곳에서 목소리를 등록함",
-        d: "그 등록은 소음이 섞여 있어 어르신 목소리를 잘 못 알아볼 수 있습니다. 조용한 곳에서 다시 등록해 주세요." });
+        d: "걸음은 그대로 세어집니다. 다만 외출과 걸어서 닿은 범위는 집 좌표가 있어야 잡힙니다(댁에서 저장해야 합니다)." });
     }
     return out;
   }
 
-  // ── 경보 ─────────────────────────────────────────────────────────────
-  //  ★설계 원칙 3가지(이걸 어기면 경보는 곧 무시된다)
-  //   ① ★근거가 얇으면 등급을 낮춘다★ — 기록 이틀·비교 축 1개로 나온 "급감"을 빨간 경보로
-  //      띄우면, 사람은 며칠 만에 경보 전체를 무시하게 된다(늑대 소년). 얇으면 회색으로 내린다.
-  //   ② ★못 잰 것을 나쁜 것으로 세지 않는다★ — null 은 "0"이 아니다. 측정 실패는 '데이터 유입'
-  //      문제로만 알리고, 연결이 나빠졌다고 말하지 않는다.
-  //   ③ ★무엇을 하면 되는지 함께 적는다★ — 원인이 기기인지 사람인지에 따라 할 일이 다르다.
-  //  ※ 임계값은 운영하며 조정할 대상이다(지금은 초기값). 여기 한곳에만 둔다.
-  var ALERT = {
-    silentDays: 3,        // 마지막 데이터가 이 일수 이상 전 → 주의
-    silentDaysHigh: 7,    // 이 이상이면 위험
-    dropObv: -30,         // 이번 주 추세가 이 값 이하 → 급감 후보
-    thinDays: 3,          // 그 주 기록일이 이 값 미만이면 근거 얇음
-    thinAxes: 2,          // 비교된 축이 이 값 미만이면 근거 얇음
-  };
   function daysBetween(dateStr){
     if (!dateStr) return null;
     var d = new Date(dateStr + "T00:00:00");
@@ -586,6 +461,12 @@
 
     return {
       days: recent.length,
+      // ★★(S606) 잰 날 수 — ★"행이 온 날"과 "걸음을 잰 날"은 다르다★★
+      //   서버는 매일 행을 만든다. 그래서 앱이 걸음을 한 번도 못 재도 ★행은 온다★ —
+      //   2026-09-09 실측: 등록 21곳 중 7일 안에 걸음을 한 번이라도 잰 곳은 8곳뿐인데
+      //   나머지 13곳도 행은 매일 오고 있었다. ★그 둘을 가르지 않으면 "설치는 됐는데
+      //   앱이 안 돕니다"가 "걷기가 줄었습니다"로 읽힌다★(대표 지적 2026-09-08).
+      measuredDays: recent.filter(function(r){ return r.step_count !== null && r.step_count !== undefined; }).length,
       lastWalked: lastWalked,
       idleDays: idleDays,
       steps: stepNow === null ? null : Math.round(stepNow),
@@ -608,156 +489,6 @@
     };
   }
 
-  function buildAlerts(){
-    var rs = roster(), out = [];
-    Object.keys(rs).forEach(function(id){
-      var name = rs[id].alias + (rs[id].region ? " · " + rs[id].region : "");
-      var ds = dailyOf(id), w = latestWeek(id);
-
-      // ① 데이터가 한 번도 안 왔다 — 기기가 아예 안 돌고 있다는 뜻.
-      if (!ds.length) {
-        out.push({ sev: "hi", id: id, r: "데이터 미도착", t: name + " — 데이터가 한 번도 오지 않았습니다",
-          d: "등록은 됐지만 기기에서 지표가 0건입니다. 기기 전원·인터넷 연결·앱 동의 화면을 확인해 주세요." });
-        return;
-      }
-      // ② 오다가 끊겼다.
-      var gap = daysBetween(ds[ds.length - 1].metric_date);
-      if (gap !== null && gap >= ALERT.silentDays) {
-        out.push({
-          sev: gap >= ALERT.silentDaysHigh ? "hi" : "mid", id: id, r: "데이터 끊김",
-          t: name + " — " + gap + "일째 데이터가 없습니다",
-          d: "마지막 기록이 " + ds[ds.length - 1].metric_date + "입니다. 기기가 꺼졌거나 인터넷이 끊겼을 수 있어요.",
-        });
-      }
-      // ③ 연결 급감 — ★근거 두께에 따라 등급을 나눈다(원칙 ①).
-      if (w && num(w.connection_obv) !== null && num(w.connection_obv) <= ALERT.dropObv) {
-        var thin = (w.observed_days || 0) < ALERT.thinDays || (w.valid_axis_count || 0) < ALERT.thinAxes;
-        out.push({
-          sev: thin ? "low" : "mid", id: id, r: "연결 급감",
-          t: name + " — 지난주보다 연결이 크게 줄었습니다 (" + Math.round(num(w.connection_obv)) + ")",
-          d: thin
-            ? "다만 근거가 얇습니다(기록 " + (w.observed_days || 0) + "일 · 비교된 축 " +
-              (w.valid_axis_count || 0) + "/3). 숫자보다 며칠 더 지켜보는 편이 낫습니다."
-            : "기록 " + (w.observed_days || 0) + "일 · 비교된 축 " + (w.valid_axis_count || 0) +
-              "/3 로 비교했습니다. 어떤 축이 줄었는지 상세에서 확인해 보세요.",
-        });
-      }
-
-      // ══════════════════════════════════════════════════════════════
-      // ★★(S604) 걷기 경보 넷 — 이 콘솔이 걷기 앱을 보는 눈★★
-      // ══════════════════════════════════════════════════════════════
-      //   ★기기가 보고 중일 때만 본다★ — 보고가 끊긴 경우는 ②가 이미 알렸고,
-      //   옛 값으로 "안 걸으신다"고 말하면 그것은 사실이 아니라 침묵이다.
-      var ws = (gap !== null && gap < ALERT.silentDays) ? walkStats(id) : null;
-      if (ws) {
-        // ① ★안 걸으신 날수★ — 이 콘솔에서 가장 급한 한 줄.
-        if (ws.idleDays !== null && ws.idleDays >= WALK.idleDays) {
-          out.push({
-            sev: ws.idleDays >= WALK.idleDaysHigh ? "hi" : "mid", id: id,
-            r: "안 걸으심",
-            t: name + " — " + ws.idleDays + "일째 걸음이 없습니다",
-            d: "마지막으로 걸으신 날이 " + ws.lastWalked + " 입니다. 몸이 편찮으시거나 " +
-               "폰을 두고 지내시는 경우가 많습니다. 안부 전화를 권합니다."
-          });
-        }
-        // ② ★평소보다 걸음 급감★ — 기준은 그분의 지난 2주다.
-        if (ws.stepDrop !== null && ws.stepDrop <= -40 && ws.steps !== null) {
-          out.push({
-            sev: ws.days >= 5 ? "mid" : "low", id: id,
-            r: "걸음 급감",
-            t: name + " — 걸음이 평소보다 " + Math.abs(ws.stepDrop) + "% 줄었습니다",
-            d: "최근 " + ws.days + "일 평균 " + ws.steps + "걸음입니다(그 앞 2주와 비교)." +
-               (ws.days < 5 ? " 잰 날이 적어 근거가 얇습니다." : "")
-          });
-        }
-        // ③ ★보행이 불안정★ — 걸음 간격의 들쭉날쭉함(낙상 위험 지표).
-        if (ws.cv !== null && ws.cv >= WALK.cvHigh) {
-          out.push({
-            sev: "mid", id: id,
-            r: "보행 불안정",
-            t: name + " — 걸음이 고르지 않습니다(변동 " + ws.cv.toFixed(0) + "%)",
-            d: "걸음과 걸음 사이 간격이 들쭉날쭉합니다. 낙상 위험을 보는 지표로 쓰입니다. " +
-               "다만 이것만으로 진단하지 않습니다 — 방문 시 걸음걸이를 함께 살펴 주세요."
-          });
-        }
-        // ④ ★집 밖에 안 나가심★ — 걸음은 있는데 집 안에서만 도는 경우.
-        if (ws.awayMin !== null && ws.awayMin < 10 && ws.days >= 5) {
-          out.push({
-            sev: "low", id: id,
-            r: "집밖 활동 없음",
-            t: name + " — 최근 " + ws.days + "일 집 밖 활동이 거의 없습니다",
-            d: "하루 평균 집 밖 " + Math.round(ws.awayMin) + "분입니다. " +
-               "집 안에서만 지내시는 상태가 이어지면 근력과 기분이 함께 떨어집니다."
-          });
-        }
-      }
-
-      // ④ ★(S508) 기기가 스스로 알려 온 고장 — 안전망.
-      //    ★기기가 보고를 하고 있을 때만 본다★: 보고 자체가 끊긴 경우는 ②가 이미 알린다.
-      //    같은 사실을 두 곳에서 두 번 알리면 경보는 곧 무시된다(설계 원칙 ①).
-      var h = latestHealth(id);
-      var hGap = h ? daysBetween(h.metric_date) : null;
-      if (h && hGap !== null && hGap <= DEVICE.staleDays) {
-        deviceProblems(h).forEach(function(p){
-          // ★(S547) 사유는 p.r 을 먼저 본다★ — p.t 는 화면 문구라 숫자가 섞일 수 있고,
-          //   그것이 그대로 reason 이 되면 숫자가 바뀔 때마다 새 경보가 된다(실측 9종).
-          //   ★p.r 이 없는 경보는 t 가 이미 고정 문구인 것들이라 종전과 같다(회귀 0).★
-          out.push({ sev: p.sev, id: id, r: "기기: " + (p.r || p.t),
-                     t: name + " — 기기: " + p.t, d: p.d });
-        });
-      } else if (!h) {
-        // ★고장이라고 말하지 않는다 — 아직 이 신호를 안 보내는 앱 버전일 수 있다.
-        //   다만 ★모른다는 사실★ 은 알린다(모르는 것을 괜찮음으로 접지 않는다).
-        out.push({ sev: "low", id: id,
-          t: name + " — 기기 상태를 알 수 없습니다",
-          d: "이 기기가 기기 상태 신호를 보내지 않고 있습니다. 앱 버전이 낮으면 그럴 수 있어요(고장이라는 뜻은 아닙니다)." });
-      }
-    });
-    // 위험 → 주의 → 정보 순.
-    var rank = { hi: 0, mid: 1, low: 2 };
-    return out.sort(function(a, b){ return rank[a.sev] - rank[b.sev]; });
-  }
-  function alertsHtml(){
-    // ★(S523 대표 지적 "위험, 주의, 이건 뭐지?") — ★위험·주의만 띄운다★.
-    //   "참고" 등급(기기 상태 신호 없음 · 근거 얇은 하락)은 매일 떠서 경보를 무디게 했다.
-    //   S508 원칙("매일 울리는 경보는 아무도 안 본다")을 표시 단계에도 적용한 것.
-    var list = buildAlerts().filter(function(a){ return a.sev !== "low"; });
-    if (!list.length) {
-      return '<div class="ok-banner">지금 살펴볼 것이 없습니다 — 데이터가 끊긴 기기도, 크게 줄어든 분도 없습니다.</div>';
-    }
-    var badge = { hi: "위험", mid: "주의", low: "참고" };
-    return '<div class="alerts">' + list.map(function(a){
-      return '<div class="alert ' + a.sev + '" data-go=\'' + esc(JSON.stringify({ view: "elder", id: a.id })) + "'>" +
-        '<span class="badge">' + badge[a.sev] + '</span><div class="body">' +
-        '<div class="t">' + esc(a.t) + '</div><div class="d">' + esc(a.d) + "</div></div></div>";
-    }).join("") + "</div>";
-  }
-
-  /**
-   * ★(S525) 경보를 ★서버에 기록★ 한다 — docs/72 표⑥("며칠 만에 잡았다").
-   *
-   * ★종전엔 경보가 화면에 그려지고 사라졌다★ → "악화를 언제 발견했는지"를 증명할 길이
-   * 영영 없었다. 12주 뒤 타임라인을 그리려면 그 순간을 남겨야 한다(소급 불가).
-   *
-   * ★판정은 여전히 콘솔이 한다★(S508 원칙) — 서버로 보내는 것은 ★결과 기록★ 뿐이고,
-   * ★날짜는 서버가 KST 로 찍는다★(화면이 보내면 발견 시각을 나중에 지어낼 수 있다).
-   * ★같은 사유는 하루 1행★ — (어르신·날짜·사유) 유니크라 화면을 몇 번 열어도 안 쌓인다.
-   * 그래서 reason(a.r)은 ★날짜·숫자가 섞이지 않은 고정 문구★ 여야 한다(숫자는 detail 로).
-   *
-   * ★실패해도 화면은 그대로 간다★ — 기록은 부수적인 일이고, 그것 때문에 개요가 안 뜨면
-   * 정작 봐야 할 경보를 못 본다(안전망이 본체를 망가뜨리지 않는다).
-   * ★참고 등급은 보내지 않는다★ — 화면에 안 띄우는 것을 이력에만 쌓으면 두 곳이 갈라진다.
-   */
-  function recordAlerts(list){
-    var payload = list.filter(function(a){ return a.sev !== "low" && a.id && a.r; })
-      .map(function(a){
-        return { elderly_id: a.id, level: a.sev === "hi" ? "위험" : "주의",
-                 reason: a.r, detail: a.d || "" };
-      });
-    if (!payload.length) return;
-    rpc("console_record_alerts", { p_alerts: payload });   // 결과를 기다리지 않는다
-  }
-
   // ── 의미층 접근자 (S525 · 서버 뷰 032·033) ──────────────────────────
   //   ★화면이 스스로 평균을 내지 않는다★ — 같은 계산이 서버와 화면 두 곳에 생기면
   //   언젠가 두 숫자가 갈라지고, 그때 무엇이 참인지 아무도 모른다(S506 교훈).
@@ -766,48 +497,18 @@
     for (var i = 0; i < rows.length; i++) if (rows[i].elderly_id === id) return rows[i];
     return null;
   }
-  function prepostOf(id){
-    var rows = DATA.console_prepost || [];
-    for (var i = 0; i < rows.length; i++) if (rows[i].elderly_id === id) return rows[i];
-    return null;
-  }
-  function alertLogOf(id){
-    return (DATA.console_alerts || []).filter(function(a){ return a.elderly_id === id; });
-  }
-  // ★(S526) cohortAll() 을 지웠다 — 호출처가 0 인 죽은 함수였고, 그것이 읽던
-  //   DATA.console_cohort 는 ★사용 중지된 절대 척도의 집단 평균★ 이다(sql 012).
-  //   서버(get-effect-dashboard)에서 조회 자체를 뺐으므로 이 키는 이제 오지 않는다.
-  //   되살릴 때는 ★OBV 로 다시 만든 뒤★ — 그 절차는 Edge 쪽 주석에 적어 두었다.
-  /**
-   * ★★(S525 정정) 일간 OBV — ★이것이 정본 척도다★(sql 034 · 대표 지시).
-   *
-   * ★절대 연결지수(console_status.index_avg_7d)를 사람끼리 비교하는 데 쓰지 말 것★ —
-   * 그 값은 목표치 60분·60분·3000m 로 잰 것이고 ★그 목표치는 2026-07-26 에 사용
-   * 중지됐다★(sql 012: "최대 목표치는 필요없어"). 어르신마다 삶이 다른데 하나의 목표를
-   * 세우는 것은 "평균적 노인을 상정하지 않는다"는 제0원칙에 정면으로 어긋난다.
-   * ★해도 되는 비교는 "그분이 자기 어제보다 나아졌는가" 하나뿐이다.★
-   */
-  function obvRowsOf(id){
-    return (DATA.console_obv || []).filter(function(r){ return r.elderly_id === id; });
-  }
-  function obvLatest(id){
-    var rows = obvRowsOf(id);
-    return rows.length ? rows[rows.length - 1] : null;
-  }
-
   // ── 상태판 정렬 (S525 · 대표 지시 "정렬 가능한 정보들로") ────────────
   //   ★정렬은 화면에서 한다★ — 자료는 이미 다 받아 왔다. 서버를 다시 부르면 느리고,
   //   폴링과 겹쳐 정렬이 제멋대로 되돌아간다.
   //   ★빈 값은 방향과 무관하게 언제나 맨 아래★ — null 을 "가장 나쁨"으로 올리면
   //   ★아직 못 잰 사람★ 이 ★나빠진 사람★ 을 화면 위에서 밀어낸다.
-  var SORT = { key: "base7", dir: 1 };   // 기본 = 자기 평소보다 나빠진 순
+  var SORT = { key: "idle", dir: -1 };   // 기본 = 오래 안 걸으신 분부터
   var STATUS_COLS = [
     { k: "alias",   t: "어르신",      txt: true,  v: function(r){ return r.alias; } },
-    // ★★척도 셋은 전부 ★그분 자신★ 을 기준으로 한다(sql 034 · 대표 정본).
-    //   절대 지수는 이 표에서 걷어냈다 — 사람끼리 견주게 만드는 열이었다.
-    { k: "prev",    t: "어제 대비",   hint: "%",     v: function(r){ return num(r.vsPrev); } },
-    { k: "base7",   t: "평소 대비",   hint: "직전 7일", v: function(r){ return num(r.vsBase7); } },
-    { k: "obv",     t: "추세(OBV)",   hint: "시작 이후 누적", v: function(r){ return num(r.obv); } },
+    // ★★(S606) 연결 척도 셋(어제 대비 · 평소 대비 · 추세 OBV)을 걷어냈다 —
+    //   대표 지시 2026-09-09 "기존 연결 관련 모든 기록 내용 다 삭제해".
+    //   그 셋은 ★소리와 대화를 재료로 삼는 척도★ 라 마이크를 닫은 뒤로는
+    //   ★이동 축 하나로만 계산된 값★ 이었다. 걷기는 아래 열들이 직접 말한다.
     // ★★(S540) 기간을 열 이름에 드러낸다 — ★한 표 안에서 열마다 기준이 다르다★
     //   왼쪽 셋은 "어제/직전 7일/시작 이후"인데 이 넷은 ★최근 7일 값★ 이고, 안부만
     //   ★가장 최근 한 건★ 이다. 종전에는 그것이 화면 어디에도 없어 "발화 89회"를
@@ -833,6 +534,11 @@
         if (r.w_first === null || r.w_first === undefined) return "";
         return Math.round(r.w_first) + "~" + Math.round(r.w_last);
       } },
+    // ★★(S606) "걸음 잰 날" — 이 콘솔에서 ★가장 먼저 봐야 하는 한 칸★★★
+    //   0/7 이면 그분의 걷기 값은 전부 빈칸이고, 아래 어떤 숫자도 뜻이 없다.
+    //   ★"도착"과 나란히 둔다★ — 도착 7/7 · 잰 날 0/7 이면 ★앱은 살아 있는데 걸음을
+    //   못 재고 있다★ 는 뜻이고, 그것은 걷기가 줄어든 것이 아니라 ★설치·권한 문제★ 다.
+    { k: "meas",    t: "걸음 잰 날",  hint: "7일 중", v: function(r){ return num(r.w_meas); } },
     { k: "arrived", t: "도착",        hint: "7일 중", v: function(r){ return num(r.days_arrived_7d); } },
     { k: "note",    t: "메모",        txt: true,  v: function(r){ return r.note || ""; } }
   ];
@@ -842,13 +548,13 @@
       var s = statusOf(id) || {};
       var out = { id: id, alias: rs[id].alias, region: rs[id].region };
       Object.keys(s).forEach(function(k){ out[k] = s[k]; });
-      // ★(S525 정정) 정본 척도는 일간 OBV 다 — 마지막 관측일의 값을 붙인다.
-      var o = obvLatest(id);
       // ★★(S604) 걷기 값을 여기서 붙인다 — 표는 값을 만들지 않고 고르기만 한다★★
       //   ★walkStats 하나에서만 센다★ — 경보·CSV 도 같은 함수를 쓴다.
       //   세 곳에서 따로 세면 "표는 괜찮은데 경보는 뜨는" 일이 반드시 생긴다.
       var ws = walkStats(id);
       out.w_idle  = ws ? ws.idleDays : null;
+      out.w_meas  = ws ? ws.measuredDays : null;
+      out.w_rows  = ws ? ws.days : null;
       out.w_steps = ws ? ws.steps : null;
       out.w_drop  = ws ? ws.stepDrop : null;
       out.w_walkm = ws && ws.walkM !== null ? Math.round(ws.walkM) : null;
@@ -857,10 +563,6 @@
       out.w_away  = ws && ws.awayMin !== null ? Math.round(ws.awayMin) : null;
       out.w_first = ws ? ws.firstHour : null;
       out.w_last  = ws ? ws.lastHour : null;
-      out.vsPrev  = o ? o.connection_vs_prev_pct  : null;
-      out.vsBase7 = o ? o.connection_vs_base7_pct : null;
-      out.obv     = o ? o.connection_obv          : null;
-      out.obvDate = o ? o.metric_date             : null;
       return out;
     });
   }
@@ -893,8 +595,7 @@
       '<span class="whose">열 이름을 누르면 그 기준으로 정렬됩니다</span></h2>' +
       '<div class="desc"><b>모든 비교는 그분 자신을 기준으로 합니다</b> — 어제의 그분, 요즘의 그분. ' +
       '어르신끼리 견주지 않습니다(삶이 저마다 달라 하나의 목표를 세울 수 없습니다).<br>' +
-      '어제 대비 = 그날의 답 · 평소 대비 = 직전 7일 자기 평균과 견준 것(하루 출렁임이 걷힙니다) · ' +
-      '추세(OBV) = 시작 이후 누적. 참여·안부는 최근 7일(<b>오늘 제외</b>)이고, ' +
+      '모든 값은 <b>최근 7일</b> 평균이고, “걸음 변화”만 그 앞 2주와 견준 것입니다. ' +
       '“도착”이 7일 중 며칠인지를 함께 보세요 — <b>이틀치로 나온 평균은 평균이 아닙니다</b>.</div></div>' +
       csvBtn("elders") + "</div><div class=\"tablewrap\"><table><tr>";
     STATUS_COLS.forEach(function(c){
@@ -909,17 +610,24 @@
     rows.forEach(function(r){
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.id })) + "'>" +
         "<td><b>" + esc(r.alias) + "</b>" + (r.region ? ' <span class="muted">· ' + esc(r.region) + "</span>" : "") + "</td>" +
-        "<td>" + deltaCell(r.vsPrev) + "</td>" +
-        "<td>" + deltaCell(r.vsBase7) + "</td>" +
-        "<td>" + deltaCell(r.obv) + "</td>" +
-        "<td>" + fmt(r.alone_pct_7d, "%") + "</td>" +
-        "<td>" + fmt(r.utter_7d, "회") + "</td>" +
-        "<td>" + fmt(r.sessions_7d, "회") + "</td>" +
-        "<td>" + fmt(r.away_avg_7d, "분") + "</td>" +
-        // ★안부는 값과 ★그 날짜★ 를 함께 — 날짜가 없으면 3주 전 기분이 오늘처럼 읽힌다.
-        "<td>" + (num(r.mood_last) === null ? '<span class="muted">기록 없음</span>'
-                  : Math.round(num(r.mood_last) * 10) / 10 +
-                    ' <span class="muted">' + esc(String(r.checkin_date || "").slice(5)) + "</span>") + "</td>" +
+        // ★★(S606) 여기가 ★열 이름과 값이 어긋나 있던 자리★ 다 — S604 가 헤더만 걷기로
+        //   바꾸고 값은 옛 연결 칸(혼자 비율·발화·세션·기분)을 그대로 두어, 화면의
+        //   "걸음" 칸에 ★발화 수★ 가 들어가 있었다. 헤더 14칸 대 값 11칸이라 뒤가 밀렸다.
+        //   ★STATUS_COLS 의 순서와 이 줄들의 순서는 반드시 같아야 한다.★
+        "<td>" + (num(r.w_idle) === null ? '<span class="muted">—</span>'
+                  : (num(r.w_idle) >= 3 ? '<span class="warn">' + r.w_idle + "일</span>" : r.w_idle + "일")) + "</td>" +
+        "<td>" + fmt(r.w_steps, "보") + "</td>" +
+        "<td>" + deltaCell(r.w_drop) + "</td>" +
+        "<td>" + fmt(r.w_walkm, "m") + "</td>" +
+        "<td>" + fmt(r.w_speed) + "</td>" +
+        "<td>" + fmt(r.w_cv, "%") + "</td>" +
+        "<td>" + fmt(r.w_away, "분") + "</td>" +
+        // ★활동 시각 — 첫~끝. 못 잰 날은 "—" 이고 0 시로 접지 않는다.
+        "<td>" + (r.w_first === null || r.w_first === undefined ? '<span class="muted">—</span>'
+                  : Math.round(r.w_first) + "~" + Math.round(r.w_last) + "시") + "</td>" +
+        "<td>" + (num(r.w_meas) === null ? '<span class="muted">—</span>'
+                  : (num(r.w_meas) === 0 ? '<span class="warn">0/' + (r.w_rows || 7) + "</span>"
+                                         : r.w_meas + "/" + (r.w_rows || 7))) + "</td>" +
         "<td>" + (num(r.days_arrived_7d) === null ? '<span class="muted">—</span>'
                   : (num(r.days_arrived_7d) < 7 ? '<span class="warn">' + r.days_arrived_7d + "/7</span>"
                                                 : r.days_arrived_7d + "/7")) + "</td>" +
@@ -936,166 +644,6 @@
         renderRoute();     // ★다시 그리기만 한다 — 서버를 부르지 않는다
       });
     });
-  }
-
-  // ── 전후 비교(표① 슬로프) ────────────────────────────────────────────
-  //   ★값이 없는 것은 고장이 아니라 "아직 기저가 아니다" 다★ — 반드시 진행도를 적는다.
-  function prepostHtml(){
-    var rows = statusRows().map(function(r){
-      var p = prepostOf(r.id) || {};
-      return { id: r.id, alias: r.alias, region: r.region, p: p };
-    });
-    var html = '<section><div class="sechead"><div><h2>사용 전후 비교' +
-      '<span class="whose">기저 = 관측 시작 첫 14일</span></h2>' +
-      '<div class="desc">이 서비스를 쓰기 시작한 첫 2주와 최근 2주를 견줍니다(두 구간은 겹치지 않습니다). ' +
-      '기저가 아직 안 찬 분은 <b>몇 일째인지</b>가 대신 나옵니다 — 그 칸이 비었다고 나빠진 것이 아닙니다.<br>' +
-      '<b>★모든 비교는 그분 안에서만 합니다</b> — 지수 칸의 숫자를 <b>어르신끼리 견주지 마세요</b>. ' +
-      '그 값은 잠정 목표치로 잰 것이라(사용 중지된 척도) 사람 간 비교에 쓸 수 없습니다. ' +
-      '견줄 수 있는 것은 맨 오른쪽 <b>OBV 변화</b>입니다.</div></div></div>' +
-      '<div class="tablewrap"><table><tr><th>어르신</th><th>기저 구간</th><th>기저 지수</th>' +
-      "<th>최근 구간</th><th>최근 지수</th><th>변화</th><th>혼자 비율 변화</th><th>OBV 변화</th></tr>";
-    if (!rows.length) html += '<tr><td colspan="8" class="muted">등록된 어르신이 없습니다</td></tr>';
-    rows.forEach(function(r){
-      var p = r.p;
-      // ★OBV 변화 = (마지막 누적) − (기저 구간 끝의 누적).
-      //   누적선의 두 지점 차이라 ★그분 안의 변화★ 이고, 척도가 정본이라 사람끼리도 견줄 수 있다.
-      var ob = obvRowsOf(r.id).filter(function(o){ return num(o.connection_obv) !== null; });
-      var obvDelta = null;
-      // ★기저 창이 아직 안 닫혔으면 계산하지 않는다★ — 그때는 "기저 끝"이 미래라
-      //   마지막 행이 그대로 잡혀 ★변화 0★ 이라는 거짓이 나온다(미리보기에서 실제로 나왔다).
-      if (ob.length && p.baseline_end && p.baseline_window_closed) {
-        var atBase = null;
-        ob.forEach(function(o){ if (o.metric_date <= p.baseline_end) atBase = o; });
-        if (atBase) obvDelta = Math.round((num(ob[ob.length - 1].connection_obv) - num(atBase.connection_obv)) * 10) / 10;
-      }
-      var baseCell = p.baseline_ready
-        ? fmt(p.baseline_index_avg) + ' <span class="muted">' + p.baseline_days + "일</span>"
-        : '<span class="muted">모으는 중 ' + (p.baseline_days == null ? 0 : p.baseline_days) + "/14일</span>";
-      var recCell = p.recent_ready
-        ? fmt(p.recent_index_avg) + ' <span class="muted">' + p.recent_days + "일</span>"
-        : '<span class="muted">' + (p.recent_days == null ? 0 : p.recent_days) + "/14일</span>";
-      html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.id })) + "'>" +
-        "<td><b>" + esc(r.alias) + "</b></td>" +
-        '<td class="muted">' + (p.baseline_start ? esc(p.baseline_start) + " ~ " + esc(p.baseline_end) : "—") + "</td>" +
-        "<td>" + baseCell + "</td>" +
-        '<td class="muted">' + (p.recent_start ? esc(p.recent_start) + " ~ " + esc(p.recent_end) : "—") + "</td>" +
-        "<td>" + recCell + "</td>" +
-        "<td>" + deltaCell(p.index_delta) + "</td>" +
-        "<td>" + deltaCell(p.alone_pct_delta) + "</td>" +
-        "<td>" + deltaCell(obvDelta) + "</td></tr>";
-    });
-    return html + "</table></div></section>";
-  }
-
-  // ── 일간 OBV 추세(표②) — ★선 1개 = 어르신 1명★ ──────────────────────
-  //   ★★평균 한 개를 그리지 않는다★★ — 서로 다른 사람의 값을 평균내면 아무에게도
-  //   답을 주지 않는다(S497 에 이미 같은 이유로 "연결 추세 평균 -50"을 걷어냈다).
-  //   그리고 절대 지수의 평균은 ★사용 중지된 목표치★ 로 잰 값이라 더더욱 안 된다.
-  //   ★모든 선은 0 에서 시작한다★ — 각자 자기 시작점이 기준이라 선끼리 높이를
-  //   비교하는 것이 아니라 ★올라가는가 내려가는가★ 를 본다.
-  function obvDailySvg(){
-    var rs = roster();
-    var series = Object.keys(rs).map(function(id){
-      return { id: id, rows: obvRowsOf(id).filter(function(r){ return num(r.connection_obv) !== null; }) };
-    });
-    var drawn = series.filter(function(s){ return s.rows.length > 0; });
-    var none = series.filter(function(s){ return s.rows.length === 0; });
-    var noteHtml = none.length
-      ? '<div class="muted" style="font-size:12.5px;margin-top:6px">' +
-        none.map(function(s){ return esc(label(s.id)); }).join(" · ") +
-        " — 아직 비교할 직전 날이 없습니다(둘째 날부터 선이 생깁니다)</div>"
-      : "";
-    if (!drawn.length) {
-      return '<div class="muted" style="font-size:13px">아직 그릴 선이 없습니다 — 이틀째부터 첫 비교가 생깁니다.</div>' + noteHtml;
-    }
-    // 가로축 = 날짜(전원 공통). 세로축 = 0 을 가운데 둔 대칭.
-    var dates = {};
-    drawn.forEach(function(s){ s.rows.forEach(function(r){ dates[r.metric_date] = 1; }); });
-    var xs = Object.keys(dates).sort();
-    // ★★(S547 · 대표 지시 "주식차트처럼 만들어줘 · 너무 큼직큼직하게 할 필요 없어")★★
-    //   ★여기는 노인앱이 아니라 PC 관리자 콘솔이다★ — 큰 글씨·성근 여백이 아니라
-    //   ★한 화면에 많이, 조밀하게★ 가 맞다. 그래서 주식차트 관례를 그대로 따른다:
-    //     · 위 = 누적선(주가) · 아래 = 그 날의 변화 막대(거래량)
-    //     · 가로 격자 + 0 기준선 · 작은 글씨(10~11px) · 얇은 선
-    //   ★★(S547 정정 · 대표 지시 "콘솔도 요양사 앱과 색 통일")★★
-    //     처음에 국내 주식 관례(오름=빨강)로 칠했는데 ★그것이 두 곳과 어긋났다★:
-    //       ① 이 콘솔 자신의 표 = `.pos`(▲ 오름) → var(--good) ★청록★ /
-    //          `.neg`(▼ 내림) → var(--amber). ★같은 화면 안에서 표와 그래프가 반대였다.★
-    //       ② 요양사 앱 = 좋아짐 브랜드 청록 / 나빠짐 Warn700.
-    //     ★빨강은 이 제품 전체에서 이미 "나쁨"이다★(경보 위험 · obv<0 · WATCH) —
-    //     한 그래프만 뒤집으면 흘깃 보는 사람이 반대로 읽는다.
-    //     → ★형태는 주식차트, 색은 제품의 뜻(오름=청록 · 내림=앰버)★.
-    //   ★바뀐 것은 그리는 방식뿐이고 값은 한 글자도 안 바꿨다★(같은 obvRowsOf).
-    var maxAbs = 20;
-    drawn.forEach(function(s){ s.rows.forEach(function(r){
-      var v = Math.abs(num(r.connection_obv)); if (v > maxAbs) maxAbs = v;
-    }); });
-    // 아래 칸(거래량)의 눈금은 ★위 칸과 따로★ 잡는다 — 누적과 일간은 크기가 다르다.
-    var volMax = 10;
-    drawn.forEach(function(s){ s.rows.forEach(function(r){
-      var v = Math.abs(num(r.connection_vs_prev_pct) || 0); if (v > volMax) volMax = v;
-    }); });
-    var W = 1000, T = 12, L = 46, R = 14;
-    var PH = 168, GAP = 10, VH = 58, B = 24;          // 가격칸 · 틈 · 거래량칸 · 날짜칸
-    var H = T + PH + GAP + VH + B;
-    var x = function(dt){ var i = xs.indexOf(dt);
-      return xs.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (xs.length - 1); };
-    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * PH; };
-    var vy0 = T + PH + GAP + VH / 2;                   // 거래량칸의 0 선
-    var vy = function(v){ return vy0 - (v / volMax) * (VH / 2); };
-    // ★오름 = --good(청록) · 내림 = --amber★ — 이 화면의 ▲▼ 표·요양사 앱과 같은 뜻.
-    var UP = "#0e7490", DOWN = "#b45309";
-    var out = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto">';
-    // ── 격자(주식차트의 눈금선) ──
-    [1, 0.5, 0, -0.5, -1].forEach(function(f){
-      var v = maxAbs * f, yy = y(v);
-      out += '<line x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy +
-        '" stroke="' + (f === 0 ? "#94a3a0" : "#e3e9e7") + '"' + (f === 0 ? ' stroke-dasharray="4 4"' : "") + "/>";
-      out += '<text x="' + (L - 6) + '" y="' + (yy + 3.5) + '" font-size="10" fill="#5b7078" text-anchor="end">' +
-        (v > 0 ? "+" : "") + Math.round(v) + "</text>";
-    });
-    out += '<text x="4" y="' + (T + 9) + '" font-size="10" fill="#5b7078">누적</text>';
-    // ── 거래량칸 0 선 ──
-    out += '<line x1="' + L + '" y1="' + vy0 + '" x2="' + (W - R) + '" y2="' + vy0 + '" stroke="#94a3a0"/>';
-    out += '<text x="4" y="' + (T + PH + GAP + 9) + '" font-size="10" fill="#5b7078">일간</text>';
-    // ── 거래량 막대(어르신별로 나란히) ──
-    var slot = xs.length > 1 ? (W - L - R) / (xs.length - 1) : 40;
-    var bw = Math.max(1.5, Math.min(5, (slot * 0.7) / Math.max(1, drawn.length)));
-    drawn.forEach(function(s, i){
-      s.rows.forEach(function(r){
-        var dv = num(r.connection_vs_prev_pct);
-        if (dv === null) return;                        // ★null 은 0 막대로 그리지 않는다★
-        var bx = x(r.metric_date) - (drawn.length * bw) / 2 + i * bw;
-        var top = dv >= 0 ? vy(dv) : vy0, hgt = Math.max(1, Math.abs(vy(dv) - vy0));
-        out += '<rect x="' + bx + '" y="' + top + '" width="' + bw + '" height="' + hgt +
-          '" fill="' + (dv >= 0 ? UP : DOWN) + '" opacity="0.85"><title>' +
-          esc(label(s.id) + " · " + r.metric_date + " · 어제 대비 " + dv) + "</title></rect>";
-      });
-    });
-    // ── 누적선 ──
-    drawn.forEach(function(s, i){
-      var c = COLORS[i % COLORS.length];
-      var d = s.rows.map(function(r, j){ return (j ? "L" : "M") + x(r.metric_date) + " " + y(num(r.connection_obv)); }).join(" ");
-      if (s.rows.length > 1) out += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="1.6"/>';
-      s.rows.forEach(function(r){
-        out += '<circle cx="' + x(r.metric_date) + '" cy="' + y(num(r.connection_obv)) + '" r="2" fill="' + c + '"><title>' +
-          esc(label(s.id) + " · " + r.metric_date + " · 누적 " + r.connection_obv +
-              " · 어제 대비 " + (r.connection_vs_prev_pct === null ? "—" : r.connection_vs_prev_pct)) + "</title></circle>";
-      });
-    });
-    var step = Math.max(1, Math.ceil(xs.length / 14));
-    xs.forEach(function(dt, i){
-      if (i % step) return;
-      out += '<text x="' + x(dt) + '" y="' + (H - 8) + '" font-size="10" fill="#5b7078" text-anchor="middle">' +
-        esc(dt.slice(5)) + "</text>";
-    });
-    out += "</svg>";
-    out += '<div class="legend" style="font-size:11.5px">' + drawn.map(function(s, i){
-      return '<span><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(label(s.id)) + "</span>";
-    }).join("") +
-      '<span class="muted">위=누적(0 위면 시작보다 나아진 쪽) · 아래=그 날 변화(' +
-      '<b style="color:' + UP + '">오름</b> / <b style="color:' + DOWN + '">내림</b>) · 빈 칸=못 잼</span></div>';
-    return out + noteHtml;
   }
 
   // ── CSV 내려받기 ─────────────────────────────────────────────────────
@@ -1157,19 +705,17 @@
     }
     // ★(S513) 연구 주차 자료 — 연구자에게 그대로 건네는 파일.
     //   ★null 은 빈 칸★(RS-4 와 같은 규약) — 0 으로 적으면 "측정했는데 0"으로 읽힌다.
-    //   ★연결지수 옆에 척도를 반드시 함께 내보낸다★(v26 이 생긴 이유).
+    //   ★★(S606) 연결·발화·기분 열을 걷어냈다★★ — 대표 지시 2026-09-09.
+    //     걷어낸 것 = 어르신발화수 · 사회적체크인수 · 넛지실행전환수 · 선제응답률 ·
+    //     기분/식사/수면 평균 · 기분_기저대비 · 대화분 · 대화세션수 · 연결지수(+척도).
+    //     ★서버 표(study_snapshot)에는 그대로 남아 있다★ — 얼린 값은 소급이 안 되므로
+    //     지우지 않는다. ★내보내지 않을 뿐이다.★
     if (kind === "study_weeks") {
       downloadCsv("텔로스_연구주차자료_" + today() + ".csv",
-        ["가명", "군", "주차", "주시작", "주끝", "어르신발화수", "사회적체크인수", "넛지실행전환수",
-         "선제응답률", "기분평균", "식사평균", "수면평균", "기분_기저대비", "대화분", "대화세션수",
-         "집밖평균분", "집밖측정일수", "연결지수", "연결지수척도"],
+        ["가명", "군", "주차", "주시작", "주끝", "집밖평균분", "집밖측정일수"],
         (DATA.study_snapshot || []).map(function(r){
           return [r.pseudonym, r.cohort, r.study_week, r.week_start, r.week_end,
-                  r.elder_utterance_count, r.social_check_in_count, r.nudge_conversion_count,
-                  r.proactive_response_rate, r.mood_avg, r.meal_avg, r.sleep_avg,
-                  r.mood_delta_from_baseline, r.conversation_minutes, r.conversation_session_count,
-                  r.away_minutes_avg, r.away_measured_days,
-                  r.connection_index, r.connection_index_mode];
+                  r.away_minutes_avg, r.away_measured_days];
         }));
       return;
     }
@@ -1194,171 +740,58 @@
         }));
       return;
     }
+    // ★★(S606) 내려받기를 걷기 셋으로 줄였다 — 대표 지시 2026-09-09★★
+    //   ★걷어낸 갈래★ = 일간 OBV · 경보 이력 · 특이사항(어르신 말씀에서 뽑은 것) ·
+    //     회사 주간 집계 · 주차 어르신별 · 어르신 주차별. ★전부 소리·연결이 재료다.★
+    //   ★남긴 셋★ = 상태판 · 어르신 일별 · 전체 원지표. ★열도 걷기만 남겼다.★
+    //   ★화면과 파일이 같은 숫자를 말해야 한다★ — 정렬 순서까지 화면과 같게 맞춘다.
     if (kind === "elders") {
-      // ★(S525) 화면의 상태판을 ★그대로★ 내보낸다 — 파일과 화면이 다른 숫자를 말하면
-      //   회의 자리에서 그 자체가 논점이 된다. 정렬 순서까지 화면과 같게 맞춘다.
-      //   ★전후 비교(기저·최근)도 같은 줄에 실어 표① 슬로프를 이 파일 하나로 그릴 수 있게.
-      // ★(S525 정정) 정본 척도(일간 OBV)를 ★앞에★ 둔다 — 파일을 열었을 때 먼저 보이는
-      //   숫자가 사람 간 비교에 쓰면 안 되는 절대 지수여서는 안 된다.
       downloadCsv("텔로스_어르신상태판_" + today() + ".csv",
-        ["가명", "동네", "기준일", "어제 대비(%)", "평소(직전7일) 대비(%)", "추세 OBV(누적)",
-         "혼자 비율(%)", "발화(회)", "대화 세션(회)", "집밖(분/일)", "안부 기분", "안부 날짜",
-         "도착일수(7일 중)", "마지막 도착",
-         "[참고·잠정척도] 7일 지수", "[참고·잠정척도] 직전 7일 지수",
-         "기저 시작", "기저 끝", "기저 일수", "최근 시작", "최근 끝", "최근 일수",
-         "혼자 비율 변화", "메모"],
+        ["가명", "동네", "걸음 잰 날(7일 중)", "안 걸으신 날수", "마지막 걸음",
+         "걸음(최근7일 평균)", "걸음 변화(앞 2주 대비 %)", "산책(m/일)", "보행속도(m/s)",
+         "보행변동CV(%)", "집밖(분/일)", "첫 활동(시)", "마지막 활동(시)",
+         "도착일수(7일 중)", "마지막 도착", "메모"],
         sortStatus(statusRows()).map(function(r){
-          var p = prepostOf(r.id) || {};
-          return [r.alias, r.region, r.obvDate, r.vsPrev, r.vsBase7, r.obv,
-                  r.alone_pct_7d, r.utter_7d, r.sessions_7d, r.away_avg_7d,
-                  r.mood_last, r.checkin_date, r.days_arrived_7d, r.last_arrival,
-                  r.index_avg_7d, r.index_avg_prev7d,
-                  p.baseline_start, p.baseline_end, p.baseline_days,
-                  p.recent_start, p.recent_end, p.recent_days,
-                  p.alone_pct_delta, r.note];
+          return [r.alias, r.region, r.w_meas, r.w_idle, (walkStats(r.id) || {}).lastWalked,
+                  r.w_steps, r.w_drop, r.w_walkm, r.w_speed,
+                  r.w_cv, r.w_away, r.w_first, r.w_last,
+                  r.days_arrived_7d, r.last_arrival, r.note];
         }));
-    } else if (kind === "obv") {
-      // ★(S525) 일간 OBV 전량 — 개인별 추세선의 원재료.
-      var rsn = roster();
-      downloadCsv("텔로스_일간OBV_" + today() + ".csv",
-        ["가명", "날짜", "어제 대비(%)", "평소(직전7일) 대비(%)", "추세 OBV(누적)",
-         "관계망 OBV", "대화 OBV", "이동 OBV", "비교된 축"],
-        (DATA.console_obv || []).map(function(o){
-          var m = rsn[o.elderly_id];
-          return [m ? m.alias : o.elderly_id, o.metric_date,
-                  o.connection_vs_prev_pct, o.connection_vs_base7_pct, o.connection_obv,
-                  o.relational_obv, o.conversation_obv, o.mobility_obv, o.valid_axis_count];
-        }));
-    } else if (kind === "notable") {
-      // ★★(S575) 특이사항 — ★화면에 보이는 것만★ 내보낸다.
-      //   [왜] 걸러진 것(그만두신 어르신·시험기기)을 파일에 실으면 ★거른 의미가 없다★.
-      //   파일은 밖으로 나간다(메일·USB) — 화면보다 넓게 담아서는 안 된다.
-      //   ★기기 번호는 넣지 않는다★ — 가명과 device_id 가 한 파일에 같이 담기면
-      //   그 파일 하나가 되짚기 열쇠가 된다(S513 이 연구 배정 대장에서 세운 규율과 같다).
-      downloadCsv("텔로스_특이사항_" + today() + ".csv",
-        ["가명", "동네", "주간 시작", "주간 끝", "날짜", "내용"],
-        (DATA.console_notable || []).map(function(r){
-          return [r.alias, r.region, r.period_start, r.period_end, r.event_date, r.event_text];
-        }));
-    } else if (kind === "alerts") {
-      // ★(S525) 경보 이력 — 표⑥("며칠 만에 잡았다"). 발견과 확인 사이가 이 파일의 값이다.
-      downloadCsv("텔로스_경보이력_" + today() + ".csv",
-        ["가명", "동네", "날짜", "등급", "사유", "내용", "처음 뜬 때", "마지막으로 뜬 때", "확인한 때", "확인한 사람", "확인 메모"],
-        (DATA.console_alerts || []).map(function(a){
-          var m = rs[a.elderly_id];
-          return [m ? m.alias : a.elderly_id, m ? m.region : null, a.alert_date, a.level, a.reason, a.detail,
-                  String(a.first_seen_at || "").slice(0, 16).replace("T", " "),
-                  String(a.last_seen_at || "").slice(0, 16).replace("T", " "),
-                  String(a.acknowledged_at || "").slice(0, 16).replace("T", " "),
-                  a.acknowledged_by, a.ack_note];
-        }));
-    } else if (kind === "company") {
-      // ★(S547) OBV 추세 4칸 추가 — 빈 칸은 "견줄 지난 주가 없다"이지 0 이 아니다.
-      downloadCsv("텔로스_회사주간집계_" + today() + ".csv",
-        ["주 시작", "어르신 수", "관계망 접촉 합(분)", "미디어 합(분)", "부재 합(분)", "사용시간 합(분)", "대화 세션 합(회)", "이동거리 합(m)",
-         "OBV 잰 사람(명)", "나아진 사람(명)", "나빠진 사람(명)", "주간이동 중앙값"],
-        (DATA.company || []).map(function(r){
-          return [r.week_start, r.elderly_count, r.total_relational_contact_min, r.total_media_min,
-                  r.total_absence_min, r.total_usage_minutes, r.total_conversation_sessions, r.total_travel_distance_m,
-                  r.obv_measured_count, r.obv_improved_count, r.obv_declined_count, r.obv_weekly_move_median];
-        }));
-    } else if (kind === "elderWeeks") {
-      var m = rs[arg];
-      downloadCsv("텔로스_" + (m ? m.alias : "어르신") + "_주차_" + today() + ".csv",
-        ["가명", "주차", "주 시작", "주 끝", "기록일", "관계망(분/일)", "관계망 변화%", "대화-어르신발화(초/일)", "대화 변화%",
-         "이동(m/일)", "이동 변화%", "누적 추세(OBV)", "비교된 축"],
-        weeksOf(arg).map(function(r){
-          return [m ? m.alias : arg, r.week_index, r.week_start, r.week_end, r.observed_days,
-                  r.relational_min_avg, r.relational_delta_pct, r.conversation_min_avg, r.conversation_delta_pct,
-                  r.mobility_m_avg, r.mobility_delta_pct, r.connection_obv, (r.valid_axis_count || 0) + "/3"];
-        }));
-    } else if (kind === "elderDaily") {
-      var m2 = rs[arg];
-      downloadCsv("텔로스_" + (m2 ? m2.alias : "어르신") + "_일별_" + today() + ".csv",
-        // ★(S525) 발화 초·외출 횟수 추가. ★분 칸은 지우지 않는다★ — 옛 행에는 분만 있고
-        //   연구 스냅샷도 분을 읽는다. 두 칸을 나란히 두면 받는 사람이 단위를 헷갈리지 않는다.
-        ["가명", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
-         "어르신 발화(초)", "어르신 발화(분)", "사용시간(분)",
-        // ★(S545) 걷기·탈것 병기 — ★총 칸은 그대로 둔다★(자를 바꾸면 옛 자료와 못 견준다).
-        //   ★총 >= 걷기 + 탈것 이 정상이다★ — 판정 못 한 홉(측위 간격 2시간 초과 등)은 어느
-        //   쪽에도 안 들어간다. 그 차이를 손실이나 결함으로 읽지 말 것.
-        //   ★빈 칸 = 못 쟀다★(옛 앱은 이 두 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
-         "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)",
-        // ★(S604) 보행 속도 — 노쇠·사망률·인지저하를 가장 잘 예측하는 단일 지표.
-        //   ★빈 칸은 "못 쟀다"이지 0 이 아니다★(탈것이 섞였거나 보행 시간이 없는 날).
-         "보행속도(m/s)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
-         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "유보-소리때문(창)", "유보-재료부족(창)", "운율 발화수", "운율 저활력", "기기 재생(분)"],
-        dailyOf(arg).map(function(r){
-          return [m2 ? m2.alias : arg, r.metric_date, r.face_to_face_minutes, r.phone_call_minutes,
-                  r.media_minutes, r.absence_minutes,
-                  r.elder_utterance_seconds, r.elder_utterance_minutes, r.active_span_minutes,
-                  r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m, r.stroll_distance_m,
-                  r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
-                  daySpeed(r),   // ★(S604) 화면과 같은 자로 미리 계산해 넣는다
-                  // ★(S565) 보행 규칙성 3칸 — ★표본 수를 반드시 함께 내려받는다★.
-                  r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
-                  // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
-                  r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
-                  // ★(S565) 활동 시간대 4칸 — ★분포 원본까지 함께 내려받는다★
-                  //   (요약은 되돌릴 수 없다 · 24칸이 있어야 나중에 다른 질문을 할 수 있다).
-                  r.active_hour_count, r.first_active_hour, r.last_active_hour,
-                  r.hourly_step_profile,
-                  r.away_from_home_minutes, r.outing_count,
-                  r.nudge_served_count,
-                  r.mood_score_avg, r.mood_positive_ratio,
-                  r.companion_alone_windows, r.companion_one_windows, r.companion_multiple_windows,
-                  r.companion_undetermined_windows,
-                  // ★(S565) 유보의 갈래 — ★"TV 때문"과 "조용해서"는 전혀 다른 말이다★.
-                  r.companion_media_undetermined_windows, r.companion_insufficient_undetermined_windows,
-                  r.prosody_utterance_count, r.prosody_low_activation,
-                  // ★(S567) 자기 기기 재생(분) = 사실. 옆의 미디어(추론)와 더하지 말 것.
-                  r.own_device_media_minutes];
-        }));
-    } else if (kind === "week") {
-      downloadCsv("텔로스_" + arg + "주_어르신별_" + today() + ".csv",
-        ["주 시작", "가명", "동네", "기록일", "관계망 접촉(분)", "미디어(분)", "사용시간(분)",
-         "어르신 발화(건)", "대화 세션(회)", "이동거리(m)", "기분평균"],
-        (DATA.elderly || []).filter(function(r){ return r.week_start === arg; }).map(function(r){
-          var m3 = rs[r.elderly_id];
-          return [r.week_start, m3 ? m3.alias : r.elderly_id, m3 ? m3.region : null,
-                  r.days_reported, r.relational_contact_min, r.media_min, r.usage_minutes,
-                  r.elder_utterances, r.conversation_sessions, r.travel_distance_m, r.mood_avg];
-        }));
-    } else if (kind === "all") {
-      // 전체 원지표(선택 기간) — 어르신별 일별 전량. IR·분석용 한 방 내려받기.
-      downloadCsv("텔로스_전체원지표_최근" + (DATA.range_days || 14) + "일_" + today() + ".csv",
-        // ★(S525) 발화 초·외출 횟수 추가(분 칸 병기 — 위 elderDaily 와 같은 이유).
-        ["가명", "동네", "날짜", "대면(분)", "통화(분)", "미디어(분)", "부재(분)",
-         "어르신 발화(초)", "어르신 발화(분)",
-         "사용시간(분)", "이동거리(m)", "걷기(m)", "탈것(m)", "산책(m)", "걸음(보)", "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)",
-        // ★(S604) 보행 속도 — 노쇠·사망률·인지저하를 가장 잘 예측하는 단일 지표.
-        //   ★빈 칸은 "못 쟀다"이지 0 이 아니다★(탈것이 섞였거나 보행 시간이 없는 날).
-         "보행속도(m/s)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수", "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)", "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸", "집밖 체류(분)", "외출(회)", "권유 서빙(회)", "기분평균", "기분 긍정비율",
-         "동석 혼자(창)", "동석 1명(창)", "동석 여럿(창)", "동석 유보(창)", "유보-소리때문(창)", "유보-재료부족(창)", "운율 발화수", "운율 저활력", "기기 재생(분)"],
-        (DATA.daily || []).map(function(r){
-          var m4 = rs[r.elderly_id];
-          return [m4 ? m4.alias : r.elderly_id, m4 ? m4.region : null, r.metric_date,
-                  r.face_to_face_minutes, r.phone_call_minutes, r.media_minutes, r.absence_minutes,
-                  r.elder_utterance_seconds, r.elder_utterance_minutes,
-                  r.active_span_minutes, r.travel_distance_m, r.walk_distance_m, r.vehicle_distance_m, r.stroll_distance_m,
-                  r.step_count, r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
-                  daySpeed(r),   // ★(S604) 화면과 같은 자로 미리 계산해 넣는다
-                  // ★(S565) 보행 규칙성 3칸 — ★표본 수를 반드시 함께 내려받는다★.
-                  r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
-                  // ★(S565) 밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
-                  r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
-                  // ★(S565) 활동 시간대 4칸 — ★분포 원본까지 함께 내려받는다★
-                  //   (요약은 되돌릴 수 없다 · 24칸이 있어야 나중에 다른 질문을 할 수 있다).
-                  r.active_hour_count, r.first_active_hour, r.last_active_hour,
-                  r.hourly_step_profile,
-                  r.away_from_home_minutes, r.outing_count,
-                  r.nudge_served_count,
-                  r.mood_score_avg, r.mood_positive_ratio, r.companion_alone_windows, r.companion_one_windows,
-                  r.companion_multiple_windows, r.companion_undetermined_windows,
-                  r.companion_media_undetermined_windows, r.companion_insufficient_undetermined_windows,
-                  r.prosody_utterance_count, r.prosody_low_activation,
-                  // ★(S567) 자기 기기 재생(분) = 사실. 옆의 미디어(추론)와 더하지 말 것.
-                  r.own_device_media_minutes];
+    } else if (kind === "elderDaily" || kind === "all") {
+      // ★한 벌의 열 정의를 둘이 나눠 쓴다★ — 갈라 두면 한쪽만 고쳐져 두 파일이 어긋난다.
+      var one = (kind === "elderDaily");
+      var m2 = one ? rs[arg] : null;
+      var head = (one ? ["가명"] : ["가명", "동네"]).concat(
+        ["날짜", "걸음(보)", "걷기(m)", "탈것(m)", "산책(m)", "이동거리(m)",
+         "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)",
+         // ★보행 속도 — 빈 칸은 "못 쟀다"이지 0 이 아니다(탈것이 섞였거나 보행 시간이 없는 날).
+         "보행속도(m/s)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수",
+         // ★밤 움직임 3칸 — ★"수면"이 아니다★. 셋을 함께 내려받는다.
+         "밤 걸음(보)", "밤 움직인 시간대(개)", "밤 조용한 최장(시간)",
+         // ★활동 시간대 — ★분포 원본(24칸)까지 함께★. 요약은 되돌릴 수 없다.
+         "활동 시간대 수(개)", "첫 활동(시)", "마지막 활동(시)", "시간대별 걸음 24칸",
+         // ★(S605) 걸어서 닿은 범위 — 차로 다녀오신 곳은 안 센다(집과 걸어서 이어진 점만).
+         "걸어서 닿은 범위(km2)",
+         // ★(S604) 새벽 화면 — 0 = 지켜본 조용한 밤 / 빈 칸 = 그 밤을 못 쟀다.
+         "새벽 화면(회)", "집밖 체류(분)", "외출(회)"]);
+      var rowsSrc = one ? dailyOf(arg) : (DATA.daily || []);
+      downloadCsv(one ? ("텔로스_" + (m2 ? m2.alias : "어르신") + "_일별걷기_" + today() + ".csv")
+                      : ("텔로스_전체걷기원지표_최근" + (DATA.range_days || 14) + "일_" + today() + ".csv"),
+        head,
+        rowsSrc.map(function(r){
+          var mm = one ? m2 : rs[r.elderly_id];
+          var head2 = one ? [mm ? mm.alias : arg]
+                          : [mm ? mm.alias : r.elderly_id, mm ? mm.region : null];
+          return head2.concat(
+            [r.metric_date, r.step_count, r.walk_distance_m, r.vehicle_distance_m,
+             r.stroll_distance_m, r.travel_distance_m,
+             r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
+             daySpeed(r),   // ★화면과 같은 자로 미리 계산해 넣는다
+             r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
+             r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
+             r.active_hour_count, r.first_active_hour, r.last_active_hour, r.hourly_step_profile,
+             r.life_space_km2, r.night_screen_on_count,
+             r.away_from_home_minutes, r.outing_count]);
         }));
     }
   }
@@ -1792,7 +1225,6 @@
     if (route.view === "security") renderSecurity();
     else if (route.view === "seats") renderSeats();
     else if (route.view === "elder") renderElder(route.id);
-    else if (route.view === "week") renderWeek(route.weekStart);
     else if (route.view === "study") renderStudy();
     else renderOverview();
   }
@@ -1814,8 +1246,6 @@
   // ── 화면 1: 개요 ─────────────────────────────────────────────────────
   function renderOverview(){
     var rs = roster(), ids = Object.keys(rs);
-    var buckets = { up: 0, flat: 0, down: 0, unknown: 0 };
-    ids.forEach(function(id){ buckets[trendBucket(latestWeek(id))]++; });
     var reporting = ids.filter(function(id){ return dailyOf(id).length > 0; }).length;
     // ★(S508) 기기 상태 — 보고 중인 기기 수와 그중 이상이 있는 기기 수.
     //   ★두 숫자를 함께 보여 준다★: "이상 0명"만 적으면 아무도 보고를 안 해서 0인 것과
@@ -1859,13 +1289,27 @@
       return dailyOf(id).some(function(r){ return r.metric_date === todayStr; });
     }).length;
     var totalDailyRows = (DATA.daily || []).length;
-    var totalWeeklyRows = (DATA.weekly_obv || []).length;
+    // ★★(S606) 걸음을 재고 있는 곳 — 이 콘솔에서 ★가장 중요한 한 숫자★★★
+    //   대표 지적(2026-09-08) = "제대로 사용하지 않아서 위험이라고 나온 경고만 잔뜩".
+    //   ★진단은 화면이 아니라 온보딩이었다★ — 2026-09-09 실측: 등록 21곳 중 최근 7일에
+    //   걸음을 한 번이라도 잰 곳은 ★8곳뿐★ 이고 나머지 13곳도 ★행은 매일 오고 있었다★.
+    //   ★그래서 "데이터가 온다"로는 앱이 도는지 알 수 없다★ — 걸음을 재야 도는 것이다.
+    var measuring = ids.filter(function(id){
+      var w = walkStats(id);
+      return w !== null && w.measuredDays > 0;
+    }).length;
 
     var html = "";
-    // 경보를 맨 위에 — 위험·주의만(참고는 표시하지 않는다 · alertsHtml 참조).
-    html += alertsHtml();
-    // ★(S525) 그리는 김에 ★서버에 남긴다★ — 표⑥ "며칠 만에 잡았다"의 왼쪽 끝.
-    recordAlerts(buildAlerts());
+    // ★★(S606) 경보 블록을 통째로 걷어냈다 — 대표 지시 2026-09-09★★
+    //   "콘솔에 경고문 모두 삭제해."
+    //   ★왜 옳은가(2026-09-09 실측)★ = 화면에 뜨던 위험·주의 26건 중 ★걷기와 관련된
+    //   것은 5건뿐★ 이었고, 위험 13건 중 ★9건이 "청취 꺼짐"★ 이었다 — 우리가 스스로
+    //   마이크를 닫은 것(2026-09-03)이라 ★정상 상태가 매일 위험으로 뜨고 있었다★.
+    //   나머지도 폐기한 옛 대표 폰 3대의 "데이터 미도착"이었다.
+    //   ★그리고 걷기 경보의 자(尺)도 틀렸다★ — 7일 중 실제로 잰 날이 하루뿐인데
+    //   그 하루를 2주 평균과 견줘 "-96% 급감"이라 부르고 근거를 7일치로 셌다.
+    //   ★서버 기록(console_record_alerts)도 함께 멈춘다★ — 화면에 안 띄우는 것을
+    //   이력에만 쌓으면 두 곳이 갈라진다(옛 recordAlerts 가 지키던 규율 그대로).
 
     html += '<div class="cards">' +
       // ★(S540) 숨긴 행이 몇 개인지 함께 적는다 — ★조용히 줄이면 그것이 고장으로 읽힌다★
@@ -1878,12 +1322,12 @@
                  ? " · 옛 중복·시연 " + DATA.internal_hidden_count + "건 숨김"
                  : "")) +
       cardHtml("오늘 데이터 도착", arrivedToday + " / " + ids.length + "명", "오늘 일간 지표가 온 어르신") +
-      cardHtml("쌓인 데이터", totalWeeklyRows + "주차", rangeLabel() + " 일간 " + totalDailyRows + "건") +
-      cardHtml("이번 주 추세", buckets.up + " ↑ / " + buckets.flat + " → / " + buckets.down + " ↓",
-               "측정 중 " + buckets.unknown + "명 · 각자 지난주 대비") +
+      cardHtml("걸음을 재고 있는 곳", measuring + " / " + ids.length + "명",
+               "최근 7일에 한 번이라도 걸음이 측정된 곳") +
+      cardHtml("쌓인 데이터", totalDailyRows + "건", rangeLabel() + " 일간 지표") +
       // ★(S540) "연락 끊김"을 이상 수에 섞지 않고 ★따로★ 적는다 — 성격이 다르다.
       //   이상 = 보고가 오는데 그 안에 문제가 있다 / 끊김 = 보고 자체가 안 온다(앱 삭제·전원 꺼짐 등).
-      cardHtml("기기 이상", devBad + "명",
+      cardHtml("동의·집 좌표", devBad + "명",
                devReporting + "명이 보고 중"
                  + (devStale > 0 ? " · 연락 끊김 " + devStale + "명" : "")) +
       "</div>";
@@ -1893,15 +1337,8 @@
     //   [왜 이 순서인가] 대표 지적("이 표는 대체 뭘 말하는건지 전혀 모르겠어")의 진단은
     //   ★해석층 부재★ 였다. 종전 개요는 날것 나열부터 시작해서, 화면을 열어도 "지금
     //   좋아지는 중인가"에 아무도 답하지 않았다. 그 답을 ★맨 위★ 에 둔다.
-    html += "<section><h2>일간 연결 추세 (OBV)" +
-      '<span class="whose">선 1개 = 어르신 1명 · 각자 자기 시작점이 0</span></h2>' +
-      '<div class="desc"><b>어르신끼리 견주는 그래프가 아닙니다.</b> 각자 자기 시작점을 0으로 두고, ' +
-      '그 뒤로 <b>자기 어제보다</b> 나아졌는지를 더해 간 선입니다. 볼 것은 선의 높이가 아니라 ' +
-      '<b>올라가는가 내려가는가</b>입니다. 점에 마우스를 올리면 그날의 값이 보입니다.</div>' +
-      obvDailySvg() + "</section>";
-
+    // ★(S606) 일간 연결 추세(OBV)와 사용 전후 비교를 걷어냈다 — 둘 다 연결지수가 재료다.
     html += statusTableHtml();
-    html += prepostHtml();
 
     // ★★(S509) 등록 대기 중인 기기 — ★기기 상태 표보다도 앞★ 에 둔다.
     //   [왜 맨 앞인가] 아래 "기기 상태" 표는 ★등록된 어르신★ 을 한 줄씩 그린다. 그래서
@@ -1951,9 +1388,10 @@
     html += '<section><div class="sechead"><div><h2>기기 상태' +
       '<span class="whose">어르신이 아니라 기기를 봅니다</span></h2></div></div>' +
       '<div class="tablewrap"><table><tr><th>어르신</th><th>마지막 보고</th><th>상태</th>' +
-      // ★(S541) "목소리" 칸 신설 — 성문이 없으면 불러도 대답 못 하고 자료도 안 쌓인다.
-      //   ★상태 칸(경보 요약)과 ★같은 사실★ 을 다르게 말하지 않도록 같은 h 에서 읽는다.
-      '<th>마지막으로 들은 때</th><th>오늘 마이크 죽음</th><th>목소리</th><th>집 좌표</th></tr>';
+      // ★★(S606) 소리 열 셋(마지막으로 들은 때 · 마이크 죽음 · 목소리)을 걷어냈다★★
+      //   대표 지시 2026-09-09 "소리 듣기 관련 경고, 데이터 등 모두 아예 완전히 삭제".
+      //   ★그 자리에 걷기를 놓는다★ — 이 앱이 도는지 보는 신호가 이제 그것이다.
+      '<th>걸음 잰 날</th><th>마지막 걸음</th><th>집 좌표</th></tr>';
     ids.forEach(function(id){
       var h = latestHealth(id), probs = deviceProblems(h);
       var gap = h ? daysBetween(h.metric_date) : null;
@@ -1963,23 +1401,16 @@
       else if (stale) state = '<span class="warn">' + gap + '일째 보고 없음</span>';
       else if (!probs.length) state = '<span class="muted">이상 없음</span>';
       else state = '<span class="warn">' + esc(probs.map(function(p){ return p.t; }).join(" · ")) + '</span>';
-      var heard = h ? agoLabel(h.minutes_since_observation) : null;
+      var wsd = walkStats(id);
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: id })) + "'>" +
         "<td><b>" + esc(rs[id].alias) + "</b>" + (rs[id].region ? ' <span class="muted">· ' + esc(rs[id].region) + "</span>" : "") + "</td>" +
         "<td>" + (h ? esc(h.metric_date) : '<span class="muted">—</span>') + "</td>" +
         "<td style='text-align:left;white-space:normal;max-width:280px'>" + state + "</td>" +
-        // ★들은 적이 없으면 0분 전이 아니라 ★없음★ 이다(정반대의 뜻을 섞지 않는다).
-        "<td>" + (heard ? esc(heard) : '<span class="warn">없음</span>') + "</td>" +
-        "<td>" + (h && num(h.mic_death_count) !== null ? num(h.mic_death_count) + "회" : '<span class="muted">—</span>') + "</td>" +
-        // ★(S541) 목소리 등록. ★null(옛 앱이라 안 보냄)은 "—"★ 로 둔다 — "등록 안 됨"으로
-        //   적으면 멀쩡히 쓰고 계신 어르신을 문제로 만든다(모르는 것은 모른다고 적는다).
-        "<td>" + (!h || h.voiceprint_enrolled === null || h.voiceprint_enrolled === undefined
-                    ? '<span class="muted">—</span>'
-                    : (h.voiceprint_enrolled === false
-                        ? '<span class="warn">등록 안 됨</span>'
-                        : (h.voiceprint_noisy_enrollment === true
-                            ? '<span class="warn">시끄러운 곳</span>'
-                            : '<span class="muted">있음</span>'))) + "</td>" +
+        // ★잰 날 0 은 ★"안 걸으셨다"가 아니라 "못 쟀다"★ 다 — 둘을 섞지 않는다.
+        "<td>" + (!wsd ? '<span class="warn">0/7</span>'
+                  : (wsd.measuredDays === 0 ? '<span class="warn">0/' + wsd.days + "</span>"
+                                            : wsd.measuredDays + "/" + wsd.days)) + "</td>" +
+        "<td>" + (wsd && wsd.lastWalked ? esc(wsd.lastWalked) : '<span class="muted">없음</span>') + "</td>" +
         "<td>" + (!h ? '<span class="muted">—</span>'
                      : (h.home_location_known === false ? '<span class="muted">없음</span>'
                         : (h.home_location_known === true ? '<span class="muted">있음</span>' : '<span class="muted">—</span>'))) + "</td></tr>";
@@ -1996,84 +1427,14 @@
     //   모르게 되고, 그것이 대표가 "중구난방"이라 한 상태다. 주차 OBV 는 아래 추세
     //   그래프와 상세 화면에 그대로 살아 있다.
 
-    // 전원 추세 그래프 — 점 하나 = 그 주의 지난주 대비 변화량(OBV).
-    //   ★(S523) 종전 설명("변화를 누적한 선")은 코드와 달랐다 — 코드는 처음부터 주별
-    //   OBV 를 그대로 찍고 있었다. 잘못된 설명이 "이 차트는 OBV 가 아니다"라는 오독을
-    //   낳았으므로(대표 지적) 설명을 지우고 제목이 그 사실만 말하게 한다.
-    html += "<section><h2>어르신별 주차 연결 추세 (OBV · 지난주 대비)" +
-      '<span class="whose">선 1개 = 어르신 1명 · 0 위 = 늘었다</span></h2>' +
-      obvSvg(ids.map(function(id){ return { id: id, rows: weeksOf(id) }; })) + "</section>";
-
-    // 회사 집계(주차 클릭 가능)
-    html += '<section><div class="sechead"><div><h2>회사 전체 · 주간 집계' + '<span class="whose">달력 주(월요일 시작) · 전원 합계</span></h2></div>' +
-      csvBtn("company") + "</div>" +
-      '<div class="tablewrap"><table><tr><th>주 시작</th><th>어르신</th><th>관계망 접촉 합</th>' +
-      "<th>사용시간 합</th><th>대화 세션 합</th><th>이동거리 합</th>" +
-      // ★★(S547) 추세 칸 — 대표 확인 "OBV 형태로 나타내라고 했던거 아니야?"★★
-      //   종전엔 이 표에 ★합계만★ 있어 "연결이 나아지고 있는가"가 한 칸도 없었다.
-      //   ★사람끼리 절대값을 평균내지 않는다★(sql 012·S525) → 수와 중앙값으로 말한다.
-      "<th>연결 추세<span class='muted'> 나아짐/나빠짐</span></th><th>주간이동 중앙값</th></tr>";
-    var comp = (DATA.company || []).slice().reverse();
-    if (!comp.length) html += '<tr><td colspan="8" class="muted">아직 데이터가 없습니다</td></tr>';
-    comp.forEach(function(r){
-      // ★잰 사람이 없으면 0 이 아니라 "견줄 것이 없다"★ — 첫 주는 지난 주가 없어 null 이다.
-      var up = num(r.obv_improved_count), dn = num(r.obv_declined_count);
-      var trend = (up === null && dn === null) ? '<span class="muted">견줄 주 없음</span>'
-                : (up || 0) + "명 / " + (dn || 0) + "명";
-      html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "week", weekStart: r.week_start })) + "'>" +
-        "<td><b>" + esc(r.week_start) + "</b></td><td>" + fmt(r.elderly_count, "명") + "</td><td>" +
-        fmt(r.total_relational_contact_min, "분") + "</td><td>" + fmt(r.total_usage_minutes, "분") + "</td><td>" +
-        fmt(r.total_conversation_sessions, "회") + "</td><td>" + fmt(r.total_travel_distance_m, "m") + "</td><td>" +
-        trend + "</td><td>" + fmt(r.obv_weekly_move_median, "") + "</td></tr>";
-    });
-    html += "</table></div></section>";
-
-    // ★★(S575) 특이사항 — 대표 지시 2026-08-26 "회사 콘솔에 보호자 특이사항 내용들이
-    //   수집되지는 않고 있지? 가능하게 수정해야 할것 같아"★★
-    //   [실측] 서버 report 에는 ★이미 쌓이고 있었다★. 콘솔이 그 테이블을 안 봤을 뿐이다.
-    //   ★근거 = 동의 문구 v1.12 "열. 서비스를 낫게 하는 데 쓰는 것"★(같은 날 함께 넣었다).
-    //
-    //   ★★제외 건수를 반드시 함께 적는다 — 0 이 "없다"인지 "걸렀다"인지 말해야 한다★★
-    //   2026-08-26 실측에서 이 목록이 ★0건★ 이었다. 결함이 아니라 사실이었고(49문장이
-    //   전부 시험·데모 기기), ★그때 "0건"만 뜨면 운영자는 고장으로 읽는다.★
-    //   이 저장소가 여러 번 밟은 자리다(S571 거짓 0 · S494 "로그 없음"을 "동작 안 함"으로).
-    var nx = DATA.console_notable_excluded || {};
-    var nrows = DATA.console_notable || [];
-    html += '<section><div class="sechead"><div><h2>특이사항' +
-      '<span class="whose">어르신 말씀에서 뽑은 짧은 기록 · 주간 리포트</span></h2></div>' +
-      '<div>' + csvBtn("notable") + '</div></div>';
-    if (!nrows.length) {
-      html += '<p class="muted" style="margin:6px 0 10px">보이는 특이사항이 없습니다.</p>';
-    } else {
-      html += '<div class="tablewrap"><table>' +
-        '<tr><th>가명</th><th>동네</th><th>주간</th><th>날짜</th><th>내용</th></tr>';
-      nrows.forEach(function(r){
-        html += "<tr><td>" + esc(r.alias || "") + "</td><td>" + esc(r.region || "") +
-          "</td><td>" + esc((r.period_start || "") + " ~ " + (r.period_end || "")) +
-          "</td><td>" + esc(r.event_date || "") + "</td><td>" + esc(r.event_text || "") + "</td></tr>";
-      });
-      html += "</table></div>";
-    }
-    // ★걸러진 것을 숨기지 않는다★ — 무엇을 왜 뺐는지 화면이 스스로 말한다.
-    html += '<div class="tablewrap" style="margin-top:8px"><table>' +
-      '<tr><td><b>보이는 것</b></td><td>' + fmt(nx.shown_sentences, "건") + '</td></tr>' +
-      '<tr><td>서버에 쌓인 전체</td><td>' + fmt(nx.total_sentences, "건") + '</td></tr>' +
-      '<tr><td>제외됨 <span class="muted">시험·통계제외 기기 · 미등록 기기 · 그만두신 어르신</span></td><td>' +
-      fmt(nx.excluded_sentences, "건") + ' <span class="muted">(기기 ' + fmt(nx.excluded_device_count, "대") + ')</span></td></tr>' +
-      '</table></div></section>';
-
     // ★★(S523) 데이터 내려받기 허브 — 대표 지시 "데이터 뽑아야해".
-    //   회사 자산으로 나가는 파일을 ★한 자리★ 에 모은다(종전엔 화면 곳곳에 흩어져
-    //   어떤 데이터가 뽑히는지 한눈에 알 수 없었다). 빈 칸 = 측정 못 함(0 아님).
+    //   회사 자산으로 나가는 파일을 ★한 자리★ 에 모은다. 빈 칸 = 측정 못 함(0 아님).
+    //   ★(S606) 걷기 셋 + 연구 셋만 남겼다★ — OBV·경보·특이사항·회사 집계는 걷어냈다.
     html += '<section><div class="sechead"><div><h2>데이터 내려받기' +
       '<span class="whose">빈 칸 = 측정 못 함(0 아님)</span></h2></div></div>' +
       '<div class="tablewrap"><table>' +
-      '<tr><td><b>전체 원지표</b> <span class="muted">어르신별 일별 전량 · ' + rangeLabel() + "</span></td><td>" + csvBtn("all") + "</td></tr>" +
-      '<tr><td><b>어르신 상태판</b> <span class="muted">어제·평소 대비 + OBV + 혼자 비율</span></td><td>' + csvBtn("elders") + "</td></tr>" +
-      '<tr><td><b>일간 OBV 전량</b> <span class="muted">개인별 추세선 원재료(표①②의 정본 척도)</span></td><td>' + csvBtn("obv") + "</td></tr>" +
-      '<tr><td><b>경보 이력</b> <span class="muted">발견 → 확인까지(표⑥ 재료)</span></td><td>' + csvBtn("alerts") + "</td></tr>" +
-      '<tr><td><b>특이사항</b> <span class="muted">어르신 말씀에서 뽑은 짧은 기록(걸러진 것은 빠짐)</span></td><td>' + csvBtn("notable") + "</td></tr>" +
-      '<tr><td><b>회사 주간 집계</b> <span class="muted">전원 합계</span></td><td>' + csvBtn("company") + "</td></tr>" +
+      '<tr><td><b>전체 걷기 원지표</b> <span class="muted">어르신별 일별 전량 · ' + rangeLabel() + "</span></td><td>" + csvBtn("all") + "</td></tr>" +
+      '<tr><td><b>어르신 상태판</b> <span class="muted">최근 7일 걷기 요약 · 화면과 같은 순서</span></td><td>' + csvBtn("elders") + "</td></tr>" +
       '<tr><td><b>연구 주차 자료</b> <span class="muted">가명·주차 지표(연구자 전달용)</span></td><td>' + csvBtn("study_weeks") + "</td></tr>" +
       '<tr><td><b>연구 설문 점수</b> <span class="muted">SGDS 등 대면 설문</span></td><td>' + csvBtn("study_survey") + "</td></tr>" +
       '<tr><td><b>연구 배정 명단</b> <span class="muted">가명·군·기저일·종이동의</span></td><td>' + csvBtn("study_roster") + "</td></tr>" +
@@ -2131,10 +1492,6 @@
     });
   }
 
-  function latestDataDate(){
-    var all = (DATA.daily || []).map(function(r){ return r.metric_date; }).sort();
-    return all.length ? all[all.length - 1] : null;
-  }
   /** 서버가 실제 적용한 기간 문구(요청값이 아니라 받은 값으로 쓴다). */
   function rangeLabel(){ return "최근 " + (DATA && DATA.range_days ? DATA.range_days : 14) + "일"; }
   function cardHtml(k, v, s){
@@ -2143,22 +1500,34 @@
   }
 
   // ── 화면 2: 어르신 상세 ──────────────────────────────────────────────
+  // ── 화면 2: 어르신 상세 ──────────────────────────────────────────────
+  //   ★★(S606) 걷기만 남겼다 — 대표 지시 2026-09-09★★
+  //     "기존 연결 관련 모든 기록 내용 다 삭제해. 오직 걷기 관련 기록들만 남기고,
+  //      앞으로도 걷기관련 기록만 해."
+  //   ★걷어낸 것★ = 사용 전후 비교(연결지수) · 경보 이력 · 주차 연결 추세(OBV) ·
+  //     주차별 상세(관계망·대화·이동 축) · 달력 주 요약(관계망·미디어·사용시간·
+  //     대화 세션·기분) · 일별 표의 소리 열 열하나(대면·통화·함께·못 가린 까닭·
+  //     기기 재생·주변 TV·어르신 발화·사용시간·이동거리·권유·기분).
+  //   ★남긴 것은 전부 걸음과 그 걸음이 만든 값이다.★
   function renderElder(id){
     var rs = roster(), me = rs[id];
     if (!me) { go({ view: "overview" }); return; }
-    var ws = weeksOf(id), ds = dailyOf(id), eff = effectOf(id);
-    var w = ws.length ? ws[ws.length - 1] : null;
+    var ds = dailyOf(id), ws = walkStats(id);
 
     var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: me.alias }]);
     html += "<h2 style='font-size:20px;margin-bottom:2px'>" + esc(me.alias) +
             (me.region ? ' <span class="muted" style="font-size:14px">· ' + esc(me.region) + "</span>" : "") + "</h2>";
-    html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">가명·동네만 표시합니다. 실명·전화번호·대화 원문·정확한 위치는 이 콘솔에 오지 않습니다.</div>';
+    html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">가명·동네만 표시합니다. 실명·전화번호·정확한 위치는 이 콘솔에 오지 않습니다.</div>';
 
+    // ★★카드 넷 — ★맨 앞이 "잰 날"이다★★
+    //   값보다 ★그 값이 몇 날로 만들어졌는지★ 를 먼저 보아야 한다. 잰 날 0 이면
+    //   아래 모든 숫자가 빈칸이고, 그것은 걷기가 준 것이 아니라 앱이 안 도는 것이다.
     html += '<div class="cards">' +
-      cardHtml("이번 주 추세", w && w.connection_obv !== null ? (Number(w.connection_obv) > 0 ? "+" : "") + Math.round(Number(w.connection_obv)) : "측정 중",
-               w ? w.week_index + "주차 · 비교된 축 " + (w.valid_axis_count || 0) + "/3" : "주차 미산출") +
-      cardHtml("그 주 기록", w ? w.observed_days + "일" : "—", "기록일이 적으면 얇은 근거") +
-      cardHtml("관계망 접촉", w ? (num(w.relational_min_avg) === null ? "측정 중" : Math.round(num(w.relational_min_avg) * 10) / 10 + "분/일") : "—", "대면·통화와 함께 계신 시간 중 큰 쪽 · 하루 평균") +
+      cardHtml("걸음 잰 날", ws ? ws.measuredDays + " / " + ws.days + "일" : "0일",
+               "최근 7일 중 걸음이 실제로 측정된 날") +
+      cardHtml("걸음", ws && ws.steps !== null ? ws.steps + "보" : "측정 중", "최근 7일 평균") +
+      cardHtml("마지막 걸음", ws && ws.lastWalked ? ws.lastWalked : "없음",
+               ws && ws.idleDays !== null ? ws.idleDays + "일 전" : "한 걸음도 기록되지 않았습니다") +
       cardHtml("최근 데이터", ds.length ? ds[ds.length - 1].metric_date : "없음", ds.length + "일치 유입") +
       "</div>";
 
@@ -2167,241 +1536,60 @@
         '<div class="desc">이 어르신은 등록돼 있으나 기기에서 지표가 한 건도 올라오지 않았습니다. 기기 전원·인터넷·앱 동의 상태를 확인해 보세요.</div></section>';
     }
 
-    // ★★(S525) 이 어르신의 전후 비교 — 표① 슬로프의 개인 칸.
-    var pp = prepostOf(id);
-    if (pp) {
-      html += "<section><h2>사용 전후 비교" + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-        '<div class="desc">기저 = <b>이 기기의 첫 신호가 온 날부터 14일</b>(등록일도, 연구 기저일도 아닙니다). ' +
-        '최근 2주와 겹치지 않게 잘라 견줍니다.</div>' +
-        '<div class="tablewrap"><table><tr><th>구간</th><th>기간</th><th>기록일</th><th>연결지수</th><th>혼자 비율</th></tr>' +
-        "<tr><td><b>기저</b></td><td>" +
-          (pp.baseline_start ? esc(pp.baseline_start) + " ~ " + esc(pp.baseline_end) : "—") + "</td><td>" +
-          (pp.baseline_days == null ? 0 : pp.baseline_days) + "/14일</td><td>" +
-          (pp.baseline_ready ? fmt(pp.baseline_index_avg) : '<span class="muted">' +
-            (pp.baseline_window_closed ? "기록이 7일에 못 미쳐 기저를 내지 않습니다" : "모으는 중") + "</span>") + "</td><td>" +
-          (pp.baseline_ready ? fmt(pp.baseline_alone_pct, "%") : '<span class="muted">—</span>') + "</td></tr>" +
-        "<tr><td><b>최근</b></td><td>" +
-          (pp.recent_start ? esc(pp.recent_start) + " ~ " + esc(pp.recent_end) : '<span class="muted">아직 기저 구간 안입니다</span>') +
-          "</td><td>" + (pp.recent_days == null ? 0 : pp.recent_days) + "/14일</td><td>" +
-          (pp.recent_ready ? fmt(pp.recent_index_avg) : '<span class="muted">모으는 중</span>') + "</td><td>" +
-          (pp.recent_ready ? fmt(pp.recent_alone_pct, "%") : '<span class="muted">—</span>') + "</td></tr>" +
-        "<tr><td><b>변화</b></td><td></td><td></td><td>" + deltaCell(pp.index_delta) + "</td><td>" +
-          deltaCell(pp.alone_pct_delta) + "</td></tr>" +
-        "</table></div></section>";
-    }
-
-    // ★★(S525) 경보 이력 — 표⑥ "며칠 만에 잡았다".
-    //   ★확인(ack)은 되돌리지 않는다★ — 최초 확인 시각이 곧 "발견에서 대응까지"의 오른쪽 끝이라
-    //   다시 누른다고 갱신되면 그 값이 매번 0 으로 리셋된다(서버가 막는다).
-    var als = alertLogOf(id);
-    if (als.length) {
-      html += '<section><div class="sechead"><div><h2>경보 이력' +
-        '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-        '<div class="desc">콘솔이 이 어르신에 대해 경보를 띄운 날들입니다. 확인하고 조치했으면 “확인”을 눌러 주세요 — ' +
-        '<b>발견에서 확인까지 걸린 시간</b>이 이 서비스의 안전망 가치를 증명하는 숫자가 됩니다.</div></div></div>' +
-        '<div class="tablewrap"><table><tr><th>날짜</th><th>등급</th><th>사유</th><th>내용</th><th>확인</th><th></th></tr>';
-      als.forEach(function(a){
-        html += "<tr><td><b>" + esc(a.alert_date) + "</b></td>" +
-          "<td>" + (a.level === "위험" ? '<span class="warn">위험</span>' : "주의") + "</td>" +
-          "<td>" + esc(a.reason) + "</td>" +
-          '<td style="text-align:left;white-space:normal;min-width:260px;max-width:340px" class="muted">' + esc(a.detail || "") + "</td>" +
-          "<td>" + (a.acknowledged_at
-            ? esc(String(a.acknowledged_at).slice(0, 16).replace("T", " ")) +
-              '<div class="muted" style="font-size:11.5px">' + esc(a.acknowledged_by || "") +
-              (a.ack_note ? " · " + esc(a.ack_note) : "") + "</div>"
-            : '<span class="muted">아직</span>') + "</td>" +
-          "<td>" + (a.acknowledged_at ? ""
-            : '<button class="ackBtn" data-alert="' + esc(String(a.id)) + '">확인</button>') + "</td></tr>";
-      });
-      html += "</table></div>" +
-        '<div id="ackMsg" style="font-size:13px;margin-top:8px"></div></section>';
-    }
-
-    // 이 사람만의 OBV
-    html += "<section><h2>주차 연결 추세" + '<span class="whose">' + esc(me.alias) + " 한 분</span></h2>" +
-      '<div class="desc">등록 1주차를 0으로 둔 누적선입니다. 축별로 나눠 그려서 <b>무엇이 오르고 내렸는지</b> 보이게 했습니다.</div>' +
-      elderAxisSvg(ws) + "</section>";
-
-    // 이 사람만의 주차 표
-    html += '<section><div class="sechead"><div><h2>주차별 상세' + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-      '<div class="desc">각 축의 하루 평균과, 직전 주 대비 변화율입니다. “—”는 비교할 지난주 값이 없었다는 뜻입니다.</div></div>' +
-      csvBtn("elderWeeks", id) + "</div>" +
-      '<div class="tablewrap"><table><tr><th>주차</th><th>기간</th><th>기록일</th>' +
-      "<th>관계망(분/일)</th><th>변화</th><th>대화<br><span class='muted' style='font-weight:400'>어르신 발화(초/일)</span></th><th>변화</th><th>이동(m/일)</th><th>변화</th><th>누적 추세</th></tr>";
-    if (!ws.length) html += '<tr><td colspan="10" class="muted">아직 주차 데이터가 없습니다</td></tr>';
-    ws.slice().reverse().forEach(function(r){
-      html += "<tr><td><b>" + r.week_index + "주차</b></td><td>" + esc(r.week_start) + "</td><td>" + r.observed_days + "일</td>" +
-        "<td>" + fmt(r.relational_min_avg) + "</td><td>" + pct(r.relational_delta_pct) + "</td>" +
-        "<td>" + fmt(r.conversation_min_avg) + "</td><td>" + pct(r.conversation_delta_pct) + "</td>" +
-        "<td>" + fmt(r.mobility_m_avg) + "</td><td>" + pct(r.mobility_delta_pct) + "</td>" +
-        "<td>" + fmtSigned(r.connection_obv) + "</td></tr>";
-    });
-    html += "</table></div></section>";
-
-    // 이 사람만의 일별
-    html += '<section><div class="sechead"><div><h2>' + rangeLabel() + ' · 일별 기록' + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-      // ★★(S542) "사용시간"이 무엇인지 화면에 적는다 — 대표 지시(S541 §1-C)★★
-      //   sql 067 이 대화 축을 ★어르신 발화★ 로 옮기면서 사용시간은 지표에서 빠졌는데,
-      //   화면에는 그 사실이 어디에도 없어 ★읽는 사람이 여전히 돌봄 지표로 읽는다★.
-      //   그 값은 "첫 발화와 마지막 발화 사이 간격"이라 08-13 에 ★424분★ 이었고
-      //   같은 날 어르신이 실제로 말씀하신 것은 ★19초★ 다. 둘을 같은 표에 나란히 두고
-      //   설명하지 않으면 ★앱을 오래 켜 두신 것이 잘 지내신 것으로 읽힌다.★
-      '<div class="desc">진한 색 = 관계망(대면·통화와 동석 중 큰 쪽), 연한 색 = 미디어(TV 등) 노출. 막대가 없는 날은 기록이 없는 날입니다(0이 아님). ' +
-      '<b>“어르신 발화”가 대화 축의 값</b>이고, <b>“사용시간”은 앱을 켜 두신 시간(운영 지표)</b>이라 연결지수에 들어가지 않습니다.</div></div>' +
+    // ── 일별 걷기 기록 ──
+    html += '<section><div class="sechead"><div><h2>' + rangeLabel() + ' · 일별 걷기' +
+      '<span class="whose">' + esc(me.alias) + "</span></h2>" +
+      '<div class="desc">막대가 없는 날은 <b>걸음을 못 잰 날</b>입니다(0보가 아닙니다). ' +
+      '표의 “측정 중”도 같은 뜻입니다 — <b>0(재었고 안 걸으셨다)과 다릅니다</b>.</div></div>' +
       csvBtn("elderDaily", id) + "</div>" +
-      dailySvg(ds) +
-      // ★★(S525) "어르신 발화"를 ★초★ 로 보여 준다 — 분은 이 축을 통째로 삼키고 있었다.
-      //   실측: 8/7 발화 46건인데 분 칸은 0(유성 합 52초 → 내림해서 0). 값은 정직했고
-      //   자(尺)가 틀렸다. 분 칸은 서버에 그대로 두되(연구 스냅샷이 읽는다) 화면은 초를 쓴다.
-      // ★(S525) "외출" 열 신설 — 집 반경 밖 구간의 수. ★좌표는 서버에 오지 않는다★
-      //   (단말이 안/밖 판정만으로 세고 그 수만 올린다 · docs/60 §8 삭제 확정은 그대로).
-      '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>대면</th><th>통화</th>' +
-      // ★(S541) "함께" = 동석 신호(성문 무의존). 대면·통화가 "측정 중"인 날에도 이 칸은 값이
-      //   나올 수 있다 — 그것이 이 칸을 만든 이유다(화자귀속 0.75% · sql 063).
-      "<th>함께</th>" +
-      // ★(S565 · T1-3(나)) "못 가린 까닭" 열 신설 — ★정직한 분모★.
-      //   S565 전수 실측: ★소리 있던 창의 79%(태블릿)·72%(폰)가 "TV 창이라 유보"★ 였고
-      //   나머지의 74%는 재료 부족 유보라 ★판정까지 간 창이 5.5%★ 였다.
-      //   ★그런데 종전 화면은 그 셋을 "유보" 한 덩어리로만 보였다.★
-      //   ★"TV 때문에 못 쟀다"는 기계의 한계이고, "조용해서 못 쟀다"는 어르신에 대한
-      //   신호일 수 있다★ — 뭉뚱그리면 "온종일 혼자 계셨다"로 오독할 여지가 남는다.
-      //   ★값을 고치는 것이 아니라 값을 정직하게 만드는 것이다★(판정 규칙 무접촉).
-      "<th>못 가린 까닭</th><th>기기 재생</th><th>주변 TV·스피커</th>" +
-      // ★(S545) "걷기" 열 신설 — 연결지수의 이동 축이 보는 값이 ★이것★ 이다(sql 069).
-      //   실측 p04 08-14 = 이동거리 243km(자동차)가 이동 축 100% 를 찍어 발화 0·관계망 0 인
-      //   날의 지수를 3배로 올렸다. ★이동거리 칸은 그대로 두고 옆에 걷기를 나란히 둔다★ —
-      //   둘이 크게 다른 날이 곧 "차로 다녀오신 날"이고, 그 사실 자체가 돌봄 정보다.
-      //   ★탈것은 CSV 에만 둔다★(화면이 좁다 · 내려받기에는 세 칸이 다 있다).
-      //   ★"측정 중" = 못 쟀다★(옛 앱은 이 칸을 안 보낸다) — 0(안 걸으셨다)과 다르다.
-      // ★(S564) "산책" 열 신설 — ★대표 지시로 이동 축이 산책이 됐다★(차량 제외 ·
-      //   걷는 속도 AND 그 구간 걸음 20보 이상 · S563). ★걷기 칸은 그대로 둔다★ —
-      //   걷기는 GPS 만 보고 산책은 걸음까지 함께 본다. 두 칸이 다른 날이 곧
-      //   "걸음 센서가 못 따라온 날"이고, 그 차이 자체가 재료다.
-      //   ★"측정 중" = 못 쟀다★(옛 앱·걸음 센서 없음) — 0(재었고 산책이 없었다)과 다르다.
-            // ★(S565) "걸음 고름" 열 신설 — 노쇠 축 T3-1(보행 규칙성 · GaitRegularity).
-      //   걸음 간격의 변동계수(%)다. ★"얼마나 빨리"(최고 걸음 빠르기)와 다른 것을 말한다★ —
-      //   빠르기는 힘이고 고름은 균형이다. ★괄호 안은 표본 수★ 이고 ★반드시 함께 적는다★ —
-      //   간격 60개로 낸 값과 500개로 낸 값을 같은 굵기로 보이면 화면이 거짓말을 한다.
-      //   ★"측정 중" = 5분 이상 이어진 보행 구간이 없던 날★ — ★0 을 쓰지 않는다★.
-      //   ★0 은 "완벽하게 고르다"라는 정반대의 뜻★ 이라 못 잼을 0 으로 접으면
-      //   ★안 걸으신 날이 가장 건강한 날로 뒤집힌다.★
-      //   ★학술 기준(건강 성인 2~3%)을 여기 대지 말 것★ — 스마트폰 걸음 감지기의 자라
-      //   눈금이 다르다(대표 폰 실측 28.0%가 정상 범위다). 판단은 개인 baseline 이 한다.
-            // ★(S565) "밤 움직임" 열 신설 — 노쇠 축 T3-2.
-      //   ★★"수면"이 아니다★★ — 폰이 밤(어제 22시~오늘 6시)에 얼마나 움직였나일 뿐이다.
-      //   ★밤 걸음 0 은 "잘 주무셨다"가 아니다★ — 폰을 거실에 두고 주무셨을 수도 있다.
-      //   ★그래서 이 열에 "수면"이라 적지 않고 경보도 걸지 않는다★(개인 baseline 만이
-      //   읽을 수 있다 — 늘 책상 위인 폰은 늘 0 이라 평소와 같고 거짓 경보가 안 난다).
-      //   ★괄호 안은 조용했던 가장 긴 시간대★ — ★걸음 수만 보면 "새벽에 한 번"과
-      //   "밤새 뒤척임"이 같아 보인다★. 그래서 두 값을 한 칸에 함께 둔다.
-            // ★(S565) "활동 시간대" 열 신설 — 노쇠 축 T3-5.
-      //   ★하루가 언제 열리고 언제 닫히나★ = 활동 창. ★창이 좁아지는 것은 노쇠·우울에서
-      //   먼저 나타나는 변화다★. ★그러나 창만 보면 속는다★ — 아침 7시에 한 번, 밤 21시에
-      //   한 번 움직이신 날도 "7~21시"라 넓어 보인다 → ★괄호 안의 시간대 수가 그것을
-      //   바로잡는다★(2개와 15개는 같은 창이어도 전혀 다른 하루다).
-      //   ★분포 원본 24칸은 CSV 에만 둔다★(표에 넣기엔 넓다 · 요약은 되돌릴 수 없으므로
-      //   원본을 내려받을 길은 반드시 남긴다).
-      //   ★"측정 중" = 그 날 24칸을 못 쟀다★ · ★0개 = 쟀고 안 걸으셨다(사실)★.
-      "<th>어르신 발화</th><th>사용시간</th><th>이동거리</th><th>걷기</th><th>산책</th><th>걸음</th><th>걸음 고름</th><th>밤 움직임</th><th>활동 시간대</th><th>집밖 체류</th><th>외출</th><th>권유</th><th>기분평균</th></tr>";
-    if (!ds.length) html += '<tr><td colspan="19" class="muted">기록 없음</td></tr>';
+      dailyStepSvg(ds) +
+      '<div class="tablewrap" style="margin-top:14px"><table><tr><th>날짜</th><th>걸음</th>' +
+      "<th>걷기</th><th>산책</th><th>걸음 고름</th><th>밤 움직임</th><th>활동 시간대</th>" +
+      // ★(S605) 걸어서 닿은 범위 — ★차로 다녀오신 곳은 안 센다★(집과 걸어서 이어진 점만).
+      //   ★0 과 빈칸이 다르다★: 0 = 집 반경 안에만 계셨다 / 빈칸 = 그 날 집을 지난 점이
+      //   하나도 없어 ★어떻게 그곳에 가셨는지 모른다★(밖에서 앱이 깨어난 날).
+      "<th>걸어서 닿은 범위</th>" +
+      // ★(S604) 새벽 화면 — ★0 과 빈칸이 다르다★: 0 = 깨어 있는 앱이 지켜본 조용한 밤 /
+      //   빈칸 = 그 밤을 못 쟀다(폰이 꺼져 있었거나 앱이 죽어 있었다).
+      "<th>새벽 화면</th><th>집밖 체류</th><th>외출</th></tr>";
+    if (!ds.length) html += '<tr><td colspan="11" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
-      // ★초가 있으면 초를, 없으면(구 APK 가 올린 옛 행) 분을 그대로 — 그리고 그 사실이
-      //   보이게 단위를 함께 적는다. 둘을 같은 칸에 섞어 놓고 단위를 숨기면 52초와 52분이
-      //   화면에서 같아 보인다.
-      var utter = num(r.elder_utterance_seconds) !== null
-        ? fmt(r.elder_utterance_seconds, "초")
-        : fmt(r.elder_utterance_minutes, "분");
-      var together = companionMin(r);   // ★(S541) null = 그날 볼 창이 없었다(미측정)
-      // ★(S541) 통화는 ★사실★(real_call_minutes)을 먼저 쓴다. 옛 phone_call_minutes 는
-      //   소리로 맞힌 추론값이라 반증됐다 — 구 APK 가 올린 행에만 남아 있으므로 그때만 쓴다
-      //   (S525 발화 초/분 과 같은 관례: 새 값이 있으면 새 값, 없으면 옛 값).
-      var callMin = num(r.real_call_minutes) !== null ? r.real_call_minutes : r.phone_call_minutes;
-      html += "<tr><td>" + esc(r.metric_date) + "</td><td>" + fmt(r.face_to_face_minutes, "분") + "</td><td>" +
-        fmt(callMin, "분") + "</td><td>" +
-        (together === null ? '<span class="muted">측정 중</span>' : Math.round(together) + "분") + "</td><td>" +
-        // ★(S565) 못 가린 까닭 — TV 때문 / 재료 부족을 갈라 적는다.
-        //   ★둘 다 0 이면 "다 가림"★(그 날은 유보가 없었다) · ★옛 앱 행은 "-"★.
-        undeterminedWhy(r) + "</td><td>" +
-        // ★(S567) 자기 기기 재생 = ★사실★(AudioManager · 권한 0 · 우리 앱 TTS 제외).
-        //   ★옆 칸(주변 소리)은 추론이고 그 규칙은 반증됐다★ — "어르신 목소리를 확인
-        //   못 한 창"을 TV 로 찍던 소거법이 ★TV 없는 식당의 가족 저녁 2시간 반★ 을
-        //   "TV 시청"으로 기록했다(S565 진단 §9). ★둘을 더하지 말 것.★
-        fmt(r.own_device_media_minutes, "분") + "</td><td>" +
-        fmt(r.media_minutes, "분") + "</td><td>" +
-        utter + "</td><td>" + fmt(r.active_span_minutes, "분") + "</td><td>" +
-        fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.walk_distance_m, "m") + "</td><td>" +
-        // ★(S564) 산책 — 걷기 중에서 ★그 구간에 실제 걸음이 있던★ 홉만 더한 값(S563).
-        fmt(r.stroll_distance_m, "m") + "</td><td>" +
-        // ★(S562) 걸음 — 서버에 S556 부터 쌓이는데 콘솔이 안 읽던 칸(요양사 앱과 쌍 규율).
-        //   ★"측정 중" = 못 쟀다★(옛 앱·센서 없음) — 0(재었고 안 걸으셨다)과 다르다.
+      html += "<tr><td>" + esc(r.metric_date) + "</td><td>" +
         fmt(r.step_count, "보") + "</td><td>" +
-        // ★(S565) 걸음 고름 — CV(%)와 표본 수를 ★한 칸에 함께★ 둔다(따로 두면 한쪽만 읽힌다).
+        fmt(r.walk_distance_m, "m") + "</td><td>" +
+        fmt(r.stroll_distance_m, "m") + "</td><td>" +
+        // 걸음 고름 — CV(%)와 표본 수를 ★한 칸에 함께★ 둔다(따로 두면 한쪽만 읽힌다).
+        //   ★"측정 중" = 이어진 보행 구간이 없던 날★ — ★0 을 쓰지 않는다★.
+        //   0 은 "완벽하게 고르다"라는 정반대의 뜻이라, 못 잼을 0 으로 접으면
+        //   ★안 걸으신 날이 가장 건강한 날로 뒤집힌다.★
         (num(r.gait_cv_percent) === null
           ? '<span class="muted">측정 중</span>'
           : (Math.round(r.gait_cv_percent * 10) / 10) + "% <span class=\"muted\">(" +
             (num(r.gait_interval_samples) === null ? "?" : r.gait_interval_samples) + ")</span>") + "</td><td>" +
-        // ★(S565) 밤 움직임 — 걸음 수 + 조용했던 가장 긴 시간대. ★"측정 중" = 두 날 중
-        //   하나를 못 쟀다★(밤은 자정을 넘어 두 날이 있어야 완성된다).
+        // 밤 움직임 — ★"수면"이 아니다★. 폰이 밤에 얼마나 움직였나일 뿐이다.
         (num(r.night_steps) === null
           ? '<span class="muted">측정 중</span>'
           : r.night_steps + "보 <span class=\"muted\">(조용 " +
             (num(r.night_longest_quiet_hours) === null ? "?" : r.night_longest_quiet_hours) +
             "시간)</span>") + "</td><td>" +
-        // ★(S565) 활동 시간대 — 창 + ★그 창이 실제로 차 있었나(칸 수)★.
-        //   ★칸 수 0 은 사실이다★(쟀고 안 걸으셨다) — 그때는 창이 없으므로 칸 수만 적는다.
+        // 활동 시간대 — 창 + ★그 창이 실제로 차 있었나(칸 수)★.
         (num(r.active_hour_count) === null
           ? '<span class="muted">측정 중</span>'
           : (num(r.first_active_hour) === null
               ? '0개 <span class="muted">(안 걸으심)</span>'
               : r.first_active_hour + "~" + r.last_active_hour + "시 " +
                 '<span class="muted">(' + r.active_hour_count + "개)</span>")) + "</td><td>" +
+        (num(r.life_space_km2) === null ? '<span class="muted">측정 중</span>'
+          : (Math.round(num(r.life_space_km2) * 1000) / 1000) + " km²") + "</td><td>" +
+        (num(r.night_screen_on_count) === null ? '<span class="muted">측정 중</span>'
+          : r.night_screen_on_count + "회") + "</td><td>" +
         fmt(r.away_from_home_minutes, "분") + "</td><td>" +
-        fmt(r.outing_count, "회") + "</td><td>" +
-        // ★(S527) 권유 = 그날 넛지 재료를 실제로 실은 횟수(표⑧ 퍼널의 분모 · sql 037).
-        //   ★0 과 "측정 중"이 화면에서 갈린다★ — 0(쟀고 한 번도 안 권했다)과
-        //   null(단말이 그날을 기억 못 한다)은 다른 사실이고, fmt 가 null 을 측정 중으로
-        //   적는다. ★어제 행이 대개 측정 중인 것은 정상이다★(단말이 하루치만 들고 있다).
-        fmt(r.nudge_served_count, "회") + "</td><td>" +
-        fmt(r.mood_score_avg) + "</td></tr>";
+        fmt(r.outing_count, "회") + "</td></tr>";
     });
-    // ★(S523) "측정 중 = 0이 아니라 못 쟀다" 설명 문구는 걷어냈다(대표 지시 · 규약은 RS-4).
     html += "</table></div></section>";
 
-    // 달력 주 기준 요약(effect_weekly) — 축이 다르므로 분리해 표시
-    if (eff.length) {
-      html += "<section><h2>달력 주 기준 요약" + '<span class="whose">' + esc(me.alias) + "</span></h2>" +
-        '<div class="desc">위의 “주차”는 등록일 기준이고, 이 표는 <b>달력 주(월요일 시작)</b> 기준입니다. 회사 집계와 맞춰 볼 때 쓰세요.</div>' +
-        '<div class="tablewrap"><table><tr><th>주 시작</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
-        "<th>사용시간</th><th>대화 세션</th><th>이동거리</th><th>기분평균</th></tr>";
-      eff.slice().reverse().forEach(function(r){
-        html += "<tr><td>" + esc(r.week_start) + "</td><td>" + fmt(r.days_reported, "일") + "</td><td>" +
-          fmt(r.relational_contact_min, "분") + "</td><td>" + fmt(r.media_min, "분") + "</td><td>" +
-          fmt(r.usage_minutes, "분") + "</td><td>" + fmt(r.conversation_sessions, "회") + "</td><td>" +
-          fmt(r.travel_distance_m, "m") + "</td><td>" + fmt(r.mood_avg) + "</td></tr>";
-      });
-      html += "</table></div></section>";
-    }
-
     el("view").innerHTML = html;
-    bindGo(); bindCsv(); bindAck();
-  }
-
-  /** ★(S525) 경보 확인. 메모는 선택 — 없어도 "언제 확인했는지"는 남는다. */
-  function bindAck(){
-    Array.prototype.forEach.call(el("view").querySelectorAll(".ackBtn"), function(b){
-      b.addEventListener("click", function(){
-        var msg = el("ackMsg");
-        b.disabled = true;
-        rpc("console_ack_alert", { p_id: Number(b.getAttribute("data-alert")), p_note: "" }).then(function(r){
-          b.disabled = false;
-          if (!r.ok) {
-            if (msg) { msg.style.color = "#b91c1c"; msg.textContent = rpcReason(r); }
-            return;
-          }
-          load();
-        });
-      });
-    });
+    bindGo(); bindCsv();
   }
 
   // ── 화면 4: 연구 (S513) ──────────────────────────────────────────────
@@ -2627,10 +1815,6 @@
         html += '<div style="margin:18px 0 6px"><b style="font-size:16px">' + esc(a.pseudonym) + "</b>" +
           '<span class="muted" style="margin-left:8px">' + esc(a.cohort) +
           " · 기저일 " + esc(a.baseline_date) + " · " + mine.length + "주 도착</span>";
-        if (mine.length) {
-          var trend = mine.map(function(r){ return r.elder_utterance_count == null ? "?" : r.elder_utterance_count; }).join(" → ");
-          html += '<div class="muted" style="margin-top:2px">어르신 발화 추이 &nbsp;<b>' + esc(trend) + "</b></div>";
-        }
         html += "</div>";
         if (!mine.length) {
           // ★빈 곳은 물음을 만든다 — 없으면 없다고 그 자리에 적는다.
@@ -2641,33 +1825,20 @@
           return;
         }
         html += '<div class="tablewrap"><table><tr><th>주차</th><th>기간</th>' +
-          "<th>어르신 발화</th><th>사회적 체크인</th><th>선제 응답률</th><th>기분</th>" +
-          "<th>대화(분)</th><th>집 밖(분/일)</th><th>연결지수</th></tr>";
+          // ★★(S606) 연결·발화 열을 걷어냈다 — 대표 지시 2026-09-09★★
+          //   걷어낸 것 = 어르신 발화 · 사회적 체크인 · 선제 응답률 · 기분 · 대화(분) ·
+          //   연결지수. ★전부 마이크가 재료였고 2026-09-03 이후로는 오지 않는다★ —
+          //   ★오지 않을 값의 빈 칸을 화면에 남겨 두면 운영자는 기다린다.★
+          //   ★얼린 옛 주의 값은 서버에 그대로 있다★(지우지 않았다 · 소급 불가라서).
+          "<th>집 밖(분/일)</th></tr>";
         mine.forEach(function(r){
-          // ★null 은 "측정 중"이 아니라 "—" 다 — 이미 얼린 주는 소급해 안 채워진다.
-          function dash(v, suffix){
-            return num(v) === null ? '<span class="muted">—</span>' : (suffix || "");
-          }
           html += "<tr><td><b>" + esc(String(r.study_week)) + "주</b></td>" +
             "<td style=\"font-size:12px\">" + esc(r.week_start) + " ~ " + esc(r.week_end) + "</td>" +
-            "<td>" + esc(String(r.elder_utterance_count == null ? "" : r.elder_utterance_count)) + "</td>" +
-            "<td>" + esc(String(r.social_check_in_count == null ? "" : r.social_check_in_count)) + "</td>" +
-            "<td>" + (num(r.proactive_response_rate) === null ? '<span class="muted">—</span>'
-                      : Math.round(num(r.proactive_response_rate) * 100) + "%") + "</td>" +
-            "<td>" + (num(r.mood_avg) === null ? '<span class="muted">—</span>'
-                      : esc(Math.round(num(r.mood_avg) * 10) / 10)) + "</td>" +
-            "<td>" + (num(r.conversation_minutes) === null ? '<span class="muted">—</span>'
-                      : esc(Math.round(num(r.conversation_minutes) * 10) / 10)) + "</td>" +
+            // ★null 은 "측정 중"이 아니라 "—" 다 — 이미 얼린 주는 소급해 안 채워진다.
             "<td>" + (num(r.away_minutes_avg) === null ? '<span class="muted">—</span>'
                       : esc(String(Math.round(num(r.away_minutes_avg)))) +
                         '<span class="muted" style="font-size:11px"> (' +
-                        esc(String(r.away_measured_days == null ? "?" : r.away_measured_days)) + "일)</span>") + "</td>" +
-            "<td>" + (num(r.connection_index) === null ? '<span class="muted">—</span>'
-                      : esc(String(Math.round(num(r.connection_index)))) +
-                        '<span class="muted" style="font-size:11px"> ' +
-                        esc(r.connection_index_mode === "A_PERSONAL" ? "평소대비"
-                            : r.connection_index_mode === "B_COLDSTART" ? "목표대비"
-                            : (r.connection_index_mode || "척도불명")) + "</span>") + "</td></tr>";
+                        esc(String(r.away_measured_days == null ? "?" : r.away_measured_days)) + "일)</span>") + "</td></tr>";
         });
         html += "</table></div>";
       });
@@ -2816,224 +1987,36 @@
     });
   }
 
-  function pct(v){
-    var n = num(v);
-    if (n === null) return '<span class="muted">—</span>';
-    var r = Math.round(n);
-    return r > 0 ? '<span class="pos">+' + r + "%</span>"
-         : r < 0 ? '<span class="neg">' + r + "%</span>"
-                 : '<span class="muted">0%</span>';
-  }
 
-  // ── 화면 3: 주차 상세 ────────────────────────────────────────────────
-  function renderWeek(weekStart){
-    var rs = roster();
-    var rows = (DATA.elderly || []).filter(function(r){ return r.week_start === weekStart; });
-    var comp = (DATA.company || []).filter(function(r){ return r.week_start === weekStart; })[0];
-
-    var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: weekStart + " 주" }]);
-    html += "<h2 style='font-size:20px;margin-bottom:2px'>" + esc(weekStart) + " 주 상세</h2>" +
-      '<div class="muted" style="font-size:12.5px;margin-bottom:16px">달력 주(월요일 시작) 기준. 이 주에 지표가 올라온 어르신만 나옵니다.</div>';
-
-    if (comp) {
-      html += '<div class="cards">' +
-        cardHtml("어르신", fmtPlainNum(comp.elderly_count) + "명", "이 주에 기록이 있던 분") +
-        cardHtml("관계망 접촉 합", fmtPlainNum(comp.total_relational_contact_min) + "분", "대면+통화 전원 합계(동석 미포함)") +
-        cardHtml("사용시간 합", fmtPlainNum(comp.total_usage_minutes) + "분", "전원 합계") +
-        cardHtml("이동거리 합", fmtPlainNum(comp.total_travel_distance_m) + "m", "전원 합계") +
-        "</div>";
-    }
-
-    html += '<section><div class="sechead"><div><h2>어르신별 내역' + '<span class="whose">' + esc(weekStart) + " 주</span></h2>" +
-      '<div class="desc">한 줄을 누르면 그 어르신의 전체 상세로 들어갑니다.</div></div>' +
-      csvBtn("week", weekStart) + "</div>" +
-      '<div class="tablewrap"><table><tr><th>어르신</th><th>기록일</th><th>관계망 접촉</th><th>미디어</th>' +
-      "<th>사용시간</th><th>대화 세션</th><th>이동거리</th><th>기분평균</th></tr>";
-    if (!rows.length) html += '<tr><td colspan="8" class="muted">이 주에는 기록이 없습니다</td></tr>';
-    rows.forEach(function(r){
-      var m = rs[r.elderly_id];
-      html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.elderly_id })) + "'>" +
-        "<td><b>" + esc(m ? m.alias : String(r.elderly_id).slice(0,8)) + "</b>" +
-        (m && m.region ? ' <span class="muted">· ' + esc(m.region) + "</span>" : "") + "</td>" +
-        "<td>" + fmt(r.days_reported, "일") + "</td><td>" + fmt(r.relational_contact_min, "분") + "</td><td>" +
-        fmt(r.media_min, "분") + "</td><td>" + fmt(r.usage_minutes, "분") + "</td><td>" +
-        fmt(r.conversation_sessions, "회") + "</td><td>" + fmt(r.travel_distance_m, "m") + "</td><td>" +
-        fmt(r.mood_avg) + "</td></tr>";
-    });
-    html += "</table></div></section>";
-
-    el("view").innerHTML = html;
-    bindGo(); bindCsv();
-  }
-  function fmtPlainNum(v){ var n = num(v); return n === null ? "측정 중" : String(Math.round(n)); }
-
-  // ── 차트 ─────────────────────────────────────────────────────────────
-  // 전원 OBV — 선마다 색 + ★범례★(누구 선인지 반드시 보이게)
-  function obvSvg(series){
-    var drawn = series.filter(function(s){
-      return s.rows.some(function(w){ return w.connection_obv !== null && w.connection_obv !== undefined; });
-    });
-    // ★(S523) 기준 주만 있는 어르신도 ★이름은 보이게★ 한다 — 대표 지적("추세가 왜
-    //   1명만이지? 정보는 2명에게 받는다며?"). 첫 주는 비교 대상(지난주)이 없어 OBV 가
-    //   null 이라 선을 못 그리는데, 종전엔 그 사람이 그래프에서 통째로 사라져
-    //   "데이터가 안 온다"로 오독됐다. 선이 없어도 ★왜 없는지★ 는 화면이 말해야 한다.
-    var baseOnly = series.filter(function(s){
-      return s.rows.length > 0 && !s.rows.some(function(w){ return w.connection_obv !== null && w.connection_obv !== undefined; });
-    });
-    var baseNote = baseOnly.length
-      ? '<div class="muted" style="font-size:12.5px;margin-top:6px">' +
-        baseOnly.map(function(s){ return esc(label(s.id)); }).join(" · ") +
-        " — 첫 주(기준 주) 진행 중 · 다음 주부터 선이 생깁니다</div>"
-      : "";
-    if (!drawn.length) return '<div class="muted" style="font-size:13px">아직 그릴 추세가 없습니다 — 두 번째 주가 지나야 첫 비교가 생깁니다.</div>' + baseNote;
-    var maxWeek = 1, maxAbs = 10;
-    drawn.forEach(function(s){ s.rows.forEach(function(w){
-      if (w.week_index > maxWeek) maxWeek = w.week_index;
-      var v = num(w.connection_obv);
-      if (v !== null && Math.abs(v) > maxAbs) maxAbs = Math.abs(v);
-    }); });
-    var W = 1000, H = 250, L = 50, R = 20, T = 16, B = 34;
-    var x = function(wi){ return maxWeek === 1 ? (L + W - R) / 2 : L + (wi - 1) * (W - L - R) / (maxWeek - 1); };
-    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
-    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
-    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) + '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
-    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0 (기준)</text>';
-    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
-    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
-    drawn.forEach(function(s, i){
-      var pts = s.rows.filter(function(w){ return num(w.connection_obv) !== null; });
-      var c = COLORS[i % COLORS.length];
-      var dstr = pts.map(function(w, j){ return (j ? "L" : "M") + x(w.week_index) + " " + y(num(w.connection_obv)); }).join(" ");
-      if (pts.length > 1) out += '<path d="' + dstr + '" fill="none" stroke="' + c + '" stroke-width="2.5"/>';
-      pts.forEach(function(w){ out += '<circle cx="' + x(w.week_index) + '" cy="' + y(num(w.connection_obv)) + '" r="4" fill="' + c + '"/>'; });
-    });
-    for (var wi = 1; wi <= maxWeek; wi++) {
-      out += '<text x="' + x(wi) + '" y="' + (H - 10) + '" font-size="11.5" fill="#5b7078" text-anchor="middle">' + wi + "주차</text>";
-    }
-    out += "</svg>";
-    out += '<div class="legend">' + drawn.map(function(s, i){
-      return '<span><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(label(s.id)) + "</span>";
-    }).join("") + "</div>";
-    return out + baseNote;
-  }
-
-  // 한 사람의 축별 OBV(무엇이 오르고 내렸는지)
-  function elderAxisSvg(ws){
-    var axes = [
-      { key: "relational_obv", name: "관계망(대면·통화·동석)", c: COLORS[0] },
-      { key: "conversation_obv", name: "대화(어르신 발화)", c: COLORS[1] },
-      { key: "mobility_obv", name: "이동", c: COLORS[2] },
-      { key: "connection_obv", name: "종합", c: "#111827" },
-    ];
-    var any = ws.some(function(w){ return axes.some(function(a){ return num(w[a.key]) !== null; }); });
-    if (!any) return '<div class="muted" style="font-size:13px">아직 그릴 추세가 없습니다 — 두 번째 주가 지나야 첫 비교가 생깁니다.</div>';
-    var maxWeek = 1, maxAbs = 10;
-    ws.forEach(function(w){
-      if (w.week_index > maxWeek) maxWeek = w.week_index;
-      axes.forEach(function(a){ var v = num(w[a.key]); if (v !== null && Math.abs(v) > maxAbs) maxAbs = Math.abs(v); });
-    });
-    var W = 1000, H = 250, L = 50, R = 20, T = 16, B = 34;
-    var x = function(wi){ return maxWeek === 1 ? (L + W - R) / 2 : L + (wi - 1) * (W - L - R) / (maxWeek - 1); };
-    var y = function(v){ return T + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - T - B); };
-    var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
-    out += '<line x1="' + L + '" y1="' + y(0) + '" x2="' + (W - R) + '" y2="' + y(0) + '" stroke="#94a3a0" stroke-dasharray="4 4"/>';
-    out += '<text x="6" y="' + (y(0) + 4) + '" font-size="11" fill="#5b7078">0 (기준)</text>';
-    out += '<text x="6" y="' + (y(maxAbs) + 10) + '" font-size="11" fill="#5b7078">+' + Math.round(maxAbs) + "</text>";
-    out += '<text x="6" y="' + (y(-maxAbs) - 2) + '" font-size="11" fill="#5b7078">-' + Math.round(maxAbs) + "</text>";
-    axes.forEach(function(a){
-      var pts = ws.filter(function(w){ return num(w[a.key]) !== null; });
-      if (!pts.length) return;
-      var dstr = pts.map(function(w, j){ return (j ? "L" : "M") + x(w.week_index) + " " + y(num(w[a.key])); }).join(" ");
-      var wide = a.key === "connection_obv";
-      if (pts.length > 1) out += '<path d="' + dstr + '" fill="none" stroke="' + a.c + '" stroke-width="' + (wide ? 3 : 2) + '"' +
-        (wide ? "" : ' stroke-dasharray="5 3"') + "/>";
-      pts.forEach(function(w){ out += '<circle cx="' + x(w.week_index) + '" cy="' + y(num(w[a.key])) + '" r="' + (wide ? 4.5 : 3.5) + '" fill="' + a.c + '"/>'; });
-    });
-    for (var wi = 1; wi <= maxWeek; wi++) {
-      out += '<text x="' + x(wi) + '" y="' + (H - 10) + '" font-size="11.5" fill="#5b7078" text-anchor="middle">' + wi + "주차</text>";
-    }
-    out += "</svg>";
-    out += '<div class="legend">' + axes.map(function(a){
-      return '<span><i style="background:' + a.c + '"></i>' + esc(a.name) + "</span>";
-    }).join("") + '<span class="muted">점선 = 축별 · 굵은 선 = 종합</span></div>';
-    return out;
-  }
-
-  // 한 사람의 일별 막대
-  //
-  // ★(S541) 미측정(null)은 ★막대를 그리지 않는다★ — 0 분 막대로 그리지 않는다.
-  //   이 그림의 설명문은 진작부터 "막대가 없는 날은 기록이 없는 날입니다(0이 아님)"라고
-  //   약속하고 있었는데, 코드가 `|| 0` 으로 null 을 0 으로 접어 ★약속을 어기고 있었다★.
-  //   서버가 이제 미측정을 null 로 내려주므로(sql 062) 여기서 접으면 그 사실이 다시 지워진다.
-  // ★(S541) 동석(companion) 기반 "함께 있던 시간"(분). ★성문에 기대지 않는 신호★ —
-  //   피치 갈래 수로만 세므로 화자귀속이 0.75% 인 현 상태에서도 동작한다(sql 063 헤더).
-  //   ★네 칸의 합이 0 이면 미측정이다★(notObserved 가 넷을 전부 0 으로 만든다) — 그 날을
-  //   "혼자 계셨다"로 읽으면 안 된다.
-  // ★(S565 · T1-3(나)) 동석을 못 가린 까닭 — "소리 때문"과 "조용해서"를 갈라 적는다.
-  //   ★기계의 한계와 어르신에 대한 신호를 같은 말로 부르지 않는다.★
-  //   ★(S567) 앞 갈래를 "TV"라 부르지 않는다★ — 그 창이 정말 TV 였는지 우리는 모른다.
-  //   실제 뜻은 ★"소리는 있었는데 그것이 누구인지 못 가렸다"★ 이고, 그것을 TV 라 부른
-  //   소거법이 ★TV 없는 식당의 가족 저녁을 "TV 시청"으로★ 기록했다(S565 진단 §9).
-  //   ★옛 앱(S565 이전)이 올린 행은 두 칸이 null 이라 "-" 로 둔다★ — 0 으로 적으면
-  //   "그런 창이 없었다"가 되어 없는 사실을 만든다.
-  function undeterminedWhy(r){
-    var tv = num(r.companion_media_undetermined_windows),
-        low = num(r.companion_insufficient_undetermined_windows);
-    if (tv === null && low === null) return '<span class="muted">-</span>';
-    if (!(tv || 0) && !(low || 0)) return '<span class="muted">다 가림</span>';
-    var parts = [];
-    if (tv) parts.push("소리 " + tv);
-    if (low) parts.push("조용 " + low);
-    return parts.join(" · ") + '<span class="muted">창</span>';
-  }
-  function companionMin(r){
-    var a = num(r.companion_alone_windows), o = num(r.companion_one_windows),
-        m = num(r.companion_multiple_windows), u = num(r.companion_undetermined_windows);
-    var total = (a || 0) + (o || 0) + (m || 0) + (u || 0);
-    if (!total) return null;
-    return ((o || 0) + (m || 0)) * (num(r.window_seconds) || 600) / 60;
-  }
-  // 관계망 = 접촉(대면+통화)과 동석 중 ★큰 쪽★ — 더하면 같은 창을 두 번 센다(sql 063 과 동일 규칙).
-  function relOf(r){
-    // ★서버 뷰 connection_relational_daily 와 ★같은 식★ 이어야 한다 — 어긋나면 화면과
-    //   지수가 다른 말을 한다(S540 에서 대표가 잡아내신 결함이 정확히 그 부류였다).
-    var f = num(r.face_to_face_minutes), p = num(r.phone_call_minutes), rc = num(r.real_call_minutes);
-    var contact = (f === null && rc === null) ? null : (f || 0) + (p || 0) + (rc || 0);
-    var comp = companionMin(r);
-    if (contact === null) return comp;   // 그날 접촉 판정이 없었다 → 동석만으로 본다
-    if (comp === null) return contact;
-    return Math.max(contact, comp);
-  }
-  function dailySvg(ds){
+  // ★★(S606) 일별 걸음 막대 — 종전 dailySvg(관계망·미디어)를 대신한다★★
+  //   ★못 잰 날은 막대를 아예 안 그린다★ — 0 높이 막대와 "그림 없음"은 화면에서
+  //   같아 보이므로, 미측정인 날은 자리만 비우고 날짜 라벨은 남긴다(그 날이
+  //   존재하지 않은 것처럼 보이면 안 된다).
+  function dailyStepSvg(ds){
     if (!ds.length) return '<div class="muted" style="font-size:13px">이 기간에는 기록이 없습니다</div>';
-    var maxV = 10;
+    var maxV = 100;
     ds.forEach(function(r){
-      var rel = relOf(r), med = num(r.media_minutes);
-      if (rel !== null && rel > maxV) maxV = rel;
-      if (med !== null && med > maxV) maxV = med;
+      var v = num(r.step_count);
+      if (v !== null && v > maxV) maxV = v;
     });
     var W = 1000, H = 210, L = 46, R = 10, T = 12, B = 30;
     var bw = (W - L - R) / ds.length;
     var y = function(v){ return T + (1 - v / maxV) * (H - T - B); };
     var out = '<svg viewBox="0 0 ' + W + " " + H + '">';
-    out += '<text x="4" y="' + (T + 10) + '" font-size="11" fill="#5b7078">' + Math.round(maxV) + "분</text>";
+    out += '<text x="4" y="' + (T + 10) + '" font-size="11" fill="#5b7078">' + Math.round(maxV) + "보</text>";
     ds.forEach(function(r, i){
-      var rel = relOf(r), med = num(r.media_minutes);
-      var x0 = L + i * bw;
-      // ★null 이면 그 막대를 아예 그리지 않는다★ — 0 높이 막대와 "그림 없음"은 화면에서
-      //   같아 보이므로, 미측정인 날은 ★자리만 비워 두고★ 아래 날짜 라벨은 그대로 둔다
-      //   (라벨까지 지우면 그날이 존재하지 않은 것처럼 보인다).
-      if (med !== null) {
-        out += '<rect x="' + (x0 + bw * 0.12) + '" y="' + y(med) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(med)) + '" fill="#c9e2de"/>';
+      var v = num(r.step_count), x0 = L + i * bw;
+      if (v !== null) {
+        out += '<rect x="' + (x0 + bw * 0.2) + '" y="' + y(v) + '" width="' + bw * 0.6 +
+               '" height="' + (y(0) - y(v)) + '" fill="#17857A" rx="2"><title>' +
+               esc(r.metric_date + " · " + v + "보") + "</title></rect>";
       }
-      if (rel !== null) {
-        out += '<rect x="' + (x0 + bw * 0.52) + '" y="' + y(rel) + '" width="' + bw * 0.32 + '" height="' + (y(0) - y(rel)) + '" fill="#17857A"/>';
-      }
-      out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' + esc(String(r.metric_date).slice(5)) + "</text>";
+      out += '<text x="' + (x0 + bw / 2) + '" y="' + (H - 8) + '" font-size="10.5" fill="#5b7078" text-anchor="middle">' +
+             esc(String(r.metric_date).slice(5)) + "</text>";
     });
     out += "</svg>";
-    out += '<div class="legend"><span><i style="background:#17857A"></i>관계망(대면·통화·동석)</span>' +
-           '<span><i style="background:#c9e2de"></i>미디어(TV 등) 노출</span></div>';
+    out += '<div class="legend"><span><i style="background:#17857A"></i>하루 걸음</span>' +
+           '<span class="muted">막대 없는 날 = 못 잰 날(0보가 아닙니다)</span></div>';
     return out;
   }
 
