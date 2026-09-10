@@ -1304,6 +1304,146 @@
     });
   }
 
+  // ── 실증 지표판 (S609 · 대표 지시) ───────────────────────────────────
+  //  ★★왜 만들었나★★
+  //    대표 지시(2026-09-10) = "실증 지표판 … 해결해줘".
+  //    IR 07장이 ★여덟 개 목표 지표★ 를 걸어 두었는데 ★세는 화면이 없었다★ —
+  //    100명을 모아도 손으로 세면 ★4주가 끝난 뒤에야★ 답이 나온다.
+  //    ★원자료는 이미 다 여기 와 있다★(DATA.daily) — 그래서 서버를 안 고치고 센다.
+  //
+  //  ★★넷은 셀 수 있고 넷은 못 센다 — 감추지 않는다 (2026-09-10 서버 실측)★★
+  //    센다 = 4주 유지율 · 일 측정 성공률 · 주 3회 실천율 · 1인 평균 걸음
+  //    ★못 센다★ = ①AI 권유 응답률 — ★서버에 자료가 0건★ 이다(단말 Room 의
+  //      nudge_conversion 에만 있고 올라오는 길이 없다 · 서버에 표 자체가 없다)
+  //      ②만족도 ③유료 전환 의향 ④재도입 의향 — ★설문이라 자동으로 못 센다★.
+  //    ★못 세는 것을 빈칸으로 두지 않고 "왜 못 세는지"를 적는다★ — 빈칸은 고장으로
+  //    읽히고, 고장으로 읽히면 아무도 이 화면을 안 본다(이 콘솔의 관통 원칙).
+  //
+  //  ★분모를 반드시 함께 적는다★ — "85%"만 적으면 두 사람 중 한 명인지 백 명 중
+  //  여든다섯인지 알 수 없다. 이 콘솔은 ★평균 금지 · 대상 명시 · 근거 두께★ 다.
+  var KPI = {
+    /** 유지율의 기준 — IR 07장이 말하는 "4주". */
+    retentionDays: 28,
+    /** 최근 구간 — 주 단위 지표의 창. */
+    recentDays: 7,
+    /** "주 3회 이상 실천"의 기준 회수. */
+    practiceDaysPerWeek: 3,
+    /** IR 07장 목표치(표시용 · 판정에는 안 쓴다). */
+    target: {
+      retention: 80, measure: 85, practice: 55, steps: 1500,
+    },
+  };
+
+  /** 그 어르신의 첫 기록일로부터 며칠 지났나. 기록이 없으면 null. */
+  function firstSeenDaysAgo(id){
+    var ds = dailyOf(id);
+    if (!ds.length) return null;
+    return daysBetween(ds[0].metric_date);
+  }
+
+  /** 최근 [n]일 안의 행들. */
+  function recentRows(id, n){
+    return dailyOf(id).filter(function(r){ return daysBetween(r.metric_date) < n; });
+  }
+
+  /**
+   * 실증 지표 넷을 센다. ★못 세면 null★ — 0 이 아니다.
+   *
+   * ★"잰 날"의 정의는 상태판과 같다★ = step_count 칸이 있는 날(0 도 잰 날이다).
+   * ★"걸으신 날"은 실외 걷기가 난 날★(stroll_distance_m > 0) — 실내 제자리걸음을
+   * 실천으로 세면 IR 이 파는 그 숫자가 아니게 된다(대표 결정과 일관).
+   */
+  function studyKpi(){
+    var ids = Object.keys(roster());
+    var range = (DATA && DATA.range_days) ? DATA.range_days : 14;
+
+    // ① 4주 유지율 — 대상은 ★28일보다 앞서 시작한 분★ 뿐이다(어제 오신 분을 셀 수 없다).
+    var eligible = ids.filter(function(id){
+      var d = firstSeenDaysAgo(id);
+      return d !== null && d >= KPI.retentionDays;
+    });
+    var retained = eligible.filter(function(id){ return recentRows(id, KPI.recentDays).length > 0; });
+    // ★창이 짧으면 아예 못 센다★ — 28일 앞을 볼 수 없으면 "0명"이 아니라 "모른다".
+    var canRetention = range >= (KPI.retentionDays + KPI.recentDays);
+
+    // ② 일 측정 성공률 — 최근 7일, ★사람×날★ 이 분모다.
+    var slots = 0, measured = 0;
+    // ③ 주 3회 이상 실천율 · ④ 1인 평균 일 걸음
+    var practiced = 0, active = 0, stepSum = 0, stepDays = 0;
+    ids.forEach(function(id){
+      var rows = recentRows(id, KPI.recentDays);
+      if (!rows.length) return;
+      active++;
+      slots += KPI.recentDays;
+      var walkDays = 0;
+      rows.forEach(function(r){
+        if (r.step_count !== null && r.step_count !== undefined) {
+          measured++;
+          stepSum += num(r.step_count); stepDays++;
+        }
+        if (num(r.stroll_distance_m) > 0) walkDays++;
+      });
+      if (walkDays >= KPI.practiceDaysPerWeek) practiced++;
+    });
+
+    return {
+      rangeDays: range,
+      canRetention: canRetention,
+      retentionEligible: eligible.length,
+      retentionKept: retained.length,
+      measureSlots: slots,
+      measureDone: measured,
+      activeElders: active,
+      practiced: practiced,
+      stepAvg: stepDays > 0 ? Math.round(stepSum / stepDays) : null,
+      stepDays: stepDays,
+    };
+  }
+
+  /** 백분율 한 칸. ★분모가 0 이면 "—"★ (0% 라고 적으면 실패로 읽힌다). */
+  function pct(a, b){ return b > 0 ? Math.round(a / b * 100) + "%" : "—"; }
+
+  /** 실증 지표판 한 덩어리. */
+  function studyKpiHtml(){
+    var k = studyKpi();
+    var html = '<section><div class="sechead"><div><h2>실증 지표판' +
+      '<span class="whose">IR 07장 목표 지표 · 원자료로 매일 셉니다</span></h2></div></div>';
+
+    html += '<div class="cards">' +
+      cardHtml("4주 유지율",
+               k.canRetention ? pct(k.retentionKept, k.retentionEligible) : "—",
+               k.canRetention
+                 ? (k.retentionKept + " / " + k.retentionEligible + "명 · 28일 전부터 계신 분 중 최근 7일 기록 있음 · 목표 " + KPI.target.retention + "%")
+                 : ("기간을 " + (KPI.retentionDays + KPI.recentDays) + "일 이상으로 바꾸면 셉니다 (지금 " + k.rangeDays + "일)")) +
+      cardHtml("일 측정 성공률", pct(k.measureDone, k.measureSlots),
+               k.measureDone + " / " + k.measureSlots + "일 · 최근 7일 × 기록이 온 " + k.activeElders + "명 · 목표 " + KPI.target.measure + "%") +
+      cardHtml("주 3회 이상 실천율", pct(k.practiced, k.activeElders),
+               k.practiced + " / " + k.activeElders + "명 · 최근 7일에 실외 걷기가 3일 이상 · 목표 " + KPI.target.practice + "%") +
+      cardHtml("1인 평균 일 걸음",
+               k.stepAvg === null ? "—" : (k.stepAvg.toLocaleString() + "보"),
+               k.stepDays > 0
+                 ? ("잰 날 " + k.stepDays + "일의 평균 · 목표 증가 +" + KPI.target.steps.toLocaleString() + "보")
+                 : "최근 7일에 걸음을 잰 날이 없습니다") +
+      "</div>";
+
+    // ★못 세는 넷을 그 자리에 적는다★ — 빈칸으로 두면 고장으로 읽힌다.
+    html += '<div class="tablewrap"><table><tr><th>아직 못 세는 지표</th><th>왜 못 세나</th><th>세려면</th></tr>' +
+      '<tr><td>AI 권유 응답률</td><td>서버에 자료가 0건입니다 — 단말에만 남고 올라오는 길이 없습니다</td>' +
+      '<td>단말 nudge_conversion 을 일일 업로드에 싣고 서버 표와 화이트리스트를 함께 만듭니다</td></tr>' +
+      '<tr><td>보호자 만족도</td><td>설문입니다</td><td>종이 또는 링크로 받아 입력합니다</td></tr>' +
+      '<tr><td>보호자 유료 전환 의향</td><td>설문입니다</td><td>같음</td></tr>' +
+      '<tr><td>복지관 재도입 의향</td><td>설문입니다</td><td>같음</td></tr>' +
+      "</table></div>";
+
+    html += '<div class="note">셈의 규칙 · ' +
+      '“잰 날”은 걸음 칸이 있는 날입니다(0보도 잰 날입니다) · ' +
+      '“실천”은 실외 걷기가 난 날입니다(실내 제자리걸음은 세지 않습니다) · ' +
+      '유지율의 대상은 28일 전부터 계신 분뿐입니다(어제 오신 분은 셀 수 없습니다) · ' +
+      '분모가 0이면 0%가 아니라 —로 적습니다.</div>';
+
+    return html + "</section>";
+  }
+
   // ── 화면 1: 개요 ─────────────────────────────────────────────────────
   function renderOverview(){
     var rs = roster(), ids = Object.keys(rs);
@@ -1402,6 +1542,10 @@
     //   ★해석층 부재★ 였다. 종전 개요는 날것 나열부터 시작해서, 화면을 열어도 "지금
     //   좋아지는 중인가"에 아무도 답하지 않았다. 그 답을 ★맨 위★ 에 둔다.
     // ★(S606) 일간 연결 추세(OBV)와 사용 전후 비교를 걷어냈다 — 둘 다 연결지수가 재료다.
+    // ★(S609) 실증 지표판을 상태판보다 ★앞★ 에 둔다 — 개별 어르신을 읽기 전에
+    //   "실증 전체가 목표에 닿고 있는가"를 먼저 봐야 한다(대표 지시).
+    html += studyKpiHtml();
+
     html += statusTableHtml();
 
     // ★(S606) 여기 있던 "등록 대기 중인 기기" 섹션을 걷어냈다 — 위 주석 참조.
