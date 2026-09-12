@@ -1301,7 +1301,12 @@
   //  ★★예상 매출은 아직 못 셈한다★★
   //    좌석 단가가 ★대표 결정 사항이고 아직 안 정해졌다★.
   //    ★모르는 것을 0 으로 적지 않는다★ — 정해지면 SEAT_PRICE 한 줄만 바꾼다.
-  var SEAT_PRICE = null;   // 원/좌석·월 — ★정해지면 숫자를 넣는다★
+  //  ★★좌석 단가 = 2,900원 (대표 확인 2026-09-12)★★
+  //    ★좌석당 B2G 과금은 S595 에서 폐기됐다★("구독료 없고 … 좌석당 뭐 돈 없고").
+  //    지금 매출선은 ★자녀 앱 Pro 구독 하나★ 이고 그 값이 ★자동갱신 월 2,900원★ 이다
+  //    (연 30,000원 = 매달 2,500원꼴 · 2026-09-12 개정).
+  //    ★그래서 좌석 하나 = 어르신 한 분 = 자녀 한 분의 구독으로 본다.★
+  var SEAT_PRICE = 2900;   // 원/좌석·월 (자녀 Pro 자동갱신 월)
 
   function growthFetch(){
     el("liveText").textContent = "성장판 불러오는 중…";
@@ -1368,14 +1373,15 @@
               "자녀 앱이 안 깔리면 응원·용돈·걷기 보고가 전부 닿지 않습니다.</p>";
     }
 
-    // 예상 매출 — ★단가가 없으면 숫자를 지어내지 않는다★
-    html += "<p class='muted'>예상 매출 : " +
-      (SEAT_PRICE === null
-        ? "★좌석 단가가 아직 정해지지 않았습니다★ — 정해지면 여기에 " +
-          esc(String(n.seats_active)) + "좌석 × 단가로 나옵니다."
-        : "월 " + (Number(n.seats_active) * SEAT_PRICE).toLocaleString("ko-KR") + "원 (" +
-          esc(String(n.seats_active)) + "좌석 × " + SEAT_PRICE.toLocaleString("ko-KR") + "원)") +
-      "</p></section>";
+    // ★★매출은 두 줄로 적는다 — 섞으면 거짓말이 된다★★
+    //   ①지금 실제로 들어오는 돈 ②전부 내신다면 들어올 돈.
+    //   ★한 줄로 적으면 '지금 17,400원 번다'로 읽힌다 — 아무도 결제하지 않고 있다.★
+    html += "<p class='muted'>지금 들어오는 돈 : <b>0원</b>" +
+      " <span>— ★Play 에 구독 상품이 아직 없어 아무도 살 수 없습니다.★</span></p>";
+    html += "<p class='muted'>전부 구독하신다면 : 월 " +
+      (Number(n.seats_active) * SEAT_PRICE).toLocaleString("ko-KR") + "원 (" +
+      esc(String(n.seats_active)) + "좌석 × " + SEAT_PRICE.toLocaleString("ko-KR") + "원)" +
+      " <span>· 연 구독은 매달 2,500원꼴</span></p></section>";
 
     // ── 달마다 ────────────────────────────────────────────────────────
     html += '<section><div class="sechead"><div><h2>달마다</h2>' +
