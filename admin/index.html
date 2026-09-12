@@ -144,6 +144,7 @@
   </select>
   <span class="who" id="whoText"></span>
   <button id="seatBtn" title="지자체·보험사 계약과 좌석 현황">계약·좌석</button>
+  <button id="growthBtn" title="월별 설치·이탈·연동률·좌석">성장판</button>
   <button id="secBtn" title="2단계 인증 · 열람 기록">보안</button>
   <button id="refreshBtn">지금 새로고침</button>
   <button id="logoutBtn" title="로그인 상태는 이 브라우저에 유지됩니다. 공용 PC 에서는 반드시 로그아웃하세요.">로그아웃</button>
@@ -158,6 +159,9 @@
   // 공개(anon) 키 — 브라우저 노출 전제. 이것만으로는 아무 데이터도 못 읽는다.
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZXJxZHNlZG1hZmJxYmdxb29pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjYzMjksImV4cCI6MjA5MTkwMjMyOX0.Qg91BDcIkfmAt_5TGG5Cro401OXAyW1-Hu9BEObsZks";
   var DASH = SUPA + "/functions/v1/get-effect-dashboard";
+  // ★(S615) 회사 성장판 — 효과측정과 묻는 것이 달라 ★따로 선다★(그 함수의 배열 순서를 안 건드린다).
+  var GROWTH = SUPA + "/functions/v1/get-growth-board";
+  var GROWTH_DATA = null;   // ★열었을 때만 받아 온다★ — 60초 자동 갱신에 얹지 않는다.
   var POLL_MS = 60000;
   var timer = null;
   var DATA = null;                 // 마지막으로 받아온 전체 데이터
@@ -1281,9 +1285,125 @@
     });
   }
 
+  // ── 회사 성장판 (S615 · 대표 지시 "회사 성장판 콘솔 작업은 진행해") ────────
+  //  ★★무엇을 묻는 화면인가★★
+  //    실증 지표판이 "어르신이 나아지고 있는가"를 묻는다면, 이 화면은
+  //    ★"회사가 크고 있는가"★ 를 묻는다. 그래서 따로 선다.
+  //
+  //  ★★셈은 여기서 하지 않는다★★
+  //    숫자는 전부 서버(sql 130 growth_board)가 낸 것을 ★그대로★ 그린다.
+  //    화면이 다시 세면 ★두 곳이 다른 숫자를 말한다★.
+  //
+  //  ★★안 센 것을 함께 말한다★★
+  //    내부 시험 기기는 안 센다 — 그런데 그 사실을 안 적으면 대표가
+  //    "설치가 왜 이것뿐인가"를 결함으로 오해하신다. 그래서 제외 수를 같이 적는다.
+  //
+  //  ★★예상 매출은 아직 못 셈한다★★
+  //    좌석 단가가 ★대표 결정 사항이고 아직 안 정해졌다★.
+  //    ★모르는 것을 0 으로 적지 않는다★ — 정해지면 SEAT_PRICE 한 줄만 바꾼다.
+  var SEAT_PRICE = null;   // 원/좌석·월 — ★정해지면 숫자를 넣는다★
+
+  function growthFetch(){
+    el("liveText").textContent = "성장판 불러오는 중…";
+    apiFetch(GROWTH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ months: 12 }),
+    })
+      .then(function(r){ if (!r.ok) throw new Error("http " + r.status); return r.json(); })
+      .then(function(d){
+        GROWTH_DATA = d.board || null;
+        el("liveText").textContent = "실측 연결됨 · " + new Date().toLocaleTimeString("ko-KR");
+        renderGrowth();
+      })
+      .catch(function(){
+        GROWTH_DATA = "failed";
+        el("liveText").textContent = "성장판을 불러오지 못했습니다";
+        renderGrowth();
+      });
+  }
+
+  function pct(x){
+    // ★모르면 "—"★ — 0% 와 "잴 수 없었다"는 다른 사실이다.
+    if (x === null || x === undefined) return "—";
+    return (Number(x) * 100).toFixed(1) + "%";
+  }
+
+  function renderGrowth(){
+    var html = crumb([{ t: "홈", go: { view: "overview" } }, { t: "성장판" }]);
+
+    if (GROWTH_DATA === null) {
+      el("view").innerHTML = html + "<section><p class='muted'>불러오는 중입니다…</p></section>";
+      bindGo();
+      growthFetch();
+      return;
+    }
+    if (GROWTH_DATA === "failed") {
+      el("view").innerHTML = html +
+        "<section><h2 class='warn'>성장판을 불러오지 못했습니다</h2>" +
+        "<p class='muted'>잠시 후 다시 눌러 보세요. ★비어 있는 것과 못 불러온 것은 다릅니다.★</p></section>";
+      bindGo();
+      return;
+    }
+
+    var n = GROWTH_DATA.now || {};
+    var months = GROWTH_DATA.months || [];
+
+    // ── 지금 ──────────────────────────────────────────────────────────
+    html += '<section><div class="sechead"><div><h2>지금</h2>' +
+            '<p class="muted">내부 시험 기기 ' + esc(String(n.excluded_internal)) +
+            '명은 세지 않았습니다.</p></div></div>';
+    // ★기존 카드 관례를 그대로 쓴다★ — 화면마다 다른 모양을 만들지 않는다.
+    html += '<div class="cards">' +
+      cardHtml("어르신", String(n.elderly_total), "통계 대상") +
+      cardHtml("자녀 연동", String(n.linked_elderly), pct(n.link_rate) + " · 연동된 어르신 수") +
+      cardHtml("활성 좌석", String(n.seats_active), "통계 대상 기준") +
+      cardHtml("7일 안에 켠 기기", String(n.active_7d),
+               "30일 " + String(n.active_30d) + " · 조용 " + String(n.quiet_over_30d)) +
+      "</div>";
+
+    // ★★가장 중요한 숫자를 말로 한 번 더★★ — 표만 보면 지나친다.
+    if (n.elderly_total > 0 && n.linked_elderly === 0) {
+      html += "<p class='warn'>★자녀가 연동된 어르신이 한 분도 없습니다.★ " +
+              "자녀 앱이 안 깔리면 응원·용돈·걷기 보고가 전부 닿지 않습니다.</p>";
+    }
+
+    // 예상 매출 — ★단가가 없으면 숫자를 지어내지 않는다★
+    html += "<p class='muted'>예상 매출 : " +
+      (SEAT_PRICE === null
+        ? "★좌석 단가가 아직 정해지지 않았습니다★ — 정해지면 여기에 " +
+          esc(String(n.seats_active)) + "좌석 × 단가로 나옵니다."
+        : "월 " + (Number(n.seats_active) * SEAT_PRICE).toLocaleString("ko-KR") + "원 (" +
+          esc(String(n.seats_active)) + "좌석 × " + SEAT_PRICE.toLocaleString("ko-KR") + "원)") +
+      "</p></section>";
+
+    // ── 달마다 ────────────────────────────────────────────────────────
+    html += '<section><div class="sechead"><div><h2>달마다</h2>' +
+            '<p class="muted">이탈은 ★마지막 접속 뒤 30일이 지난 기기★ 만 셉니다 — ' +
+            '그래서 최근 달은 아직 굳지 않아 작게 나옵니다.</p></div></div>';
+    html += "<table><thead><tr><th>달</th><th>새 어르신</th><th>새 기기</th>" +
+            "<th>이탈</th></tr></thead><tbody>";
+    if (!months.length) {
+      html += "<tr><td colspan='4' class='muted'>아직 기록이 없습니다.</td></tr>";
+    }
+    months.forEach(function(m){
+      html += "<tr><td>" + esc(m.month) + "</td>" +
+              "<td>" + esc(String(m.new_elderly)) + "</td>" +
+              "<td>" + esc(String(m.new_devices)) + "</td>" +
+              "<td>" + esc(String(m.churned)) +
+              (m.churn_settled ? "" : " <span class='muted'>(아직 안 굳음)</span>") +
+              "</td></tr>";
+    });
+    html += "</tbody></table></section>";
+
+    el("view").innerHTML = html;
+    bindGo();
+  }
+
   function renderRoute(){
     if (!DATA) return;
-    if (route.view === "security") renderSecurity();
+    if (route.view === "growth") renderGrowth();
+    else if (route.view === "security") renderSecurity();
     else if (route.view === "seats") renderSeats();
     else if (route.view === "elder") renderElder(route.id);
     else if (route.view === "study") renderStudy();
@@ -2217,6 +2337,7 @@
   el("googleBtn").addEventListener("click", function(){ socialLogin("google"); });
   el("refreshBtn").addEventListener("click", load);
   el("homeBtn").addEventListener("click", function(){ go({ view: "overview" }); });
+  el("growthBtn").addEventListener("click", function(){ go({ view: "growth" }); });
   el("secBtn").addEventListener("click", function(){ go({ view: "security" }); });
   el("seatBtn").addEventListener("click", function(){ go({ view: "seats" }); });
   el("logoutBtn").addEventListener("click", function(){ setSess(null); showLogin(null); });
