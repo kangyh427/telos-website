@@ -311,14 +311,39 @@
    *
    * ★구글로 이어 두셨으면 그 주소★ · ★아니면 기기번호 앞자리★ · ★둘 다 없으면 안 붙인다★.
    */
+  /** 운영자가 콘솔에서 직접 적어 둔 이름표. ★없으면 null★. */
+  function labelOf(id){
+    var r = (DATA && DATA.roster ? DATA.roster : []).filter(function(x){ return x.id === id; })[0];
+    return (r && r.console_label) ? String(r.console_label) : null;
+  }
+
+  /**
+   * 가명 옆에 붙이는 한 조각.
+   *
+   * ★★(S622-c · 대표 지적) 순서가 뜻이다★★
+   *   대표 = "★기기 c8cd3b 이렇게 하면 이게 누구인지 알 수 있는거야?★
+   *   나중에 어떤 노인인지 알 수 있어야해."
+   *   ★맞는 지적이다★ — 기기번호는 ★구분★ 은 되지만 ★식별★ 은 안 된다.
+   *   "c8cd3b 가 누구였더라"는 아무도 답할 수 없다.
+   *
+   *   ★그래서 순서를 이렇게 둔다★:
+   *     ①★사람이 적은 이름표★(console_label) — ★이것만이 "누구인지" 를 답한다★
+   *     ②구글 계정 주소 — 본인이 이어 두신 것이라 믿을 만하다
+   *     ③기기번호 앞자리 — ★최후의 구분표★(식별이 아니라 구분)
+   *   ★①이 없으면 ②, ②도 없으면 ③★. 셋 다 없으면 아무것도 안 붙인다.
+   */
   function accountTag(id){
+    var lb = labelOf(id);
+    if (lb) {
+      return ' <span style="font-weight:600;color:#1a1a1a" title="운영자가 적어 둔 이름표입니다. 어르신 상세 화면에서 고칠 수 있습니다">· ' + esc(lb) + "</span>";
+    }
     var a = accountOf(id);
     if (a) {
       return ' <span class="muted" style="font-weight:400" title="구글로 이어 두신 계정입니다. 이 값은 화면에만 보이고 내려받는 파일에는 들어가지 않습니다">· ' + esc(a) + "</span>";
     }
     var d = deviceShortOf(id);
     if (d) {
-      return ' <span class="muted" style="font-weight:400" title="아직 구글로 이어 두지 않으신 분입니다. 기기번호 앞자리로 구분합니다(화면에만 보입니다)">· 기기 ' + esc(d) + "</span>";
+      return ' <span class="muted" style="font-weight:400" title="아직 이름표도 구글 연결도 없는 분입니다. 기기번호 앞자리로 구분만 합니다 — 누구인지는 알 수 없으니 상세 화면에서 이름표를 적어 주세요">· 기기 ' + esc(d) + "</span>";
     }
     return "";
   }
@@ -2014,11 +2039,26 @@
     // ★(S622) 문구를 사실에 맞춰 고쳤다★ — 구글로 이어 두신 분은 이제 계정 주소가 보인다.
     //   ★말과 사실이 어긋나는 것이 이 저장소가 가장 자주 반복한 실패다★ —
     //   "가명만 표시합니다"를 그대로 둔 채 주소를 띄우면 그 한 줄이 거짓이 된다.
-    html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">' +
+    html += '<div class="muted" style="font-size:12.5px;margin-bottom:10px">' +
             (accountOf(id)
               ? '구글로 이어 두신 계정 주소와 동네를 표시합니다. 이 주소는 화면에만 보이고 내려받는 파일에는 들어가지 않습니다. 실명·전화번호·정확한 위치는 이 콘솔에 오지 않습니다.'
               : '가명·동네만 표시합니다. 실명·전화번호·정확한 위치는 이 콘솔에 오지 않습니다.') +
             '</div>';
+
+    // ★★(S622-c · 대표 지적) 이름표를 ★사람이 적는다★★★
+    //   대표 = "기기 c8cd3b 이렇게 하면 이게 누구인지 알 수 있는거야? ★나중에 어떤
+    //   노인인지 알 수 있어야해.★"
+    //   ★가명도 기기번호도 "구분"만 한다 — "식별"은 사람이 적어야 한다.★
+    //   ★누가 언제 적었는지도 함께 남는다★(sql 136) — 적은 사람을 모르면 틀린
+    //   이름표를 아무도 못 고친다.
+    html += '<div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<span style="font-size:13px;color:#555">이름표</span>' +
+      '<input id="labelInput" type="text" maxlength="60" value="' + esc(labelOf(id) || "") + '"' +
+      ' placeholder="예: 김OO 어르신 · 고운동 경로당" ' +
+      'style="flex:1 1 260px;min-width:200px;padding:7px 10px;border:1px solid #d5d8dd;border-radius:8px;font-size:14px">' +
+      '<button class="btn" id="labelSave">저장</button>' +
+      '<span class="muted" id="labelMsg" style="font-size:12.5px"></span>' +
+      '</div>';
 
     // ★★카드 넷 — ★맨 앞이 "잰 날"이다★★
     //   값보다 ★그 값이 몇 날로 만들어졌는지★ 를 먼저 보아야 한다. 잰 날 0 이면
@@ -2092,6 +2132,30 @@
 
     el("view").innerHTML = html;
     bindGo(); bindCsv();
+
+    // ★(S622-c) 이름표 저장 — 관리자 확인은 ★서버 함수 안에서★ 한다(sql 136).
+    var saveBtn = el("labelSave");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function(){
+        var box = el("labelInput"), msg = el("labelMsg");
+        if (!box) return;
+        var v = String(box.value || "").trim();
+        saveBtn.disabled = true;
+        if (msg) { msg.textContent = "저장 중…"; msg.className = "muted"; }
+        rpc("console_set_elderly_label", { p_elderly_id: id, p_label: v }).then(function(r){
+          saveBtn.disabled = false;
+          if (r.ok) {
+            if (msg) { msg.textContent = "저장했습니다"; }
+            // ★화면의 값도 그 자리에서 맞춘다★ — 다음 새로고침까지 옛 이름표가
+            //   남아 있으면 "저장이 안 됐나" 싶어 또 누르시게 된다.
+            var row = (DATA.roster || []).filter(function(x){ return x.id === id; })[0];
+            if (row) row.console_label = v || null;
+          } else {
+            if (msg) { msg.textContent = "저장 실패 — " + rpcReason(r); msg.className = "warn"; }
+          }
+        });
+      });
+    }
   }
 
   // ── 화면 4: 연구 (S513) ──────────────────────────────────────────────
