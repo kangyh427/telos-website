@@ -224,21 +224,58 @@
     if (!since || !metricDate) return true;
     return String(metricDate) >= since;
   }
-  /** 빈칸 하나의 ★이름★. 화면용(HTML)과 CSV 가 ★같은 판정★ 을 쓴다. */
-  function blankKind(field, metricDate){
-    if (!fieldExisted(field, metricDate)) return "none";      // 해당 없음
-    if (String(metricDate) === today()) return "pending";     // 오늘 — 아직 안 끝났다
-    return "failed";                                          // 측정 실패
+  // ── ★★(S622-b · 대표 지적) 빈칸을 ★넷★ 으로 가른다 — 셋으로는 모자랐다★★ ──────
+  //   대표 = "★왜 이렇게 측정실패가 많지? 이유가 대체 뭐야?★" (2026-09-15)
+  //
+  //   [실측] 내려받으신 CSV 472행에서 「측정실패」가 ★5,900칸★ 이었는데,
+  //   ★그중 2,577칸(43%)은 고장이 아니었다★ —
+  //   ★그 기기가 그 칸을 180일 내내 한 번도 보낸 적이 없다★(앱이 옛 판이라 칸이 없다).
+  //
+  //   [★내가 반쪽만 만들었다★] 아침에 넣은 `field_since` 는 ★누구에게든 처음 온 날★ 이라,
+  //   ★한 기기가 08-27 에 보행리듬을 보내기 시작하면 그 뒤로는 옛 판을 쓰는 다른 모든
+  //   분의 모든 날이 「측정실패」로 찍혔다★. 논리는 맞지만 ★사람이 읽기엔 전부 고장★ 이고
+  //   ★정작 고칠 수 있는 것이 묻힌다★.
+  //
+  //   [고침] ★그 사람 기준으로 한 번 더 묻는다★(`field_since_by_elderly` · sql 135):
+  //       해당 없음   = 그 시기엔 이 기능이 세상에 없었다     → 아무도 못 고친다
+  //       ★앱 옛 판★  = 이 기기는 이 칸을 보낼 줄 모른다       → ★배포가 답이다★
+  //       측정 실패   = 보낸 적 있는데 그 날만 없다            → ★이것만 진짜 고칠 거리★
+  //       측정 중     = 오늘(하루가 안 끝났다)                → 고장이 아니다
+  //   ★넷을 하나로 뭉개지 말 것★ — 뭉개는 순간 다시 "전부 고장"으로 보인다.
+  function fieldSinceFor(elderlyId, field){
+    var m = (DATA && DATA.field_since_by_elderly) ? DATA.field_since_by_elderly : null;
+    var mine = (m && elderlyId) ? m[elderlyId] : null;
+    return (mine && mine[field]) ? String(mine[field]) : null;
   }
-  function blankCell(field, metricDate){
-    var k = blankKind(field, metricDate);
+
+  /**
+   * 빈칸 하나의 ★이름★. 화면(HTML)과 CSV 가 ★같은 판정★ 을 쓴다.
+   *
+   * @param elderlyId 그 어르신. ★안 주면 전역 기준으로만 가른다★(종전 거동).
+   */
+  function blankKind(field, metricDate, elderlyId){
+    if (!fieldExisted(field, metricDate)) return "none";       // 해당 없음
+    if (String(metricDate) === today()) return "pending";      // 오늘
+    if (elderlyId) {
+      var mineSince = fieldSinceFor(elderlyId, field);
+      // ★이 기기가 이 칸을 한 번도 안 보냈다★ → 배포 문제이지 측정 실패가 아니다.
+      if (!mineSince) return "oldapp";
+      // ★보내기 시작하기 전의 날★ 도 같은 뜻이다(그때 이 기기엔 그 칸이 없었다).
+      if (String(metricDate) < mineSince) return "oldapp";
+    }
+    return "failed";                                           // ★진짜 측정 실패★
+  }
+  function blankCell(field, metricDate, elderlyId){
+    var k = blankKind(field, metricDate, elderlyId);
     if (k === "none") return '<span class="muted" title="그 날에는 이 기능이 없었습니다 — 고장이 아닙니다">해당 없음</span>';
     if (k === "pending") return '<span class="muted">측정 중</span>';
-    return '<span class="muted" title="이 날은 잴 수 있었는데 못 쟀습니다">측정 실패</span>';
+    if (k === "oldapp") return '<span class="muted" title="이 기기의 앱이 이 항목을 보낼 줄 모릅니다 — 새 판이 깔리면 저절로 찹니다. 고장이 아닙니다">앱 옛 판</span>';
+    return '<span class="warn" title="이 기기는 이 항목을 보낸 적이 있는데 이 날은 못 쟀습니다 — 여기가 진짜 고칠 거리입니다">측정 실패</span>';
   }
   /** 값이 있으면 값, 없으면 갈라 적은 빈칸. ★일별 표 전용★(주간 요약은 fmt). */
-  function dayCell(v, unit, field, metricDate){
-    return num(v) === null ? blankCell(field, metricDate) : (esc(Math.round(num(v)*10)/10) + (unit || ""));
+  function dayCell(v, unit, field, metricDate, elderlyId){
+    return num(v) === null ? blankCell(field, metricDate, elderlyId)
+                           : (esc(Math.round(num(v)*10)/10) + (unit || ""));
   }
   // ── ★★(S622 · 대표 지시) 가명 대신 구글 ID★★ ───────────────────────────
   //   대표 = "그냥 노인 로그인 정보 있잖아. ★구글로 회원가입하고 로그인했으면
@@ -253,18 +290,46 @@
     var m = (DATA && DATA.elderly_account) ? DATA.elderly_account : null;
     return (m && m[id]) ? String(m[id]) : null;
   }
-  /** 가명 옆에 붙이는 한 조각. ★없으면 빈 문자열★ — 자리를 만들지 않는다. */
+  /**
+   * ★★(S622-b · 대표 지시) 로그인 안 하신 분께도 이름표★★
+   *
+   * 대표 = "나머지 노인들은 로그인을 안한건가? ★안하더라도, 뭔가 개별 식별 될 수
+   * 있는걸로 이름표라도 붙여.★" (2026-09-15)
+   *
+   * ★기기번호 앞 6자★ 를 쓴다(서버가 `device_short` 로 딱 그만큼만 내려보낸다).
+   * ★전체 36자를 뿌리지 않는 까닭★ = 그것은 되짚기 열쇠가 된다(S509 규율).
+   * ★6자면 운영자가 "아, 그 기기"라고 알아보시기에 충분하다.★
+   * ★화면 전용★ — 이메일과 같이 CSV 에는 안 들어간다.
+   */
+  function deviceShortOf(id){
+    var r = (DATA && DATA.roster ? DATA.roster : []).filter(function(x){ return x.id === id; })[0];
+    return (r && r.device_short) ? String(r.device_short) : null;
+  }
+
+  /**
+   * 가명 옆에 붙이는 한 조각. ★없으면 빈 문자열★ — 자리를 만들지 않는다.
+   *
+   * ★구글로 이어 두셨으면 그 주소★ · ★아니면 기기번호 앞자리★ · ★둘 다 없으면 안 붙인다★.
+   */
   function accountTag(id){
     var a = accountOf(id);
-    return a ? ' <span class="muted" style="font-weight:400" title="구글로 이어 두신 계정입니다. 이 값은 화면에만 보이고 내려받는 파일에는 들어가지 않습니다">· ' + esc(a) + "</span>" : "";
+    if (a) {
+      return ' <span class="muted" style="font-weight:400" title="구글로 이어 두신 계정입니다. 이 값은 화면에만 보이고 내려받는 파일에는 들어가지 않습니다">· ' + esc(a) + "</span>";
+    }
+    var d = deviceShortOf(id);
+    if (d) {
+      return ' <span class="muted" style="font-weight:400" title="아직 구글로 이어 두지 않으신 분입니다. 기기번호 앞자리로 구분합니다(화면에만 보입니다)">· 기기 ' + esc(d) + "</span>";
+    }
+    return "";
   }
 
   /** CSV 한 칸. ★엑셀에서 눈으로 갈리게 글자로 적는다★(대표 처방). */
-  function dayCsv(v, field, metricDate){
+  function dayCsv(v, field, metricDate, elderlyId){
     if (v !== null && v !== undefined && v !== "") return v;
-    var k = blankKind(field, metricDate);
+    var k = blankKind(field, metricDate, elderlyId);
     if (k === "none") return "\u2014";      // — (해당 없음)
     if (k === "pending") return "";          // 오늘은 비워 둔다(고장이 아니다)
+    if (k === "oldapp") return "앱옛판";
     return "측정실패";
   }
 
@@ -465,6 +530,15 @@
     });
     return m;
   }
+  /**
+   * ★감춰진 분까지 포함한 이름표 찾기★ — [roster] 는 조용한 곳을 빼지만 이쪽은 안 뺀다.
+   *
+   * ★파일에 UUID 를 찍지 않기 위한 자리다★(S622-b · 대표 지적).
+   */
+  function aliasOf(id){
+    var r = (DATA && DATA.roster ? DATA.roster : []).filter(function(x){ return x.id === id; })[0];
+    return r ? { id: r.id, alias: r.alias || "이름 없음", region: r.region || "" } : null;
+  }
   function dailyOf(id){
     return (DATA.daily || []).filter(function(r){ return r.elderly_id === id; })
       .sort(function(a,b){ return a.metric_date < b.metric_date ? -1 : 1; });
@@ -501,7 +575,29 @@
   //     매일 위험으로 뜬다★. 2026-09-09 실측: 위험 13건 중 9건이 "청취 꺼짐"이었다.
   //   ★남긴 둘★ = 동의 없음(동의를 안 하시면 ★걷기 측정 자체가 안 뜬다★) ·
   //     집 좌표 없음(걸음은 세어지지만 외출·걸어서 닿은 범위는 못 잰다).
-  function deviceProblems(h){
+  /**
+   * ★★(S622-b · 대표 지시 "생활반경") 걸음은 오는데 자취가 없는 기기를 짚는다★★
+   *
+   * [실측 2026-09-15] 최근 30일에 ★생활반경이 잡힌 분은 18명 중 2명뿐★ 이었다.
+   * ★그런데 원인이 "집 좌표 없음"이 아니었다★ — N0026(걸음 14일)·N0031(걸음 11일)은
+   * ★집 좌표가 있는데도 생활반경이 0일★ 이다.
+   *
+   * [까닭] ★생활반경은 자취 점(walk_point)에서 나온다★. 그 점은
+   * ★걸음이 올 때마다 그 자리를 물어서★ 남는데(WalkPathRecorder), 그 "물어보기"가
+   * ★위치 권한★ 을 쓴다. ★걸음 권한과 위치 권한은 다른 권한이다★ —
+   * ★걸음만 허용하고 위치를 막으면 정확히 이 모습이 된다★:
+   *   걸음 ○ · 걷기 거리 △(이동 레인이 따로 잰다) · ★생활반경 ✗★.
+   *
+   * [그래서 여기서 판정한다] ★서버에 새 칸을 더하지 않는다★ — 콘솔이 이미 가진
+   * 재료(걸음·생활반경·집 좌표)로 답이 나온다. ★판정 규칙은 콘솔이 갖는다★(S508 규율)
+   * — 임계를 바꿀 때 220만 대에 앱을 밀지 않아도 된다.
+   *
+   * ★집 좌표가 없으면 이 판정을 하지 않는다★ — 그때는 생활반경이 비는 것이 당연하고,
+   * ★한 원인이 나머지를 설명하면 나머지를 문제라 부르지 않는다★(이 파일의 규율).
+   *
+   * @param id 그 어르신(자취 판정에 쓴다). ★안 주면 종전 두 갈래만 본다.★
+   */
+  function deviceProblems(h, id){
     if (!h) return [];
     if (h.consent_granted === false) {
       return [{ sev: "hi", t: "동의 없음",
@@ -511,8 +607,27 @@
     if (h.home_location_known === false) {
       out.push({ sev: "low", t: "집 좌표 없음",
         d: "걸음은 그대로 세어집니다. 다만 외출과 걸어서 닿은 범위는 집 좌표가 있어야 잡힙니다(댁에서 저장해야 합니다)." });
+    } else if (id && looksLikeLocationBlocked(id)) {
+      out.push({ sev: "hi", t: "위치 권한 확인",
+        d: "걸음은 들어오는데 걸어오신 자취가 한 점도 안 남습니다. 집 좌표는 있으므로 위치 권한(‘앱 사용 중 허용’ 이상)이 막혀 있을 가능성이 큽니다. 걸어서 닿은 범위와 외출이 이것 때문에 비어 있습니다." });
     }
     return out;
+  }
+
+  /**
+   * ★걸음은 오는데 자취 기반 값이 한 날도 없는가★ — 위치 권한을 의심하는 자리.
+   *
+   * ★"한 날도"를 본다★ — 하루 이틀 비는 것은 실내에 계셨다는 뜻일 수 있다.
+   * ★걸음이 온 날이 셋 미만이면 판정하지 않는다★ — 표본이 모자라면 말하지 않는다.
+   */
+  function looksLikeLocationBlocked(id){
+    var ds = dailyOf(id);
+    var walked = 0, reached = 0;
+    ds.forEach(function(r){
+      if (num(r.step_count) !== null && num(r.step_count) > 0) walked += 1;
+      if (num(r.life_space_km2) !== null) reached += 1;
+    });
+    return walked >= 3 && reached === 0;
   }
 
   function daysBetween(dateStr){
@@ -919,7 +1034,13 @@
                       : ("텔로스_전체걷기원지표_최근" + (DATA.range_days || 14) + "일_" + today() + ".csv"),
         head,
         rowsSrc.map(function(r){
-          var mm = one ? m2 : rs[r.elderly_id];
+          // ★★(S622-b · 대표 지적) 파일에 36자 UUID 가 찍히던 자리★★
+          //   [무엇이 있었나] `rs` 는 [roster] 이고 ★보름 넘게 조용한 곳은 거기서 빠진다★.
+          //   그런데 일별 자료에는 그분들의 옛 행이 그대로 있어서 ★이름표를 못 찾고
+          //   UUID 가 그대로 파일에 찍혔다★(대표가 받으신 CSV 에 실제로 세 분이 그랬다).
+          //   ★그것은 가명보다 못한 이름표다★ — 누구인지도 모르면서 길기만 하다.
+          //   [고침] ★감춰지지 않은 전체 명부에서 한 번 더 찾는다.★
+          var mm = one ? m2 : (rs[r.elderly_id] || aliasOf(r.elderly_id));
           var head2 = one ? [mm ? mm.alias : arg]
                           : [mm ? mm.alias : r.elderly_id, mm ? mm.region : null];
           // ★★(S622) 빈칸을 갈라 적는다 — 「—」(해당 없음) / 「측정실패」★★
@@ -928,7 +1049,9 @@
           //   ★판정은 화면과 같은 함수를 쓴다★(dayCsv → blankKind) — 갈라 두면
           //   화면과 파일이 다른 말을 하게 된다.
           var d = r.metric_date;
-          var C = function(v, f){ return dayCsv(v, f, d); };
+          // ★(S622-b) 그 어르신을 함께 넘긴다★ — 「앱 옛 판」과 「측정실패」를 가르는 축이다.
+          var eid = one ? arg : r.elderly_id;
+          var C = function(v, f){ return dayCsv(v, f, d, eid); };
           return head2.concat(
             [d, C(r.step_count, "step_count"), C(r.walk_distance_m, "walk_distance_m"),
              C(r.vehicle_distance_m, "vehicle_distance_m"),
@@ -1700,7 +1823,9 @@
     var devStale = ids.filter(isStaleDevice).length;
     var devBad = ids.filter(function(id){
       if (isStaleDevice(id)) return false;
-      return deviceProblems(latestHealth(id)).length > 0;
+      // ★(S622-b) 개요 카드도 같은 자를 쓴다★ — 표에는 뜨는데 카드에는 안 세어지면
+      //   "몇 명이 문제인가"가 표와 어긋난다.
+      return deviceProblems(latestHealth(id), id).length > 0;
     }).length;
 
     // ★(S523 대표 지적 "체계적으로, 데이터를 쓰기 편하게") — 개요의 축을
@@ -1780,19 +1905,37 @@
       //   ★그 자리에 걷기를 놓는다★ — 이 앱이 도는지 보는 신호가 이제 그것이다.
       '<th>걸음 잰 날</th><th>마지막 걸음</th><th>집 좌표</th></tr>';
     ids.forEach(function(id){
-      var h = latestHealth(id), probs = deviceProblems(h);
-      var gap = h ? daysBetween(h.metric_date) : null;
-      var stale = h && gap !== null && gap > DEVICE.staleDays;
+      var h = latestHealth(id), probs = deviceProblems(h, id);
+      // ★★(S622-b · 대표 지적) 이 표가 거짓말을 하고 있었다★★
+      //   [무엇이 있었나] 이 줄은 ★기기 상태 보고(device_health)만★ 보고
+      //   "N일째 보고 없음"이라 적었다. 그런데 ★걸음은 오늘도 오는 기기★ 가 있다.
+      //   ★캡처 실측(2026-09-15)★ = N0031 이 "7일째 보고 없음"인데
+      //   ★마지막 걸음은 2026-09-15★ 였다(지표 22일치 중 기기보고는 3일뿐).
+      //   ★멀쩡히 걷고 계신 분을 죽은 기기로 적은 것이다.★
+      //
+      //   [고침] ★두 신호를 갈라서 말한다★ — 합치면 다시 한 낱말로 뭉개진다.
+      //     ㉠아무것도 안 온다        → "N일째 아무 자료 없음" (★진짜 끊김★)
+      //     ㉡걸음은 오는데 기기 상태만 안 온다 → "★기기 상태만 안 옴★"
+      //       (앱은 살아 있다 · 동의·집 좌표를 못 읽을 뿐이라 ★다른 종류의 문제★ 다)
+      //   ★"마지막 보고"도 lastSignalDay 로 바꾼다★ — 뭐라도 온 마지막 날이 사실이다.
+      var lastAny = lastSignalDay(id);
+      var anyGap = lastAny ? daysBetween(lastAny) : null;
+      var healthGap = h ? daysBetween(h.metric_date) : null;
+      var quietAll = anyGap !== null && anyGap > DEVICE.staleDays;
+      var healthOnlyStale = !quietAll && (h === null || (healthGap !== null && healthGap > DEVICE.staleDays));
+      var stale = quietAll;
       var state;
-      if (!h) state = '<span class="muted">보고 없음</span>';
-      else if (stale) state = '<span class="warn">' + gap + '일째 보고 없음</span>';
+      if (!lastAny) state = '<span class="muted">보고 없음</span>';
+      else if (quietAll) state = '<span class="warn">' + anyGap + '일째 아무 자료 없음</span>';
+      else if (healthOnlyStale) state = '<span class="warn" title="걸음 자료는 오고 있는데 기기 상태(동의·집 좌표)만 안 옵니다. 앱은 살아 있습니다 — 끊긴 것이 아닙니다">기기 상태만 안 옴</span>';
       else if (!probs.length) state = '<span class="muted">이상 없음</span>';
       else state = '<span class="warn">' + esc(probs.map(function(p){ return p.t; }).join(" · ")) + '</span>';
       var wsd = walkStats(id);
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: id })) + "'>" +
         "<td><b>" + esc(rs[id].alias) + "</b>" + accountTag(id) +
         (rs[id].region ? ' <span class="muted">· ' + esc(rs[id].region) + "</span>" : "") + "</td>" +
-        "<td>" + (h ? esc(h.metric_date) : '<span class="muted">—</span>') + "</td>" +
+        // ★(S622-b) 기기 상태 날짜가 아니라 ★뭐라도 온 마지막 날★ 을 적는다.
+        "<td>" + (lastAny ? esc(lastAny) : '<span class="muted">—</span>') + "</td>" +
         "<td style='text-align:left;white-space:normal;max-width:280px'>" + state + "</td>" +
         // ★잰 날 0 은 ★"안 걸으셨다"가 아니라 "못 쟀다"★ 다 — 둘을 섞지 않는다.
         "<td>" + (!wsd ? '<span class="warn">0/7</span>'
@@ -1914,36 +2057,36 @@
     ds.slice().reverse().forEach(function(r){
       html += "<tr><td>" + esc(r.metric_date) + "</td><td>" +
         // ★(S622) 빈칸을 셋으로 갈라 적는다★ — 해당 없음 / 측정 실패 / 측정 중.
-        dayCell(r.step_count, "보", "step_count", r.metric_date) + "</td><td>" +
-        dayCell(r.walk_distance_m, "m", "walk_distance_m", r.metric_date) + "</td><td>" +
-        dayCell(r.stroll_distance_m, "m", "stroll_distance_m", r.metric_date) + "</td><td>" +
+        dayCell(r.step_count, "보", "step_count", r.metric_date, id) + "</td><td>" +
+        dayCell(r.walk_distance_m, "m", "walk_distance_m", r.metric_date, id) + "</td><td>" +
+        dayCell(r.stroll_distance_m, "m", "stroll_distance_m", r.metric_date, id) + "</td><td>" +
         // 걸음 고름 — CV(%)와 표본 수를 ★한 칸에 함께★ 둔다(따로 두면 한쪽만 읽힌다).
         //   ★"측정 중" = 이어진 보행 구간이 없던 날★ — ★0 을 쓰지 않는다★.
         //   0 은 "완벽하게 고르다"라는 정반대의 뜻이라, 못 잼을 0 으로 접으면
         //   ★안 걸으신 날이 가장 건강한 날로 뒤집힌다.★
         (num(r.gait_cv_percent) === null
-          ? blankCell("gait_cv_percent", r.metric_date)
+          ? blankCell("gait_cv_percent", r.metric_date, id)
           : (Math.round(r.gait_cv_percent * 10) / 10) + "% <span class=\"muted\">(" +
             (num(r.gait_interval_samples) === null ? "?" : r.gait_interval_samples) + ")</span>") + "</td><td>" +
         // 밤 움직임 — ★"수면"이 아니다★. 폰이 밤에 얼마나 움직였나일 뿐이다.
         (num(r.night_steps) === null
-          ? blankCell("night_steps", r.metric_date)
+          ? blankCell("night_steps", r.metric_date, id)
           : r.night_steps + "보 <span class=\"muted\">(조용 " +
             (num(r.night_longest_quiet_hours) === null ? "?" : r.night_longest_quiet_hours) +
             "시간)</span>") + "</td><td>" +
         // 활동 시간대 — 창 + ★그 창이 실제로 차 있었나(칸 수)★.
         (num(r.active_hour_count) === null
-          ? blankCell("active_hour_count", r.metric_date)
+          ? blankCell("active_hour_count", r.metric_date, id)
           : (num(r.first_active_hour) === null
               ? '0개 <span class="muted">(안 걸으심)</span>'
               : r.first_active_hour + "~" + r.last_active_hour + "시 " +
                 '<span class="muted">(' + r.active_hour_count + "개)</span>")) + "</td><td>" +
-        (num(r.life_space_km2) === null ? blankCell("life_space_km2", r.metric_date)
+        (num(r.life_space_km2) === null ? blankCell("life_space_km2", r.metric_date, id)
           : (Math.round(num(r.life_space_km2) * 1000) / 1000) + " km²") + "</td><td>" +
-        (num(r.night_screen_on_count) === null ? blankCell("night_screen_on_count", r.metric_date)
+        (num(r.night_screen_on_count) === null ? blankCell("night_screen_on_count", r.metric_date, id)
           : r.night_screen_on_count + "회") + "</td><td>" +
-        dayCell(r.away_from_home_minutes, "분", "away_from_home_minutes", r.metric_date) + "</td><td>" +
-        dayCell(r.outing_count, "회", "outing_count", r.metric_date) + "</td></tr>";
+        dayCell(r.away_from_home_minutes, "분", "away_from_home_minutes", r.metric_date, id) + "</td><td>" +
+        dayCell(r.outing_count, "회", "outing_count", r.metric_date, id) + "</td></tr>";
     });
     html += "</table></div></section>";
 
