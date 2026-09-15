@@ -198,6 +198,76 @@
   function fmt(v, unit){ var n = num(v); return n === null ? '<span class="muted">측정 중</span>'
     : esc(Math.round(n*10)/10) + (unit || ""); }
 
+  // ── ★★(S622 · 대표 질문) 빈칸은 한 가지가 아니다 — 셋을 갈라 적는다★★ ─────
+  //   대표 = "★왜 이동거리 빼고 다 빈칸이지?★" (2026-09-15)
+  //   [실상] 대표가 보신 07-17~08-10 은 ★걷기 앱이 되기 전★ 이다. 그 칸들이 코드에
+  //   아예 없던 시기라 ★채울 자료가 세상에 없다★. 그런데 표는 그것을
+  //   ★"기능은 있는데 못 잰 날"과 똑같은 빈칸★ 으로 보여 줬다 —
+  //   그래서 표를 열면 ★전부 고장 난 것처럼 보였다★.
+  //
+  //   ★소급해 채울 수 없고 지우는 것도 거짓말이다★ → ★갈라 적는 것이 답이다.★
+  //     · 해당 없음  = 그 날에는 잴 길이 자체가 없었다(그 칸이 아직 없던 시절)
+  //     · 측정 실패  = 잴 수 있었는데 못 쟀다  ← ★고쳐야 할 것은 이것뿐이다★
+  //     · 측정 중    = 오늘 — 아직 하루가 안 끝났다(고장이 아니다)
+  //
+  //   ★날짜를 여기 박지 않는다★ — 서버가 `field_since` 로 알려 준다(sql 133).
+  //   박으면 칸이 늘 때마다 stale 이 되고, ★화면이 받은 기간 안에서 스스로 세면
+  //   진짜 측정 실패가 「해당 없음」으로 둔갑한다★(그 방향의 실수가 더 나쁘다).
+  //   ★서버가 모르면 종전대로 "측정 중"이다★ — 없는 이름표를 붙이지 않는다.
+  function fieldSince(field){
+    var m = (DATA && DATA.field_since) ? DATA.field_since : null;
+    return (m && m[field]) ? String(m[field]) : null;
+  }
+  /** 그 날 그 칸을 잴 수 있었나. ★모르면 "그렇다"로 접는다★(덜 말하는 쪽). */
+  function fieldExisted(field, metricDate){
+    var since = fieldSince(field);
+    if (!since || !metricDate) return true;
+    return String(metricDate) >= since;
+  }
+  /** 빈칸 하나의 ★이름★. 화면용(HTML)과 CSV 가 ★같은 판정★ 을 쓴다. */
+  function blankKind(field, metricDate){
+    if (!fieldExisted(field, metricDate)) return "none";      // 해당 없음
+    if (String(metricDate) === today()) return "pending";     // 오늘 — 아직 안 끝났다
+    return "failed";                                          // 측정 실패
+  }
+  function blankCell(field, metricDate){
+    var k = blankKind(field, metricDate);
+    if (k === "none") return '<span class="muted" title="그 날에는 이 기능이 없었습니다 — 고장이 아닙니다">해당 없음</span>';
+    if (k === "pending") return '<span class="muted">측정 중</span>';
+    return '<span class="muted" title="이 날은 잴 수 있었는데 못 쟀습니다">측정 실패</span>';
+  }
+  /** 값이 있으면 값, 없으면 갈라 적은 빈칸. ★일별 표 전용★(주간 요약은 fmt). */
+  function dayCell(v, unit, field, metricDate){
+    return num(v) === null ? blankCell(field, metricDate) : (esc(Math.round(num(v)*10)/10) + (unit || ""));
+  }
+  // ── ★★(S622 · 대표 지시) 가명 대신 구글 ID★★ ───────────────────────────
+  //   대표 = "그냥 노인 로그인 정보 있잖아. ★구글로 회원가입하고 로그인했으면
+  //   구글 id 같은걸로 수정 변경해도 될것 같아.★" (2026-09-15)
+  //   [왜] 가명(N0028·태블릿2)만 보고는 ★그게 누구인지 아무도 모른다★.
+  //
+  //   ★★대표 결정 = 「화면에만」★★ — ★CSV 에 넣지 말 것★.
+  //   파일은 메일·USB 로 밖으로 나가고, ★가명과 이메일이 한 파일에 담기면
+  //   그 파일 하나가 가명↔실명을 잇는 열쇠★ 가 된다(sql 134 머리말).
+  //   ★이어 두지 않으신 분은 빈 값이고, 그때는 가명만 쓴다★(지우지 않는다).
+  function accountOf(id){
+    var m = (DATA && DATA.elderly_account) ? DATA.elderly_account : null;
+    return (m && m[id]) ? String(m[id]) : null;
+  }
+  /** 가명 옆에 붙이는 한 조각. ★없으면 빈 문자열★ — 자리를 만들지 않는다. */
+  function accountTag(id){
+    var a = accountOf(id);
+    return a ? ' <span class="muted" style="font-weight:400" title="구글로 이어 두신 계정입니다. 이 값은 화면에만 보이고 내려받는 파일에는 들어가지 않습니다">· ' + esc(a) + "</span>" : "";
+  }
+
+  /** CSV 한 칸. ★엑셀에서 눈으로 갈리게 글자로 적는다★(대표 처방). */
+  function dayCsv(v, field, metricDate){
+    if (v !== null && v !== undefined && v !== "") return v;
+    var k = blankKind(field, metricDate);
+    if (k === "none") return "\u2014";      // — (해당 없음)
+    if (k === "pending") return "";          // 오늘은 비워 둔다(고장이 아니다)
+    return "측정실패";
+  }
+
   // ── 로그인 ───────────────────────────────────────────────────────────
   function showLogin(msg){
     el("login").style.display = "block"; el("app").style.display = "none";
@@ -267,9 +337,13 @@
   }
 
   // ★기간은 취향(비밀 아님)이라 localStorage 에 남긴다 — 탭을 닫아도 다음에 그대로 열린다.
+  // ★(S622 · 대표 처방) 기본을 30일로 올렸다★ — 14일은 "이번 주와 지난 주"뿐이라
+  //   한 달 흐름이 안 보였고, 그렇다고 180일을 기본으로 두면 ★걷기 앱이 되기 전★ 의
+  //   날들이 표의 절반을 차지한다(그것이 "왜 다 빈칸이지?"의 뿌리였다).
+  //   ★고르신 값은 그대로 지킨다★ — 기본값만 바뀐다.
   function rangeDays(){
     var v = Number(localStorage.getItem("telos_range_days"));
-    return [7, 14, 30, 60, 90, 180].indexOf(v) >= 0 ? v : 14;
+    return [7, 14, 30, 60, 90, 180].indexOf(v) >= 0 ? v : 30;
   }
   function setRangeDays(v){ localStorage.setItem("telos_range_days", String(v)); }
 
@@ -674,7 +748,8 @@
     if (!rows.length) html += '<tr><td colspan="' + STATUS_COLS.length + '" class="muted">등록된 어르신이 없습니다</td></tr>';
     rows.forEach(function(r){
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: r.id })) + "'>" +
-        "<td><b>" + esc(r.alias) + "</b>" + (r.region ? ' <span class="muted">· ' + esc(r.region) + "</span>" : "") + "</td>" +
+        "<td><b>" + esc(r.alias) + "</b>" + accountTag(r.id) +
+        (r.region ? ' <span class="muted">· ' + esc(r.region) + "</span>" : "") + "</td>" +
         // ★★(S606) 여기가 ★열 이름과 값이 어긋나 있던 자리★ 다 — S604 가 헤더만 걷기로
         //   바꾸고 값은 옛 연결 칸(혼자 비율·발화·세션·기분)을 그대로 두어, 화면의
         //   "걸음" 칸에 ★발화 수★ 가 들어가 있었다. 헤더 14칸 대 값 11칸이라 뒤가 밀렸다.
@@ -847,16 +922,35 @@
           var mm = one ? m2 : rs[r.elderly_id];
           var head2 = one ? [mm ? mm.alias : arg]
                           : [mm ? mm.alias : r.elderly_id, mm ? mm.region : null];
+          // ★★(S622) 빈칸을 갈라 적는다 — 「—」(해당 없음) / 「측정실패」★★
+          //   대표 질문("왜 다 빈칸이지?")의 답이 이 한 줄에 있다:
+          //   앞쪽 절반은 ★고장이 아니라 그 기능이 없던 시절★ 이다.
+          //   ★판정은 화면과 같은 함수를 쓴다★(dayCsv → blankKind) — 갈라 두면
+          //   화면과 파일이 다른 말을 하게 된다.
+          var d = r.metric_date;
+          var C = function(v, f){ return dayCsv(v, f, d); };
           return head2.concat(
-            [r.metric_date, r.step_count, r.walk_distance_m, r.vehicle_distance_m,
-             r.stroll_distance_m, r.travel_distance_m,
-             r.walking_bout_count, r.walking_bout_minutes, r.peak_cadence_steps_per_min,
-             daySpeed(r),   // ★화면과 같은 자로 미리 계산해 넣는다
-             r.gait_step_interval_median_ms, r.gait_cv_percent, r.gait_interval_samples,
-             r.night_steps, r.night_active_hours, r.night_longest_quiet_hours,
-             r.active_hour_count, r.first_active_hour, r.last_active_hour, r.hourly_step_profile,
-             r.life_space_km2, r.night_screen_on_count,
-             r.away_from_home_minutes, r.outing_count]);
+            [d, C(r.step_count, "step_count"), C(r.walk_distance_m, "walk_distance_m"),
+             C(r.vehicle_distance_m, "vehicle_distance_m"),
+             C(r.stroll_distance_m, "stroll_distance_m"), C(r.travel_distance_m, "travel_distance_m"),
+             C(r.walking_bout_count, "walking_bout_count"),
+             C(r.walking_bout_minutes, "walking_bout_minutes"),
+             C(r.peak_cadence_steps_per_min, "peak_cadence_steps_per_min"),
+             // ★보행 속도는 우리가 계산한 값이다★ — 재료(walk_distance_m)가 있었는지로 가른다.
+             C(daySpeed(r), "walk_distance_m"),
+             C(r.gait_step_interval_median_ms, "gait_step_interval_median_ms"),
+             C(r.gait_cv_percent, "gait_cv_percent"),
+             C(r.gait_interval_samples, "gait_interval_samples"),
+             C(r.night_steps, "night_steps"), C(r.night_active_hours, "night_active_hours"),
+             C(r.night_longest_quiet_hours, "night_longest_quiet_hours"),
+             C(r.active_hour_count, "active_hour_count"),
+             C(r.first_active_hour, "first_active_hour"),
+             C(r.last_active_hour, "last_active_hour"),
+             C(r.hourly_step_profile, "hourly_step_profile"),
+             C(r.life_space_km2, "life_space_km2"),
+             C(r.night_screen_on_count, "night_screen_on_count"),
+             C(r.away_from_home_minutes, "away_from_home_minutes"),
+             C(r.outing_count, "outing_count")]);
         }));
     }
   }
@@ -1696,7 +1790,8 @@
       else state = '<span class="warn">' + esc(probs.map(function(p){ return p.t; }).join(" · ")) + '</span>';
       var wsd = walkStats(id);
       html += '<tr class="clickable" data-go=\'' + esc(JSON.stringify({ view: "elder", id: id })) + "'>" +
-        "<td><b>" + esc(rs[id].alias) + "</b>" + (rs[id].region ? ' <span class="muted">· ' + esc(rs[id].region) + "</span>" : "") + "</td>" +
+        "<td><b>" + esc(rs[id].alias) + "</b>" + accountTag(id) +
+        (rs[id].region ? ' <span class="muted">· ' + esc(rs[id].region) + "</span>" : "") + "</td>" +
         "<td>" + (h ? esc(h.metric_date) : '<span class="muted">—</span>') + "</td>" +
         "<td style='text-align:left;white-space:normal;max-width:280px'>" + state + "</td>" +
         // ★잰 날 0 은 ★"안 걸으셨다"가 아니라 "못 쟀다"★ 다 — 둘을 섞지 않는다.
@@ -1771,9 +1866,16 @@
     var ds = dailyOf(id), ws = walkStats(id);
 
     var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: me.alias }]);
-    html += "<h2 style='font-size:20px;margin-bottom:2px'>" + esc(me.alias) +
+    html += "<h2 style='font-size:20px;margin-bottom:2px'>" + esc(me.alias) + accountTag(id) +
             (me.region ? ' <span class="muted" style="font-size:14px">· ' + esc(me.region) + "</span>" : "") + "</h2>";
-    html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">가명·동네만 표시합니다. 실명·전화번호·정확한 위치는 이 콘솔에 오지 않습니다.</div>';
+    // ★(S622) 문구를 사실에 맞춰 고쳤다★ — 구글로 이어 두신 분은 이제 계정 주소가 보인다.
+    //   ★말과 사실이 어긋나는 것이 이 저장소가 가장 자주 반복한 실패다★ —
+    //   "가명만 표시합니다"를 그대로 둔 채 주소를 띄우면 그 한 줄이 거짓이 된다.
+    html += '<div class="muted" style="font-size:12.5px;margin-bottom:16px">' +
+            (accountOf(id)
+              ? '구글로 이어 두신 계정 주소와 동네를 표시합니다. 이 주소는 화면에만 보이고 내려받는 파일에는 들어가지 않습니다. 실명·전화번호·정확한 위치는 이 콘솔에 오지 않습니다.'
+              : '가명·동네만 표시합니다. 실명·전화번호·정확한 위치는 이 콘솔에 오지 않습니다.') +
+            '</div>';
 
     // ★★카드 넷 — ★맨 앞이 "잰 날"이다★★
     //   값보다 ★그 값이 몇 날로 만들어졌는지★ 를 먼저 보아야 한다. 잰 날 0 이면
@@ -1811,36 +1913,37 @@
     if (!ds.length) html += '<tr><td colspan="11" class="muted">기록 없음</td></tr>';
     ds.slice().reverse().forEach(function(r){
       html += "<tr><td>" + esc(r.metric_date) + "</td><td>" +
-        fmt(r.step_count, "보") + "</td><td>" +
-        fmt(r.walk_distance_m, "m") + "</td><td>" +
-        fmt(r.stroll_distance_m, "m") + "</td><td>" +
+        // ★(S622) 빈칸을 셋으로 갈라 적는다★ — 해당 없음 / 측정 실패 / 측정 중.
+        dayCell(r.step_count, "보", "step_count", r.metric_date) + "</td><td>" +
+        dayCell(r.walk_distance_m, "m", "walk_distance_m", r.metric_date) + "</td><td>" +
+        dayCell(r.stroll_distance_m, "m", "stroll_distance_m", r.metric_date) + "</td><td>" +
         // 걸음 고름 — CV(%)와 표본 수를 ★한 칸에 함께★ 둔다(따로 두면 한쪽만 읽힌다).
         //   ★"측정 중" = 이어진 보행 구간이 없던 날★ — ★0 을 쓰지 않는다★.
         //   0 은 "완벽하게 고르다"라는 정반대의 뜻이라, 못 잼을 0 으로 접으면
         //   ★안 걸으신 날이 가장 건강한 날로 뒤집힌다.★
         (num(r.gait_cv_percent) === null
-          ? '<span class="muted">측정 중</span>'
+          ? blankCell("gait_cv_percent", r.metric_date)
           : (Math.round(r.gait_cv_percent * 10) / 10) + "% <span class=\"muted\">(" +
             (num(r.gait_interval_samples) === null ? "?" : r.gait_interval_samples) + ")</span>") + "</td><td>" +
         // 밤 움직임 — ★"수면"이 아니다★. 폰이 밤에 얼마나 움직였나일 뿐이다.
         (num(r.night_steps) === null
-          ? '<span class="muted">측정 중</span>'
+          ? blankCell("night_steps", r.metric_date)
           : r.night_steps + "보 <span class=\"muted\">(조용 " +
             (num(r.night_longest_quiet_hours) === null ? "?" : r.night_longest_quiet_hours) +
             "시간)</span>") + "</td><td>" +
         // 활동 시간대 — 창 + ★그 창이 실제로 차 있었나(칸 수)★.
         (num(r.active_hour_count) === null
-          ? '<span class="muted">측정 중</span>'
+          ? blankCell("active_hour_count", r.metric_date)
           : (num(r.first_active_hour) === null
               ? '0개 <span class="muted">(안 걸으심)</span>'
               : r.first_active_hour + "~" + r.last_active_hour + "시 " +
                 '<span class="muted">(' + r.active_hour_count + "개)</span>")) + "</td><td>" +
-        (num(r.life_space_km2) === null ? '<span class="muted">측정 중</span>'
+        (num(r.life_space_km2) === null ? blankCell("life_space_km2", r.metric_date)
           : (Math.round(num(r.life_space_km2) * 1000) / 1000) + " km²") + "</td><td>" +
-        (num(r.night_screen_on_count) === null ? '<span class="muted">측정 중</span>'
+        (num(r.night_screen_on_count) === null ? blankCell("night_screen_on_count", r.metric_date)
           : r.night_screen_on_count + "회") + "</td><td>" +
-        fmt(r.away_from_home_minutes, "분") + "</td><td>" +
-        fmt(r.outing_count, "회") + "</td></tr>";
+        dayCell(r.away_from_home_minutes, "분", "away_from_home_minutes", r.metric_date) + "</td><td>" +
+        dayCell(r.outing_count, "회", "outing_count", r.metric_date) + "</td></tr>";
     });
     html += "</table></div></section>";
 
