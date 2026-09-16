@@ -632,6 +632,9 @@
     if (h.home_location_known === false) {
       out.push({ sev: "low", t: "집 좌표 없음",
         d: "걸음은 그대로 세어집니다. 다만 외출과 걸어서 닿은 범위는 집 좌표가 있어야 잡힙니다(댁에서 저장해야 합니다)." });
+    } else if (id && looksNeverUsed(id)) {
+      out.push({ sev: "hi", t: "아직 안 쓰임",
+        d: NEVER_USED_DAYS + "일 내리 걸음도 이동도 화면 켜짐도 한 번 없습니다. 기기는 살아 있고 동의도 되어 있으니 고장이 아니라 ★기기를 안 들고 다니시는 것★ 일 가능성이 큽니다. 현장에서 한 번 확인해 주세요." });
     } else if (id && looksLikeLocationBlocked(id)) {
       out.push({ sev: "hi", t: "위치 권한 확인",
         d: "걸음은 들어오는데 걸어오신 자취가 한 점도 안 남습니다. 집 좌표는 있으므로 위치 권한(‘앱 사용 중 허용’ 이상)이 막혀 있을 가능성이 큽니다. 걸어서 닿은 범위와 외출이 이것 때문에 비어 있습니다." });
@@ -653,6 +656,36 @@
       if (num(r.life_space_km2) !== null) reached += 1;
     });
     return walked >= 3 && reached === 0;
+  }
+
+  /**
+   * ★★(S624 · 대표 지시) 기기는 살아 있는데 ★아무도 안 쓰는★ 기기를 짚는다★★
+   *
+   * [실측 2026-09-16] 한 기기가 ★16일 내리★ 걸음 0 · 이동 0 · 야간 화면 0 ·
+   * 활동시간 0 이었다. 동의도 됐고 권한도 있고 센서도 있고 보고도 매일 온다.
+   * ★그런데 콘솔은 그 기기를 "이상 없음"이라고 적고 있었다★ — 그것이 거짓이다.
+   *
+   * [무엇인가] 대개 ★기기를 안 들고 다니시는 것★ 이다(선반에 놓여 있다).
+   * ★고장이 아니라 배포의 문제다★ — 그리고 그것이야말로 현장이 알아야 할 사실이다
+   * (설치는 됐는데 쓰이지 않는 대수가 곧 이 사업의 실제 전환율이다).
+   *
+   * ★"안 걸으셨다"와 가르는 선★ = 하루 이틀 안 걸으실 수는 있다. 그러나
+   * ★[NEVER_USED_DAYS] 일 내리 한 걸음도 없고 화면도 한 번 안 켜졌다면★
+   * 그것은 그분의 하루가 아니라 ★놓여 있는 기기★ 다.
+   */
+  var NEVER_USED_DAYS = 7;
+  function looksNeverUsed(id){
+    var ds = dailyOf(id).filter(function(r){ return num(r.step_count) !== null; });
+    if (ds.length < NEVER_USED_DAYS) return false;
+    var recent = ds.slice(-NEVER_USED_DAYS);
+    for (var i = 0; i < recent.length; i++) {
+      if (num(recent[i].step_count) > 0) return false;
+      // ★화면을 한 번이라도 켜셨으면 "안 쓰는 기기"라고 하지 않는다★ —
+      //   앉아만 계셔도 쓰고 계신 것이다(그건 걸음의 문제이지 기기의 문제가 아니다).
+      if (num(recent[i].night_screen_on_count) > 0) return false;
+      if (num(recent[i].travel_distance_m) > 0) return false;
+    }
+    return true;
   }
 
   function daysBetween(dateStr){
@@ -1922,8 +1955,36 @@
 
     // ★(S508) 기기 상태 — 어르신 목록보다 ★앞★ 에 둔다.
     //   돌봄 숫자를 읽기 전에 "그 숫자가 나올 기기가 돌고는 있었는가"를 먼저 봐야 한다.
+    // ★★(S624 · 대표 지시) 한눈에 세어지는 줄 — 판올림마다 되풀이되는 일이다★★
+    //   [왜] 동의문을 올릴 때마다 ★어르신이 다시 누르시기 전까지 걷기가 멈춘다★.
+    //   그 대수를 ★표를 훑어서★ 세게 두면 아무도 안 센다. ★숫자로 먼저 보인다.★
+    //   ★여기서 새로 판정하지 않는다★ — [deviceProblems] 가 이미 낸 답을 셀 뿐이다
+    //   (규칙을 두 곳에 두면 표와 요약이 서로 다른 말을 한다).
+    var tally = { consent: 0, unused: 0, quiet: 0, total: ids.length };
+    ids.forEach(function(id){
+      var hh = latestHealth(id);
+      var la = lastSignalDay(id);
+      var gap = la ? daysBetween(la) : null;
+      if (!la || (gap !== null && gap > DEVICE.staleDays)) { tally.quiet += 1; return; }
+      var ps = deviceProblems(hh, id);
+      ps.forEach(function(x){
+        if (x.t === "동의 없음") tally.consent += 1;
+        if (x.t === "아직 안 쓰임") tally.unused += 1;
+      });
+    });
+    function tallyChip(label, n, hint){
+      var cls = n > 0 ? "warn" : "muted";
+      return '<span class="' + cls + '" title="' + esc(hint) + '" style="margin-right:14px">' +
+        esc(label) + ' <b>' + n + '</b>명</span>';
+    }
     html += '<section><div class="sechead"><div><h2>기기 상태' +
       '<span class="whose">어르신이 아니라 기기를 봅니다</span></h2></div></div>' +
+      '<div style="margin:0 0 10px 2px;font-size:14px">' +
+        tallyChip("동의 대기", tally.consent, "동의 화면에서 멈춰 있어 걷기 측정이 시작되지 않습니다. 판올림 뒤에는 기기마다 한 번씩 눌러 드려야 합니다.") +
+        tallyChip("아직 안 쓰임", tally.unused, NEVER_USED_DAYS + "일 내리 걸음·이동·화면 켜짐이 한 번도 없습니다. 기기를 안 들고 다니실 가능성이 큽니다.") +
+        tallyChip("자료 끊김", tally.quiet, "아무 자료도 안 들어옵니다(앱이 안 돌거나 기기가 꺼져 있습니다).") +
+        '<span class="muted">전체 ' + tally.total + '명</span>' +
+      '</div>' +
       '<div class="tablewrap"><table><tr><th>어르신</th><th>마지막 보고</th><th>상태</th>' +
       // ★★(S606) 소리 열 셋(마지막으로 들은 때 · 마이크 죽음 · 목소리)을 걷어냈다★★
       //   대표 지시 2026-09-09 "소리 듣기 관련 경고, 데이터 등 모두 아예 완전히 삭제".
