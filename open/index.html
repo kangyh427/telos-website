@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+ 파일명: open/index.html
+ 저장소 경로: kangyh427/telos-website/open/index.html  (웹 주소 = /open/)
+ 설명: ★자녀가 부모님께 보낸 "앱 열어 주세요" 링크가 닿는 자리★
+ 작성일: 2026-09-17 (S631 · 대표 지시 "정말 간단하게 연동하는 모든 방법")
+
+ ─────────────────────────────────────────────────────────────────────────────
+ 이 페이지가 하는 일은 ★둘뿐★
+ ─────────────────────────────────────────────────────────────────────────────
+   ① 어르신 앱이 깔려 있으면 → ★앱을 열고 연동 화면을 띄운다★
+   ② 없으면                → ★스토어로 보낸다★
+
+ ─────────────────────────────────────────────────────────────────────────────
+ ★★여기에는 연동 번호가 없다 — 일부러 그렇다★★
+ ─────────────────────────────────────────────────────────────────────────────
+   반대 방향(`/pair/`)은 번호를 싣는다(10분 만료·1회용).
+   ★그러나 이 방향은 아니다★ — 이 링크의 뜻은 ★"앱을 열어 달라"★ 하나뿐이고,
+   실제로 이어지는 것은 ★어르신이 앱 안에서 "확인"을 누르실 때★ 다.
+   ★전화번호는 해지 뒤 재배정되므로 그 확인이 유일한 방어선이다.★
+   ★링크가 그 방어선을 대신하게 두지 않는다.★
+
+ ★그 밖★: 저장하는 것 0(쿠키·분석·서버 호출 없음) · 외부 자원 0 · 큰 글씨(어르신이 보신다).
+================================================================================
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>텔로스 케어 열기</title>
+<style>
+  :root{
+    --ink:#121A26; --muted:#4C5765; --bg:#F2F5F9; --card:#FFFFFF;
+    --accent:#00799C; --accent-ink:#FFFFFF; --line:#E3E9F0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px 16px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;
+    line-height:1.6; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:420px; margin:0 auto;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px 18px;}
+  /* ★어르신이 보시는 화면이라 글씨를 크게 둔다.★ */
+  h1{font-size:26px; margin:0 0 10px;}
+  p{margin:10px 0; color:var(--muted); font-size:18px;}
+  a.btn{
+    display:block; text-align:center; text-decoration:none; font-size:20px; font-weight:700;
+    padding:18px 12px; border-radius:10px; margin-top:14px;
+  }
+  a.primary{background:var(--accent); color:var(--accent-ink);}
+  a.secondary{background:#FFFFFF; color:var(--accent); border:1px solid var(--accent);}
+  .foot{margin-top:18px; font-size:14px; color:var(--muted); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>텔로스 케어 열기</h1>
+    <p>가족이 연동을 청했어요. 아래를 누르시면 앱이 열립니다.</p>
+
+    <a class="btn primary" id="openApp" href="#">앱 열기</a>
+    <a class="btn secondary"
+       href="https://play.google.com/store/apps/details?id=com.naoncare">앱 설치하기</a>
+
+    <p class="foot">텔로스 케어 · 주식회사 텔로스</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE = "https://play.google.com/store/apps/details?id=com.naoncare";
+
+  // ★앱을 여는 주소★ — 안드로이드 크롬이 이해하는 intent 꼴이다.
+  //   ★앱이 없으면 브라우저가 스스로 스토어로 보낸다★(browser_fallback_url).
+  //   ★아무것도 싣지 않는다★ — 뜻은 "열어 달라" 하나뿐이다.
+  var INTENT = "intent://pair#Intent;scheme=naoncare;package=com.naoncare" +
+    ";S.browser_fallback_url=" + encodeURIComponent(STORE) + ";end";
+
+  document.getElementById("openApp").setAttribute("href", INTENT);
+
+  // ★한 번만 저절로 열어 본다★ — 단추는 그대로 남는다(저절로 안 열리는 자리가 있다).
+  if (/android/i.test(navigator.userAgent || "")) {
+    window.setTimeout(function () { window.location.href = INTENT; }, 400);
+  }
+})();
+</script>
+</body>
+</html>

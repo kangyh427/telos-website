@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+ 파일명: pair/index.html
+ 저장소 경로: kangyh427/telos-website/pair/index.html  (웹 주소 = /pair/)
+ 설명: ★어르신 폰에서 보낸 "한 번 누르면 이어지는 링크"가 닿는 자리★
+ 작성일: 2026-09-17 (S631 · 대표 지시 "정말 간단하게 연동하는 모든 방법")
+
+ ─────────────────────────────────────────────────────────────────────────────
+ 이 페이지가 하는 일은 ★둘뿐★
+ ─────────────────────────────────────────────────────────────────────────────
+   ① 자녀 앱이 깔려 있으면  → ★앱을 열고 연동 번호를 넘긴다★
+   ② 깔려 있지 않으면      → ★스토어로 보낸다★
+   그리고 ★숫자를 눈에 보이게 적어 둔다★ — 링크가 안 먹는 자리(사내 메신저·
+   구형 브라우저)에서 ★사람이 할 수 있는 길★ 이 마지막까지 남아야 한다.
+
+ ─────────────────────────────────────────────────────────────────────────────
+ ★넘지 않는 선★
+ ─────────────────────────────────────────────────────────────────────────────
+   · ★아무것도 저장하지 않는다★ — 쿠키·분석 스크립트·서버 호출 ★0★.
+     주소에 실린 숫자는 ★이 브라우저 밖으로 나가지 않는다★.
+   · ★주소에 실리는 것은 연동 번호 하나뿐★(10분 만료·1회용). 이름·전화번호·좌표는
+     ★절대 싣지 않는다★ — 어르신 앱 InviteMessage 가 그 규율을 지키고 시험이 잠근다.
+   · ★여기서는 아무도 이어지지 않는다★ — 연동은 ★자녀 앱 안에서★ 일어난다.
+     이 페이지는 숫자를 들고 문을 두드릴 뿐이다.
+   · ★외부 자원을 안 쓴다★ — 글꼴·스크립트·이미지 전부 없음(정적 한 장).
+================================================================================
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ★검색에 걸리지 않게★ — 주소에 연동 번호가 실린다. -->
+<meta name="robots" content="noindex, nofollow">
+<title>가족 연동 | 텔로스 케어</title>
+<style>
+  :root{
+    --ink:#121A26; --muted:#4C5765; --bg:#F2F5F9; --card:#FFFFFF;
+    --accent:#00799C; --accent-ink:#FFFFFF; --line:#E3E9F0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px 16px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;
+    line-height:1.55; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:420px; margin:0 auto;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px 18px;}
+  h1{font-size:20px; margin:0 0 6px;}
+  p{margin:8px 0; color:var(--muted); font-size:15px;}
+  .code{
+    font-size:44px; font-weight:800; letter-spacing:6px; text-align:center;
+    color:var(--accent); margin:14px 0 2px; font-variant-numeric:tabular-nums;
+  }
+  .code-note{text-align:center; font-size:14px; color:var(--muted); margin:0 0 18px;}
+  a.btn{
+    display:block; text-align:center; text-decoration:none; font-size:17px; font-weight:700;
+    padding:15px 12px; border-radius:10px; margin-top:10px;
+  }
+  a.primary{background:var(--accent); color:var(--accent-ink);}
+  a.secondary{background:#FFFFFF; color:var(--accent); border:1px solid var(--accent);}
+  .foot{margin-top:18px; font-size:13px; color:var(--muted); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>가족 연동</h1>
+    <p id="lead">부모님 폰에서 보낸 연동 번호입니다.</p>
+
+    <div class="code" id="code">— — —</div>
+    <p class="code-note" id="codeNote">10분 안에 눌러 주세요</p>
+
+    <a class="btn primary" id="openApp" href="#">앱에서 연동하기</a>
+    <a class="btn secondary" id="install"
+       href="https://play.google.com/store/apps/details?id=com.naoncare.guardian">앱 설치하기</a>
+
+    <p class="foot">텔로스 케어 · 주식회사 텔로스</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ★주소에서 숫자만 꺼낸다★ — 무엇이 실려 오든 숫자 말고는 쓰지 않는다
+  //   (그대로 화면에 그리면 그것이 곧 남의 글을 이 페이지에 띄우는 길이 된다).
+  function codeFromQuery() {
+    var m = /[?&]c=([^&#]*)/.exec(window.location.search);
+    if (!m) return null;
+    var raw = decodeURIComponent(m[1] || "");
+    var digits = raw.replace(/[^0-9]/g, "");
+    if (digits.length < 4 || digits.length > 8) return null;
+    return digits;
+  }
+
+  var STORE = "https://play.google.com/store/apps/details?id=com.naoncare.guardian";
+  var code = codeFromQuery();
+
+  var codeEl = document.getElementById("code");
+  var noteEl = document.getElementById("codeNote");
+  var leadEl = document.getElementById("lead");
+  var openEl = document.getElementById("openApp");
+
+  // ★앱을 여는 주소★ — 안드로이드 크롬이 이해하는 intent 꼴이다.
+  //   ★앱이 없으면 브라우저가 스스로 스토어로 보낸다★(browser_fallback_url).
+  function intentUrl(c) {
+    return "intent://pair" + (c ? "?c=" + c : "") +
+      "#Intent;scheme=naoncareguardian;package=com.naoncare.guardian" +
+      ";S.browser_fallback_url=" + encodeURIComponent(STORE) + ";end";
+  }
+
+  if (code) {
+    codeEl.textContent = code;
+    openEl.setAttribute("href", intentUrl(code));
+  } else {
+    // ★번호가 없으면 없다고 말한다★ — 빈칸은 고장으로 읽힌다.
+    codeEl.textContent = "—";
+    noteEl.textContent = "연동 번호가 없는 주소예요. 부모님께 다시 보내 달라고 해 주세요.";
+    leadEl.textContent = "부모님 폰에서 보낸 링크로 들어와 주세요.";
+    openEl.setAttribute("href", intentUrl(null));
+  }
+
+  // ★한 번만 저절로 열어 본다★ — 앱이 있으면 그대로 열리고, 없으면 스토어로 간다.
+  //   ★단추는 그대로 남는다★ — 저절로 열리지 않는 자리(사내 브라우저 등)가 있다.
+  var isAndroid = /android/i.test(navigator.userAgent || "");
+  if (code && isAndroid) {
+    window.setTimeout(function () {
+      window.location.href = intentUrl(code);
+    }, 400);
+  }
+})();
+</script>
+</body>
+</html>
