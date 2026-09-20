@@ -769,10 +769,33 @@
   //     추세 그래프는 ★지나간 일★ 을 말하고, 이 숫자는 ★오늘 해야 할 일★ 을 말한다.
   //     그래프를 아무리 잘 그려도 "오늘 누구에게 전화할까"에는 답하지 못한다.
   //
+  //   ★★(S670) 자를 하나로 맞췄다 — 이 콘솔이 마지막까지 다른 자를 보고 있었다★★
+  //     ★종전★ = 산책 거리는 `walk_distance_m`(★이동 레인의 홉 자★), 속도의 분모는
+  //       `walking_bout_minutes`(★만보기 걷기 구간 · 집 안 서성임 포함★).
+  //       ★이 머리말은 이미 "산책으로 인정된 거리 ÷ 보행 구간 시간"이라 적고 있었는데
+  //       코드는 그렇지 않았다★ — 글과 코드가 갈리면 ★코드가 사실★ 이다.
+  //     ★지금★ = 거리도 시간도 ★산책 원장★ 하나에서 나온다
+  //       (`stroll_distance_m` ÷ `stroll_minutes`). 앱·서버·자녀 앱이 S608 부터 쓰던
+  //       그 자다 — ★콘솔만 남아 있었다.★
+  //     ★왜 분모까지 옮겼나★ = 분자만 옮기면 아직 자가 둘이다. [실측 2026-09-20 서버]
+  //       어느 어르신의 09-14 는 걷기 구간 ★339분★ 에 1,250m → ★0.06 m/s★ 라
+  //       사람이 낼 수 없는 값이 나와 통째로 버려졌다(09-12 도 366분에 0.11).
+  //       ★분모가 실내 시간을 안고 있으면 속도는 구조적으로 느려진다.★
+  //     ★`walking_bout_minutes` 는 지우지 않는다★ — 그 값은 "하루에 얼마나
+  //       움직이셨나"라는 ★다른 물음★ 의 답이다(실내 활동도 생존 신호다).
+  //
   //   ★정직한 한계★
-  //     · 보행 속도는 ★산책으로 인정된 거리 ÷ 보행 구간 시간★ 이다. 차 이동이 섞이면
-  //       사람이 낼 수 없는 값이 나온다(대표 폰 실측 3.25 m/s) → [WALK.speedMax] 위는
+  //     · 보행 속도는 ★산책 거리 ÷ 산책 시간★ 이다. 산책 중 신호등·쉼도 분모에 든다
+  //       (걷는 동안만의 순수 속도보다 조금 느리게 나온다). 차 이동이 섞이면 사람이
+  //       낼 수 없는 값이 나온다(대표 폰 실측 3.25 m/s) → [WALK.speedMax] 위는
   //       ★버린다★. 지우는 것이 아니라 ★그 날의 속도를 모른다고 두는 것★ 이다.
+  //     · ★★`stroll_minutes` 는 ★어르신 앱 vc39 부터★ 올라온다★★ — 그 판이 그 폰에
+  //       깔리기 전의 날은 ★빈칸★ 이고 표는 그것을 ★「앱 옛 판」★ 이라 적는다
+  //       (「측정 실패」가 아니다 · sql 135 가 기기별로 가른다).
+  //       ★그러므로 이 화면을 vc39 보다 먼저 올리면 보행 속도가 한동안 통째로 빈다★ —
+  //       ★올리는 순서 = ①Edge ingest ②어르신 앱 vc39 ③퍼짐 확인 ④이 화면★.
+  //       ★백필하지 않는다★ — 산책 원장은 ★기기 안에만★ 있어서 서버가 지난 날의
+  //       산책 시간을 알 길이 자체가 없다(옛 행에 그 값이 없는 것이 사실이다).
   //     · 값이 없는 날은 0 으로 접지 않는다 — ★못 잰 것과 안 걸으신 것은 다르다★.
   var WALK = {
     days: 7,           // 최근 며칠로 평균을 내는가
@@ -789,10 +812,13 @@
     var t = 0; v.forEach(function(x){ t += x; });
     return t / v.length;
   }
-  /** 하루치 행에서 보행 속도(m/s). 낼 수 없으면 null(0 이 아니다). */
+  /**
+   * 하루치 행에서 보행 속도(m/s). 낼 수 없으면 null(0 이 아니다).
+   * ★(S670) 분자·분모가 ★같은 원장★ 에서 나온다★ — 까닭은 [WALK] 머리말.
+   */
   function daySpeed(r){
     if (!r) return null;
-    var m = r.walk_distance_m, min = r.walking_bout_minutes;
+    var m = r.stroll_distance_m, min = r.stroll_minutes;
     if (!m || !min || min <= 0) return null;
     var v = m / (min * 60);
     if (v < WALK.speedMin || v > WALK.speedMax) return null;   // 탈것·잡음은 버린다
@@ -834,8 +860,15 @@
       idleDays: idleDays,
       steps: stepNow === null ? null : Math.round(stepNow),
       stepDrop: stepDrop,
-      walkM: avgOf(recent.map(function(r){ return r.walk_distance_m; })),
+      // ★★(S670) "산책" 열은 ★산책 원장★ 을 본다 — 이름과 자를 맞췄다★★
+      //   종전에는 열 이름이 "산책"인데 값은 `walk_distance_m`(이동 레인 홉 자)였다.
+      //   [실측 2026-09-20] 같은 날 같은 어르신이 ★912m(홉) 대 1,092m(원장)★.
+      //   ★대표가 콘솔로 효과를 보시는데 앱과 숫자가 다르면 어느 쪽을 믿을지 모르게 된다.★
+      walkM: avgOf(recent.map(function(r){ return r.stroll_distance_m; })),
       strollM: avgOf(recent.map(function(r){ return r.stroll_distance_m; })),
+      // ★옛 자는 이름을 밝혀 남긴다★ — CSV 가 원자료로 함께 내보낸다(둘을 견줄 수 있게).
+      hopM: avgOf(recent.map(function(r){ return r.walk_distance_m; })),
+      strollMin: avgOf(recent.map(function(r){ return r.stroll_minutes; })),
       vehicleM: avgOf(recent.map(function(r){ return r.vehicle_distance_m; })),
       speed: avgOf(recent.map(daySpeed)),
       cv: avgOf(recent.map(function(r){ return r.gait_cv_percent; })),
@@ -1126,7 +1159,9 @@
       var one = (kind === "elderDaily");
       var m2 = one ? rs[arg] : null;
       var head = (one ? ["가명"] : ["가명", "동네"]).concat(
-        ["날짜", "걸음(보)", "걷기(m)", "탈것(m)", "산책(m)", "이동거리(m)",
+        // ★(S670) "산책(분)"이 늘었다 — ★보행속도의 분모★ 다(산책(m) 의 짝).
+        //   ★"걷기(m)"는 옛 자(이동 레인 홉)이고 남겨 둔다★ — 원자료로 견줄 수 있게.
+        ["날짜", "걸음(보)", "걷기(m)", "탈것(m)", "산책(m)", "산책(분)", "이동거리(m)",
          "보행구간(회)", "보행구간(분)", "최고걸음빠르기(보/분)",
          // ★보행 속도 — 빈 칸은 "못 쟀다"이지 0 이 아니다(탈것이 섞였거나 보행 시간이 없는 날).
          "보행속도(m/s)", "걸음간격중앙값(ms)", "걸음고름CV(%)", "걸음고름표본수",
@@ -1164,12 +1199,16 @@
           return head2.concat(
             [d, C(r.step_count, "step_count"), C(r.walk_distance_m, "walk_distance_m"),
              C(r.vehicle_distance_m, "vehicle_distance_m"),
-             C(r.stroll_distance_m, "stroll_distance_m"), C(r.travel_distance_m, "travel_distance_m"),
+             C(r.stroll_distance_m, "stroll_distance_m"),
+             C(r.stroll_minutes, "stroll_minutes"),
+             C(r.travel_distance_m, "travel_distance_m"),
              C(r.walking_bout_count, "walking_bout_count"),
              C(r.walking_bout_minutes, "walking_bout_minutes"),
              C(r.peak_cadence_steps_per_min, "peak_cadence_steps_per_min"),
-             // ★보행 속도는 우리가 계산한 값이다★ — 재료(walk_distance_m)가 있었는지로 가른다.
-             C(daySpeed(r), "walk_distance_m"),
+             // ★보행 속도는 우리가 계산한 값이다★ — 재료가 있었는지로 가른다.
+             //   ★(S670) 그 재료가 `stroll_distance_m`+`stroll_minutes` 로 바뀌었다★ —
+             //   빈칸의 까닭을 옛 칸으로 설명하면 운영자가 엉뚱한 곳을 보게 된다.
+             C(daySpeed(r), "stroll_minutes"),
              C(r.gait_step_interval_median_ms, "gait_step_interval_median_ms"),
              C(r.gait_cv_percent, "gait_cv_percent"),
              C(r.gait_interval_samples, "gait_interval_samples"),
