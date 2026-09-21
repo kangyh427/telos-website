@@ -566,6 +566,11 @@
     var quiet = quietMap();
     (DATA.roster || []).forEach(function(r){
       if (quiet[r.id]) return;
+      // ★★(S681 · 대표 지시) 보관함으로 옮긴 줄은 메인에서 빠진다★★
+      //   "30일 걷기 측정이 안된 경우에는 ★별도의 저장소로 옮기고, 메인에서
+      //   보이지 않게★ 해줘" — ★자료는 한 줄도 안 지웠다★(파기는 1년 뒤 sql 154).
+      //   ★되돌리는 길은 개요 맨 아래 보관함에 있다★ — 숨기는 길만 만들면 함정이다.
+      if (r.archived_at) return;
       m[r.id] = { id: r.id, alias: r.alias || "이름 없음", region: r.region || "" };
     });
     return m;
@@ -2361,10 +2366,11 @@
     //   숨긴 줄은 [roster] 에서 통째로 빠지므로(S540) 서버가 [roster_hidden] 으로
     //   따로 보내 준다. ★맨 아래에 둔다★ — 매일 보는 화면이 아니다.
     html += hiddenRosterSection();
+    html += archivedRosterSection();
 
     html += adminSection();
     el("view").innerHTML = html;
-    bindGo(); bindAdmin(); bindCsv(); bindSort(); bindUnhide(); bindBrief();
+    bindGo(); bindAdmin(); bindCsv(); bindSort(); bindUnhide(); bindUnarchive(); bindBrief();
   }
 
   /**
@@ -2456,6 +2462,60 @@
            '<td><button class="btn" data-unhide="' + esc(r.id) + '">명단에 되돌리기</button></td></tr>';
     });
     return h + "</table></div></section>";
+  }
+
+  /**
+   * ★★(S681 · 대표 지시) 보관함 — 30일째 걷기가 안 잡힌 줄★★
+   *
+   * ★사유를 갈라 적는다★ — 대표 말씀은 "고독사 또는 앱 삭제"였는데,
+   * ★실제로 가장 많은 것은 그 둘이 아니라 세 번째★ 다:
+   *   · no_signal = ★기기가 30일째 아무 자료도 안 보낸다★ (앱 삭제·기기 교체·고독사)
+   *   · no_walk   = ★자료는 오는데 걸음만 30일째 0 이다★ (권한·센서·미휴대)
+   * ★그 셋을 한 칸에 담으면 "고독사로 간주된 분"이 실은 설정 문제였던 게 된다.★
+   *
+   * ★보호자 0명은 따로 표시한다★ — sweep-concerns 가 "며칠째 신호 없음"을 매일
+   * 자녀·요양사에게 보내지만 ★연결된 사람이 없으면 그 알림은 갈 곳이 없다★.
+   * ★그런 분을 조용히 감추면 아무도 모른 채 사라진다.★
+   */
+  function archivedRosterSection(){
+    var rows = DATA.roster_archived || [];
+    if (!rows.length) return "";
+    var h = '<section class="card" style="margin-top:14px"><div class="hd"><div><h2>보관함 ' +
+            rows.length + '명 <span class="whose">30일째 걷기가 안 잡힌 줄 · 자료는 지워지지 않았습니다 · 보관 1년 뒤 파기</span></h2></div></div>' +
+            '<div class="tablewrap"><table>' +
+            '<tr><th>가명</th><th>이름표</th><th>사유</th><th>마지막 측정</th><th>보관한 날</th><th></th></tr>';
+    rows.forEach(function(r){
+      var why = r.archive_reason === "no_signal"
+        ? '<b>기기 신호 없음</b><div class="muted" style="font-size:12px">앱 삭제 · 기기 교체 · 확인 필요</div>'
+        : (r.archive_reason === "no_walk"
+            ? '걸음만 없음<div class="muted" style="font-size:12px">권한 · 센서 · 미휴대</div>'
+            : '<span class="muted">직접 내림</span>');
+      h += "<tr><td>" + esc(r.alias || "") + "</td>" +
+           "<td>" + esc(r.console_label || "") + "</td>" +
+           "<td>" + why + "</td>" +
+           '<td class="muted">' + esc(r.archive_last_seen || "기록 없음") + "</td>" +
+           '<td class="muted">' + esc(String(r.archived_at || "").slice(0, 10)) + "</td>" +
+           '<td><button class="btn" data-unarchive="' + esc(r.id) + '">명단에 되돌리기</button></td></tr>';
+    });
+    return h + "</table></div>" +
+      '<div class="muted" style="font-size:12.5px;padding:8px 12px">' +
+      '걸음이 다시 잡히면 다음 점검에서 <b>저절로 되돌아옵니다</b>. ' +
+      '보관한 날로부터 1년이 지나면 자료까지 파기되며, 그것은 되돌릴 수 없습니다.' +
+      '</div></section>';
+  }
+
+  function bindUnarchive(){
+    Array.prototype.forEach.call(document.querySelectorAll("[data-unarchive]"), function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.getAttribute("data-unarchive");
+        btn.disabled = true;
+        btn.textContent = "되돌리는 중…";
+        rpc("console_set_elderly_archive", { p_elderly_id: id, p_archived: false }).then(function(r){
+          if (r.ok) { btn.textContent = "되돌렸습니다 — 새로고침하세요"; }
+          else { btn.disabled = false; btn.textContent = "실패 — " + rpcReason(r); }
+        });
+      });
+    });
   }
 
   function bindUnhide(){
