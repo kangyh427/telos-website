@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://xeerqdsedmafbqbgqooi.supabase.co; base-uri 'none'; form-action 'none'">
+<title>텔로스 케어 · 기관 콘솔</title>
+<!-- ============================================================================
+  파일명 : console/gov_console.html   (배포 = telos-website/gov/index.html → www.telos.it.kr/gov/)
+  작성일 : 2026-09-26 (S690 — 지자체 별도 콘솔 · 대표 지시 "4단계 지자체 콘솔 시작해")
+
+  단일 책임 : 지자체(좌석 계약) 담당자가 ★자기 계약의 어르신만★ 보고,
+    ①「살펴볼 분」에서 연락·확인을 기록하고 ② 어르신별 보고서와 ③ 걷기 측정 요약을 뽑는다.
+    ★셈도 그림도 하지 않는다★ — 서버 get-walk-report({scope:"gov"})가 준 것을 띄울 뿐이다.
+
+  ★대표 결정 (2026-09-26)★
+    · 특별관리는 ★회사 콘솔이 아니라 이 지자체 콘솔★ 에 둔다 — 판매가 시작되면 쓴다.
+    · 알림이 아니라 담당자가 여는 목록이다. 어르신·자녀에게 아무것도 보내지 않는다.
+    · "앱 덕분에 걸음이 늘었다"를 말하지 않는다 — 목록은 판정이 아니라 ★평소와 달라진 것★ 이다.
+
+  ★회사 콘솔(/admin)과 섞지 않는다★ — 로그인 칸 이름이 다르다(telos_gov_session).
+    한 브라우저에서 두 콘솔을 써도 서로의 로그인을 덮지 않는다.
+  ★들어오는 길은 구글 하나★(회사 콘솔과 같은 까닭 · 서버도 비밀번호 로그인을 막는다).
+  ★보이는 것은 가명과 걷기 수치뿐★ — 실명 표시는 지자체 제3자 제공 동의가 정해진 뒤의 일이다.
+  ★PC 전용★.
+============================================================================ -->
+<style>
+:root{--ink:#1f2933;--muted:#64748b;--line:#e2e8f0;--acc:#0f6e5c;--soft:#e8f3f0;--warm:#fff7ed;--warmline:#fed7aa;--bg:#f4f6f8}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:var(--ink);background:var(--bg);font-size:14px}
+button{font:inherit;cursor:pointer}
+#login{max-width:420px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px}
+#login h2{margin:0 0 8px;font-size:20px}#login p{color:var(--muted);line-height:1.6;margin:0 0 18px}
+#loginErr{display:none;background:var(--warm);border:1px solid var(--warmline);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5}
+.btn-google{width:100%;padding:12px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-weight:600}
+#app{display:none}
+header{display:flex;align-items:center;gap:14px;padding:12px 22px;background:#fff;border-bottom:1px solid var(--line)}
+header b{color:var(--acc)}header .sp{flex:1}header select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:inherit}
+header .who{color:var(--muted);font-size:12px}
+.lnk{border:0;background:none;color:var(--muted)}.lnk:hover{text-decoration:underline}
+nav{display:flex;gap:4px;padding:0 22px;background:#fff;border-bottom:1px solid var(--line)}
+nav button{border:0;background:none;padding:12px 14px;color:var(--muted);border-bottom:2px solid transparent}
+nav button.on{color:var(--ink);border-bottom-color:var(--acc);font-weight:600}
+main{max-width:1120px;margin:0 auto;padding:18px 22px 40px}
+.note{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--muted);line-height:1.6;margin-bottom:14px;font-size:13px}
+.empty{background:#fff;border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:10px}
+.card.warm{border-color:var(--warmline);background:var(--warm)}
+.card h3{margin:0 0 6px;font-size:16px}
+.reason{margin:4px 0}.reason b{display:block}.reason span{display:block;color:#475569;font-size:13px}.reason small{display:block;color:var(--muted);font-size:12px}
+.fu{margin-top:8px;font-size:12px;color:var(--acc)}
+.acts{display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:150px}
+.acts button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px}
+.acts button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.acts input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th{background:#f1f5f9;text-align:left;padding:9px 10px;font-size:12px;color:#475569;font-weight:600}
+td{border-top:1px solid var(--line);padding:9px 10px}
+td .tag{font-size:11px;background:var(--warm);border:1px solid var(--warmline);border-radius:4px;padding:1px 6px;margin-right:4px}
+td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px}
+#viewer{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10}
+#viewer .box{position:absolute;inset:3vh 4vw;background:#fff;border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+#viewer .bar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+#viewer .bar .t{flex:1;font-weight:600}
+#viewer .bar button{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:6px;padding:6px 12px}
+#viewer .bar button.close{background:#fff;color:var(--ink);border-color:var(--line)}
+#viewer iframe{flex:1;border:0;background:#e9edf1}
+</style>
+</head>
+<body>
+<div id="login">
+  <h2>텔로스 케어 · 기관 콘솔</h2>
+  <p>기관 담당자로 등록된 구글 계정으로 로그인하세요. 담당하시는 어르신의 걷기 기록만 보입니다.</p>
+  <div id="loginErr"></div>
+  <button class="btn-google" id="googleBtn">구글 계정으로 로그인</button>
+</div>
+
+<div id="app">
+  <header>
+    <b>텔로스 케어</b><span>기관 콘솔</span>
+    <select id="contractSel" title="계약"></select>
+    <span class="sp"></span>
+    <span class="who" id="who"></span>
+    <button class="lnk" id="logoutBtn">로그아웃</button>
+  </header>
+  <nav>
+    <button data-tab="attention" class="on">살펴볼 분</button>
+    <button data-tab="all">어르신 전체</button>
+    <button data-tab="cohort">걷기 측정 요약</button>
+  </nav>
+  <main id="main"><div class="empty">불러오는 중…</div></main>
+</div>
+
+<div id="viewer"><div class="box">
+  <div class="bar"><span class="t" id="vTitle"></span><button id="vPrint">인쇄 · PDF 로 저장</button><button class="close" id="vClose">닫기</button></div>
+  <iframe id="vFrame" title="보고서" sandbox="allow-same-origin allow-modals"></iframe>
+</div></div>
+
+<script>
+(function(){
+  "use strict";
+  var SUPA = "https://xeerqdsedmafbqbgqooi.supabase.co";
+  // ★공개 전제값(anon)★ — 회사 콘솔에 박힌 것과 같다. 데이터는 로그인 + 담당자 확인을 지나야 나온다.
+  var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZXJxZHNlZG1hZmJxYmdxb29pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjYzMjksImV4cCI6MjA5MTkwMjMyOX0.Qg91BDcIkfmAt_5TGG5Cro401OXAyW1-Hu9BEObsZks";
+  var FN = SUPA + "/functions/v1/get-walk-report";
+  var SESS_KEY = "telos_gov_session";   // ★회사 콘솔(telos_session)과 다른 칸★
+
+  var state = { contracts: [], contractId: null, tab: "attention", overview: null };
+
+  function el(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+  function sess(){ try { var v = localStorage.getItem(SESS_KEY); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+  function setSess(s){ try { if (s) localStorage.setItem(SESS_KEY, JSON.stringify(s)); else localStorage.removeItem(SESS_KEY); } catch(e){} }
+
+  function showLogin(msg){
+    el("login").style.display = "block"; el("app").style.display = "none";
+    var e = el("loginErr");
+    if (msg) { e.innerHTML = msg; e.style.display = "block"; } else { e.style.display = "none"; }
+  }
+  function showApp(){ el("login").style.display = "none"; el("app").style.display = "block"; }
+
+  function socialLogin(provider){
+    var back = location.origin + location.pathname;
+    location.href = SUPA + "/auth/v1/authorize?provider=" + provider + "&redirect_to=" + encodeURIComponent(back);
+  }
+  function captureHashSession(){
+    if (!location.hash || location.hash.indexOf("access_token") < 0) return;
+    var p = new URLSearchParams(location.hash.slice(1));
+    var at = p.get("access_token");
+    if (at) setSess({ access_token: at, refresh_token: p.get("refresh_token") });
+    history.replaceState(null, "", location.pathname);
+  }
+  function refresh(){
+    var s = sess();
+    if (!s || !s.refresh_token) return Promise.resolve(false);
+    return fetch(SUPA + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST", headers: { "apikey": ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: s.refresh_token }),
+    }).then(function(r){ return r.json().then(function(j){
+      if (!r.ok || !j.access_token) return false;
+      setSess({ access_token: j.access_token, refresh_token: j.refresh_token });
+      return true;
+    }); }).catch(function(){ return false; });
+  }
+  function call(body, retried){
+    var s = sess();
+    if (!s) return Promise.reject(new Error("no_session"));
+    body.scope = "gov";
+    if (state.contractId && !body.contract_id) body.contract_id = state.contractId;
+    return fetch(FN, {
+      method: "POST",
+      headers: { "apikey": ANON, "Authorization": "Bearer " + s.access_token, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(function(r){
+      if (r.status === 401 && !retried) {
+        return refresh().then(function(ok){ if (!ok) throw new Error("session_expired"); return call(body, true); });
+      }
+      if (r.status === 403) return r.json().then(function(j){ throw new Error(j.reason || "forbidden"); });
+      if (!r.ok) return r.text().then(function(t){ throw new Error("http_" + r.status + " " + t.slice(0, 160)); });
+      return r;
+    });
+  }
+  function fail(e){
+    if (e.message === "not_staff") { setSess(null); showLogin("이 계정은 기관 담당자로 등록되어 있지 않습니다.<br>담당 기관이나 텔로스에 등록을 요청해 주세요."); return; }
+    if (e.message === "password_login_blocked") { setSess(null); showLogin("비밀번호 로그인은 받지 않습니다. 구글 계정으로 로그인해 주세요."); return; }
+    if (e.message === "no_session" || e.message === "session_expired") { setSess(null); showLogin("로그인이 만료되었습니다. 다시 로그인해 주세요."); return; }
+    el("main").innerHTML = '<div class="empty">불러오지 못했습니다 — ' + esc(e.message) + "</div>";
+  }
+
+  // ── 화면 ──
+  function renderAttention(){
+    var o = state.overview;
+    var list = o.people.filter(function(p){ return p.attention.length > 0; });
+    var html = '<div class="note">평소와 달라진 분을 먼저 보여 드립니다. <b>걸음 기록만 보고 만든 목록이며 건강 상태를 판정하지 않습니다.</b> ' +
+      '어르신과 자녀에게는 아무것도 보내지 않습니다. 연락하셨으면 기록을 남겨 두세요 — 담당자끼리 겹쳐 연락하지 않게 됩니다.</div>';
+    if (!list.length) {
+      html += '<div class="empty">지금 살펴볼 분이 없습니다. (어르신 ' + o.people.length + '분 · 최근 ' + o.weeks + '주 기록 기준)</div>';
+    }
+    list.forEach(function(p){
+      html += '<div class="card warm"><div><h3>' + esc(p.alias) + '</h3>';
+      p.attention.forEach(function(a){
+        html += '<div class="reason"><b>' + esc(a.title) + '</b><span>' + esc(a.detail) + '</span><small>' + esc(a.basis) + '</small></div>';
+      });
+      if (p.followup) html += '<div class="fu">' + fuText(p.followup) + "</div>";
+      html += '</div><div class="acts">' +
+        '<button class="pri" data-fu="contacted" data-id="' + esc(p.id) + '">연락함</button>' +
+        '<button data-fu="checked" data-id="' + esc(p.id) + '">확인함(연락 안 함)</button>' +
+        '<input placeholder="메모(선택)" id="memo-' + esc(p.id) + '" maxlength="500">' +
+        '<button data-report="' + esc(p.id) + '" data-alias="' + esc(p.alias) + '">보고서 보기</button></div></div>';
+    });
+    if (o.never_measured) html += '<div class="note">아직 한 번도 걸음이 잡히지 않은 분이 ' + o.never_measured + '분 있습니다 — 「어르신 전체」에서 설치·권한을 확인해 주세요.</div>';
+    el("main").innerHTML = html;
+    bindCardButtons();
+  }
+  function fuText(f){
+    var d = new Date(f.at); var when = (d.getMonth() + 1) + "월 " + d.getDate() + "일";
+    return (f.kind === "contacted" ? "연락함" : "확인함") + " · " + when + " · " + esc(f.by) + (f.note ? " · " + esc(f.note) : "");
+  }
+  function renderAll(){
+    var o = state.overview;
+    var html = '<div class="note">' + esc(o.contract.name) + ' · 어르신 ' + o.people.length + '분 · 최근 ' + o.weeks + '주 기록. 걸음 수는 휴대폰이 스스로 잰 값이라 휴대폰을 두고 다니신 시간은 빠집니다.</div>';
+    html += "<table><tr><th>가명</th><th>잰 날(" + o.weeks + "주)</th><th>최근 7일 하루 걸음</th><th>평소 4주</th><th>마지막 기록</th><th>살펴볼 까닭</th><th></th></tr>";
+    o.people.forEach(function(p){
+      html += "<tr><td>" + esc(p.alias) + "</td><td>" + p.measured_days + "일</td><td>" + (p.recent_steps ? esc(p.recent_steps) + "보" : "—") +
+        "</td><td>" + (p.usual_steps ? esc(p.usual_steps) + "보" : "—") + "</td><td>" + esc(p.last_measured || "아직 없음") + "</td><td>" +
+        p.attention.map(function(a){ return '<span class="tag">' + esc(a.title) + "</span>"; }).join("") +
+        '</td><td><button data-report="' + esc(p.id) + '" data-alias="' + esc(p.alias) + '"' + (p.measured_days ? "" : " disabled") + ">보고서</button></td></tr>";
+    });
+    el("main").innerHTML = html + "</table>";
+    bindCardButtons();
+  }
+  function renderCohort(){
+    el("main").innerHTML = '<div class="note">담당하시는 어르신 전체의 걷기 측정 요약 한 장입니다. <b>측정한 변화를 적은 것이며 서비스 이용의 효과를 뜻하지 않습니다.</b></div>' +
+      '<div class="empty"><button class="btn-google" id="cohortBtn" style="max-width:280px">요약 열기</button></div>';
+    el("cohortBtn").onclick = function(){ openViewer("걷기 측정 요약", { mode: "cohort" }); };
+  }
+  function render(){
+    Array.prototype.forEach.call(document.querySelectorAll("nav button"), function(b){ b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
+    if (state.tab === "cohort") return renderCohort();
+    if (!state.overview) { el("main").innerHTML = '<div class="empty">불러오는 중…</div>'; return; }
+    if (state.tab === "all") renderAll(); else renderAttention();
+  }
+
+  function bindCardButtons(){
+    Array.prototype.forEach.call(document.querySelectorAll("[data-report]"), function(b){
+      b.onclick = function(){ openViewer(b.getAttribute("data-alias") + " 걷기 분석 보고서", { mode: "report", elderly_id: b.getAttribute("data-report") }); };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-fu]"), function(b){
+      b.onclick = function(){
+        var id = b.getAttribute("data-id");
+        var memo = (el("memo-" + id) || {}).value || null;
+        b.disabled = true;
+        call({ mode: "followup", elderly_id: id, kind: b.getAttribute("data-fu"), note: memo })
+          .then(function(){ return loadOverview(); })
+          .catch(function(e){ b.disabled = false; alert("기록하지 못했습니다: " + e.message); });
+      };
+    });
+  }
+
+  function openViewer(title, body){
+    el("vTitle").textContent = title + " · 불러오는 중…";
+    el("vFrame").srcdoc = "";
+    el("viewer").style.display = "block";
+    call(body).then(function(r){ return r.text(); }).then(function(h){
+      el("vFrame").srcdoc = h; el("vTitle").textContent = title;
+    }).catch(function(e){ el("vTitle").textContent = title + " · 불러오지 못했습니다 (" + e.message + ")"; });
+  }
+  el("vClose").onclick = function(){ el("viewer").style.display = "none"; };
+  el("vPrint").onclick = function(){ var w = el("vFrame").contentWindow; if (w) { w.focus(); w.print(); } };
+
+  function loadOverview(){
+    return call({ mode: "overview" }).then(function(r){ return r.json(); }).then(function(j){
+      state.overview = j; render();
+    });
+  }
+
+  function boot(){
+    call({ mode: "whoami" }).then(function(r){ return r.json(); }).then(function(j){
+      showApp();
+      el("who").textContent = j.email + (j.admin ? " · 회사 관리자" : "");
+      state.contracts = j.contracts;
+      var sel = el("contractSel");
+      sel.innerHTML = j.contracts.map(function(k){ return '<option value="' + esc(k.id) + '">' + esc(k.name) + "</option>"; }).join("");
+      sel.style.display = j.contracts.length > 1 ? "" : "none";
+      if (!j.contracts.length) { el("main").innerHTML = '<div class="empty">연결된 계약이 없습니다.</div>'; return; }
+      state.contractId = j.contracts[0].id;
+      sel.onchange = function(){ state.contractId = sel.value; state.overview = null; render(); loadOverview().catch(fail); };
+      render();
+      return loadOverview();
+    }).catch(fail);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("nav button"), function(b){
+    b.onclick = function(){ state.tab = b.getAttribute("data-tab"); render(); };
+  });
+  el("googleBtn").onclick = function(){ socialLogin("google"); };
+  el("logoutBtn").onclick = function(){ setSess(null); showLogin(null); };
+
+  captureHashSession();
+  if (sess()) boot(); else showLogin(null);
+})();
+</script>
+</body>
+</html>
