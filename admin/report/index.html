@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://xeerqdsedmafbqbgqooi.supabase.co; base-uri 'none'; form-action 'none'">
+<title>텔로스 케어 · 걷기 보고서</title>
+<!-- ============================================================================
+  파일명 : console/walk_report_page.html   (배포 = telos-website/admin/report/index.html)
+  작성일 : 2026-09-26 (S690 — 추적 보고서를 ★서버 한 곳에서★ · 대표 지시)
+
+  단일 책임 : 회사 콘솔에서 ★어르신별 걷기 보고서(A4 두 쪽)★ 와 ★코호트 요약★ 을
+    열어 보고 "인쇄 → PDF 로 저장"하게 한다. ★셈도 그림도 하지 않는다★ —
+    서버 get-walk-report 가 준 HTML 을 그대로 띄울 뿐이다(자녀 앱과 같은 셈).
+
+  ★기존 콘솔(admin/index.html)을 한 글자도 건드리지 않는다★(대표 지시 "기존 기능 망치면 안돼")
+    · 로그인은 콘솔이 남긴 것을 ★읽기만★ 한다(localStorage "telos_session" · 같은 주소라 공유된다).
+    · 토큰이 만료되면 콘솔과 같은 방식으로 새로 받아 ★같은 칸에★ 적는다(콘솔도 그 값을 쓴다).
+    · 로그인이 없으면 콘솔(/admin/)로 보낸다 — 이 쪽에 로그인 화면을 따로 두지 않는다.
+  ★PC 전용★(콘솔과 같다).
+============================================================================ -->
+<style>
+:root{--ink:#1f2933;--muted:#64748b;--line:#e2e8f0;--acc:#0f6e5c;--soft:#e8f3f0;--bg:#f4f6f8}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:var(--ink);background:var(--bg)}
+.top{display:flex;align-items:center;gap:14px;padding:12px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.top b{color:var(--acc)}.top a{color:var(--muted);font-size:13px;text-decoration:none}.top a:hover{text-decoration:underline}
+.top .sp{flex:1}
+.wrap{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 49px)}
+.side{background:#fff;border-right:1px solid var(--line);overflow:auto;padding:12px}
+.side h3{font-size:12px;color:var(--muted);margin:10px 4px 6px;font-weight:600}
+.btn{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 11px;margin-bottom:6px;cursor:pointer;font:inherit;font-size:13px}
+.btn:hover{border-color:var(--acc)}.btn.on{border-color:var(--acc);background:var(--soft)}
+.btn small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.btn.cohort{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.btn.cohort small{color:#d9efe9}
+.tagx{font-size:10px;border:1px solid var(--line);border-radius:3px;padding:0 4px;margin-left:4px;color:var(--muted)}
+.main{display:flex;flex-direction:column;min-width:0}
+.bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:#fff}
+.bar .t{font-weight:600;flex:1}
+.bar button{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:6px;padding:7px 14px;font:inherit;font-size:13px;cursor:pointer}
+.bar button:disabled{opacity:.4;cursor:default}
+iframe{flex:1;border:0;width:100%;background:#e9edf1}
+.msg{padding:40px;color:var(--muted);font-size:14px;line-height:1.6}
+.msg a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="top"><b>텔로스 케어</b><span>걷기 보고서</span><span class="sp"></span><a href="/admin/">← 관리자 콘솔로</a></div>
+<div class="wrap">
+  <div class="side" id="side"><div class="msg" id="sideMsg">불러오는 중…</div></div>
+  <div class="main">
+    <div class="bar"><span class="t" id="title">왼쪽에서 어르신을 고르세요</span><button id="print" disabled>인쇄 · PDF 로 저장</button></div>
+    <iframe id="view" title="보고서" sandbox="allow-same-origin allow-modals"></iframe>
+  </div>
+</div>
+<script>
+(function(){
+  "use strict";
+  var SUPA = "https://xeerqdsedmafbqbgqooi.supabase.co";
+  // ★공개 전제값(anon)★ — 콘솔(admin/index.html)에 박힌 것과 같다. 데이터는 로그인+관리자 확인을 지나야 나온다.
+  var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZXJxZHNlZG1hZmJxYmdxb29pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjYzMjksImV4cCI6MjA5MTkwMjMyOX0.Qg91BDcIkfmAt_5TGG5Cro401OXAyW1-Hu9BEObsZks";
+  var FN = SUPA + "/functions/v1/get-walk-report";
+  var SESS_KEY = "telos_session";   // ★콘솔과 같은 칸★ — 이름을 바꾸면 로그인이 안 이어진다.
+
+  function el(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+  function sess(){ try { var v = localStorage.getItem(SESS_KEY); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+  function setSess(s){ try { localStorage.setItem(SESS_KEY, JSON.stringify(s)); } catch(e){} }
+
+  function refresh(){
+    var s = sess();
+    if (!s || !s.refresh_token) return Promise.resolve(false);
+    return fetch(SUPA + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST", headers: { "apikey": ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: s.refresh_token }),
+    }).then(function(r){ return r.json().then(function(j){
+      if (!r.ok || !j.access_token) return false;
+      setSess({ access_token: j.access_token, refresh_token: j.refresh_token });
+      return true;
+    }); }).catch(function(){ return false; });
+  }
+
+  function call(body, retried){
+    var s = sess();
+    if (!s) return Promise.reject(new Error("no_session"));
+    return fetch(FN, {
+      method: "POST",
+      headers: { "apikey": ANON, "Authorization": "Bearer " + s.access_token, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(function(r){
+      if (r.status === 401 && !retried) {
+        return refresh().then(function(ok){ if (!ok) throw new Error("session_expired"); return call(body, true); });
+      }
+      if (r.status === 403) throw new Error("forbidden");
+      if (!r.ok) return r.text().then(function(t){ throw new Error("http_" + r.status + " " + t.slice(0, 200)); });
+      return r;
+    });
+  }
+
+  function needLogin(why){
+    el("side").innerHTML = '<div class="msg">' + esc(why) + '<br><a href="/admin/">관리자 콘솔에서 로그인</a>한 뒤 다시 여세요.</div>';
+  }
+
+  var current = null;
+  function show(title, body){
+    el("title").textContent = title + " · 불러오는 중…";
+    el("print").disabled = true;
+    call(Object.assign({ format: "html" }, body)).then(function(r){ return r.text(); }).then(function(html){
+      el("view").srcdoc = html;
+      el("title").textContent = title;
+      el("print").disabled = false;
+    }).catch(function(e){
+      el("title").textContent = title + " · 불러오지 못했습니다 (" + e.message + ")";
+    });
+  }
+
+  el("print").onclick = function(){
+    var w = el("view").contentWindow;
+    if (w) { w.focus(); w.print(); }
+  };
+
+  function pick(btn, title, body){
+    Array.prototype.forEach.call(document.querySelectorAll(".btn"), function(b){ b.classList.remove("on"); });
+    btn.classList.add("on");
+    current = body;
+    show(title, body);
+  }
+
+  function load(){
+    if (!sess()) { needLogin("로그인되어 있지 않습니다."); return; }
+    call({ mode: "list" }).then(function(r){ return r.json(); }).then(function(j){
+      var side = el("side"); side.innerHTML = "";
+      var c = document.createElement("button");
+      c.className = "btn cohort";
+      c.innerHTML = "코호트 요약<small>시험 기기·통계 제외 어르신을 뺀 " + j.weeks + "주 집계</small>";
+      c.onclick = function(){ pick(c, "코호트 요약", { mode: "cohort" }); };
+      side.appendChild(c);
+      var h = document.createElement("h3"); h.textContent = "어르신별 보고서 (최근 " + j.weeks + "주 잰 날 순)"; side.appendChild(h);
+      j.elders.filter(function(e){ return !e.archived; }).forEach(function(e){
+        var b = document.createElement("button");
+        b.className = "btn";
+        var tags = (e.excluded ? '<span class="tagx">통계 제외</span>' : "") + (e.internal ? '<span class="tagx">내부</span>' : "");
+        b.innerHTML = esc(e.alias || "(가명 없음)") + tags +
+          "<small>잰 날 " + e.measured_days + "일" + (e.last_measured ? " · 마지막 " + esc(e.last_measured) : " · 아직 없음") + "</small>";
+        b.onclick = function(){ pick(b, (e.alias || "어르신") + " 걷기 분석 보고서", { mode: "report", elderly_id: e.id }); };
+        side.appendChild(b);
+      });
+    }).catch(function(e){
+      if (e.message === "forbidden") needLogin("관리자 권한이 없는 계정입니다(비밀번호 로그인은 받지 않습니다).");
+      else if (e.message === "no_session" || e.message === "session_expired") needLogin("로그인이 만료되었습니다.");
+      else el("side").innerHTML = '<div class="msg">목록을 불러오지 못했습니다: ' + esc(e.message) + "</div>";
+    });
+  }
+  load();
+})();
+</script>
+</body>
+</html>
