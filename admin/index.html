@@ -60,6 +60,8 @@
   button.primary:hover{background:#136d64}
   button.danger{color:var(--red);border-color:#f0d5d5}
   button.link{border:none;background:none;color:var(--teal);padding:0;text-decoration:underline;font-size:13px}
+  a.btn{border:1px solid var(--teal);background:var(--teal);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;text-decoration:none;font-weight:600}
+  a.btn:hover{background:#136d64}
   main{max-width:1120px;margin:0 auto;padding:20px 20px 60px}
   .crumb{font-size:13px;color:var(--sub);margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .purpose{background:var(--teal-soft);border:1px solid #cfe6e2;border-radius:10px;
@@ -143,6 +145,9 @@
     <option value="180">최근 180일</option>
   </select>
   <span class="who" id="whoText"></span>
+  <!-- ★(S695 · 대표 지시 「회사 콘솔에서 레포트 페이지로 가는 버튼을 찾을 수 없어」) 걷기 보고서 페이지로 가는 입구 ★
+       같은 사이트(/admin/report/)라 로그인이 이어진다 · 새 탭으로 열어 이 콘솔은 그대로 둔다 -->
+  <a class="btn" id="reportLink" href="/admin/report/" target="_blank" rel="noopener" title="어르신별 걷기 분석 보고서 · 코호트 요약 (A4)">걷기 보고서</a>
   <button id="seatBtn" title="지자체·보험사 계약과 좌석 현황">계약·좌석</button>
   <button id="growthBtn" title="월별 설치·이탈·연동률·좌석">성장판</button>
   <button id="secBtn" title="2단계 인증 · 열람 기록">보안</button>
