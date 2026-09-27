@@ -154,7 +154,7 @@
   <button id="refreshBtn">지금 새로고침</button>
   <button id="logoutBtn" title="로그인 상태는 이 브라우저에 유지됩니다. 공용 PC 에서는 반드시 로그아웃하세요.">로그아웃</button>
 </header>
-<main id="view"></main>
+<main id="view" data-pager-root></main>
 </div>
 
 <script>
@@ -3340,6 +3340,137 @@
 
   captureHashSession();
   if (sess()) load(); else showLogin(null);
+})();
+</script>
+<!-- ★★(S695 · 대표 지시) 목록마다 20줄 · 아래 쪽 번호 · 목록마다 찾기★★
+     대표 = "각 항목에 줄수가 너무 많아서 스크롤 아래로 내리기가 힘들어. 각 항목당 표시되는 항목은
+     20개 줄로 한정하고, 항목 칸 아래에 페이지를 추가해서 옆으로 이동하는 페이지를 통해 보여줄 수
+     있게 해주고, 각 항목별로 검색기능도 추가해줘." (회사 콘솔 · 기관 콘솔 둘 다)
+     ★표를 그리는 코드는 한 줄도 안 고친다★ — 화면(data-pager-root)에 표가 새로 그려지면 이 조각이
+     스스로 찾아 붙는다(표가 스무 곳이 넘고 60초마다 다시 그려진다 · 한 곳씩 고치면 반드시 빠진다).
+     ★숨길 뿐 지우지 않는다★ — 줄의 클릭·정렬·CSV 는 그대로다(CSV 는 화면이 아니라 자료에서 만든다).
+     ★두 콘솔에 글자 그대로 같은 조각★ 이다(CSP 가 외부 스크립트를 막아 한 파일로 못 나눈다) — 한쪽만 고치지 말 것. -->
+<style>
+.pg-bar{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.pg-bar input{flex:0 1 320px;padding:7px 10px;border:1px solid #d5dde3;border-radius:8px;font:inherit;font-size:13px}
+.pg-bar .pg-count{font-size:12px;color:#64748b}
+.pg-nav{display:flex;align-items:center;justify-content:center;gap:4px;margin:10px 0 2px;flex-wrap:wrap}
+.pg-nav button{min-width:32px;padding:5px 9px;border:1px solid #d5dde3;background:#fff;border-radius:6px;font:inherit;font-size:12.5px;cursor:pointer;color:#1f2933}
+.pg-nav button.on{background:#17857A;border-color:#17857A;color:#fff;font-weight:600}
+.pg-nav button:disabled{opacity:.4;cursor:default}
+.pg-nav .pg-gap{padding:0 4px;color:#94a3b8}
+.pg-empty{padding:14px;text-align:center;color:#64748b;font-size:13px}
+</style>
+<script>
+(function(){
+  "use strict";
+  var PAGE = 20;          // 한 쪽에 보이는 줄
+  var SEARCH_FROM = 11;   // 이보다 짧은 목록에는 찾기 칸을 달지 않는다(열 줄 안팎은 눈으로 찾는다)
+  var memo = {};          // 목록마다 찾는 말·쪽 — 60초 새로고침으로 다시 그려져도 이어진다
+  var typing = null;      // 찾기 칸에 치고 있던 목록(다시 그려진 뒤 커서를 돌려준다)
+
+  function keyOf(root, i){
+    var on = document.querySelector("nav button.on");
+    return (on ? on.getAttribute("data-tab") : "") + (location.hash || "") + "|" + i;
+  }
+  // 목록의 한 줄들 — 표면 <td> 가 있는 줄(머리 줄 빼고), 카드 묶음(.plist)이면 그 자식들
+  function itemsOf(box){
+    var out = [], i;
+    if (box.tagName === "TABLE") {
+      for (i = 0; i < box.rows.length; i++) if (box.rows[i].querySelector("td")) out.push(box.rows[i]);
+    } else {
+      for (i = 0; i < box.children.length; i++) out.push(box.children[i]);
+    }
+    return out;
+  }
+  function btn(label, page, on, off){
+    return '<button type="button" data-pg="' + page + '"' + (on ? ' class="on"' : "") + (off ? " disabled" : "") + ">" + label + "</button>";
+  }
+  function mount(box, key){
+    var items = itemsOf(box);
+    if (!items.length) return;   // 줄이 나중에 채워지는 빈 표 — 표시하지 않고 다음에 다시 본다
+    box.setAttribute("data-pg-done", "1");
+    if (items.length <= PAGE && items.length < SEARCH_FROM) return;
+    var anchor = box.tagName === "TABLE" && box.parentNode.classList.contains("tablewrap") ? box.parentNode : box;
+    var st = memo[key] || (memo[key] = { q: "", page: 0 });
+    var bar = null, input = null;
+    if (items.length >= SEARCH_FROM) {
+      bar = document.createElement("div");
+      bar.className = "pg-bar";
+      bar.innerHTML = '<input type="search" placeholder="이 목록에서 찾기 — 이름·가명·숫자 아무거나"><span class="pg-count"></span>';
+      anchor.parentNode.insertBefore(bar, anchor);
+      input = bar.querySelector("input");
+      input.value = st.q;
+      input.addEventListener("input", function(){ st.q = input.value; st.page = 0; typing = key; draw(); });
+      // 다른 칸을 누르셔서 떠나면 새로고침 뒤에 커서를 돌려주지 않는다
+      input.addEventListener("blur", function(ev){ if (ev.relatedTarget) typing = null; });
+    }
+    var nav = document.createElement("div");
+    nav.className = "pg-nav";
+    anchor.parentNode.insertBefore(nav, anchor.nextSibling);
+    var empty = document.createElement("div");
+    empty.className = "pg-empty";
+    empty.textContent = "찾는 말이 들어간 줄이 없습니다.";
+    empty.style.display = "none";
+    anchor.parentNode.insertBefore(empty, nav);
+    nav.addEventListener("click", function(ev){
+      var b = ev.target.closest ? ev.target.closest("button[data-pg]") : null;
+      if (!b || b.disabled) return;
+      st.page = Number(b.getAttribute("data-pg"));
+      draw();
+      anchor.scrollIntoView({ block: "nearest" });
+    });
+    function draw(){
+      var q = st.q.trim().toLowerCase();
+      var hit = items.filter(function(r){ return !q || r.textContent.toLowerCase().indexOf(q) >= 0; });
+      var pages = Math.max(1, Math.ceil(hit.length / PAGE));
+      if (st.page >= pages) st.page = pages - 1;
+      var from = st.page * PAGE, to = from + PAGE;
+      items.forEach(function(r){ r.style.display = "none"; });
+      hit.forEach(function(r, i){ if (i >= from && i < to) r.style.display = ""; });
+      empty.style.display = hit.length ? "none" : "";
+      if (bar) bar.querySelector(".pg-count").textContent = q
+        ? "찾은 줄 " + hit.length + " / 전체 " + items.length
+        : "전체 " + items.length + "줄" + (pages > 1 ? " · " + (from + 1) + "–" + Math.min(to, hit.length) + "줄" : "");
+      if (pages <= 1) { nav.innerHTML = ""; return; }
+      var h = btn("‹ 이전", st.page - 1, false, st.page === 0), last = -1;
+      for (var p = 0; p < pages; p++) {
+        // 쪽이 많으면 처음·끝·지금 언저리만 — 나머지는 …
+        if (p === 0 || p === pages - 1 || Math.abs(p - st.page) <= 2) {
+          if (last >= 0 && p - last > 1) h += '<span class="pg-gap">…</span>';
+          h += btn(String(p + 1), p, p === st.page, false);
+          last = p;
+        }
+      }
+      nav.innerHTML = h + btn("다음 ›", st.page + 1, false, st.page >= pages - 1);
+    }
+    draw();
+    var lost = !document.activeElement || document.activeElement === document.body;
+    if (input && typing === key && lost) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+  }
+  function scan(root){
+    var boxes = root.querySelectorAll("table, .plist"), n = 0;
+    for (var i = 0; i < boxes.length; i++) {
+      var b = boxes[i];
+      if (b.tagName === "TABLE" && b.closest(".plist")) continue;
+      var key = keyOf(root, n++);
+      if (!b.hasAttribute("data-pg-done")) mount(b, key);
+    }
+  }
+  function watch(root){
+    var pending = false;
+    new MutationObserver(function(){
+      if (pending) return;
+      pending = true;
+      setTimeout(function(){ pending = false; scan(root); }, 0);
+    }).observe(root, { childList: true, subtree: true });
+    scan(root);
+  }
+  function start(){
+    var roots = document.querySelectorAll("[data-pager-root]");
+    for (var i = 0; i < roots.length; i++) watch(roots[i]);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
 </script>
 </body>
