@@ -101,6 +101,10 @@
   a.ct-out{font-size:13px;color:var(--teal);margin-left:6px}
   .ct-new{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;padding:12px 14px;border:1px dashed var(--line);border-radius:10px;font-size:13px}
   .ct-new input,.ct-new select{padding:6px 8px;font-size:13px}
+  .ct-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:4px 0 14px}
+  .ct-steps div{background:var(--teal-soft);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55}
+  .ct-steps div b:first-child{display:inline-block;width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;text-align:center;line-height:20px;margin-right:4px;font-size:12px}
+  .ctp-add.first{margin:0 0 12px;padding:12px 14px;border:1px solid var(--teal);border-radius:10px;background:var(--teal-soft)}
   .ctp{margin-top:14px;border:2px solid var(--teal);border-radius:12px;padding:16px 18px;background:#fff;text-align:left}
   .ctp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
   .ctp-name{font-size:18px;font-weight:700}
@@ -176,7 +180,7 @@
   <!-- ★(S695 · 대표 지시 「회사 콘솔에서 레포트 페이지로 가는 버튼을 찾을 수 없어」) 걷기 보고서 페이지로 가는 입구 ★
        같은 사이트(/admin/report/)라 로그인이 이어진다 · 새 탭으로 열어 이 콘솔은 그대로 둔다 -->
   <a class="btn" id="reportLink" href="/admin/report/" target="_blank" rel="noopener" title="어르신별 걷기 분석 보고서 · 코호트 요약 (A4)">걷기 보고서</a>
-  <button id="seatBtn" title="지자체·보험사 계약과 좌석 현황">계약·좌석</button>
+  <button id="seatBtn" title="보건소·지자체 등 기관 만들기 · 기관 담당자 넣기 · 인원·기간">기관 관리</button>
   <button id="growthBtn" title="월별 설치·이탈·연동률·좌석">성장판</button>
   <button id="secBtn" title="2단계 인증 · 열람 기록">보안</button>
   <button id="refreshBtn">지금 새로고침</button>
@@ -1537,22 +1541,25 @@
   }
 
   function renderSeats(){
-    var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "계약·좌석" }]);
+    var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "기관 관리" }]);
 
-    html += '<section><div class="sechead"><div><h2>기관' +
-      '<span class="whose">지자체 · 보건소 · 복지관 · 보험사</span></h2>' +
-      '<div class="desc">기관 하나가 계약 하나입니다. <b>「관리」</b>에서 인원·기간·담당자·소속 어르신을 고칩니다. ' +
-      '어르신은 기관 담당자가 <b>기관 콘솔 「어르신 추가」</b>에서 어르신 폰의 연동 번호로 넣습니다.</div></div></div>' +
+    html += '<section><div class="sechead"><div><h2>기관 목록' +
+      '<span class="whose">보건소 · 지자체 · 복지관 · 보험사</span></h2></div></div>' +
+      '<div class="ct-steps">' +
+      '<div><b>1</b> 아래 <b>「새 기관 만들기」</b>에 기관 이름을 적고 만듭니다.</div>' +
+      '<div><b>2</b> 기관 줄의 <b>「편집」</b> → <b>「기관 담당자」</b> 칸에 그 기관 담당자의 <b>구글 이메일</b>을 넣습니다.</div>' +
+      '<div><b>3</b> 담당자에게 <b>www.telos.it.kr/gov</b> 를 알려 드립니다. 그 이메일로 구글 로그인하면 <b>그 기관 어르신만</b> 보이고, ' +
+      '어르신은 담당자가 <b>「어르신 추가」</b>에서 어르신 폰의 연동 번호로 넣습니다.</div></div>' +
       '<div id="contractBox" class="desc">불러오는 중…</div>' +
       '<div id="contractDetail"></div>' +
-      '<div class="ct-new"><b>새 기관</b>' +
+      '<div class="ct-new"><b>새 기관 만들기</b>' +
       '<label>이름 <input id="scName" placeholder="예: ○○보건소" style="width:180px"></label>' +
       '<label>종류 <select id="scKind"><option value="gov">지자체·보건소</option><option value="free_pilot">무료실증</option>' +
       '<option value="insurer">보험사</option><option value="other">기타</option></select></label>' +
       '<label>인원 <input id="scTotal" type="number" min="1" value="100" style="width:80px">명</label>' +
       '<label>기간 <input id="scMonths" type="number" min="1" value="12" style="width:70px">개월</label>' +
-      '<button class="primary" id="scCreate">만들기</button> <span id="scMsg" class="muted"></span>' +
-      '<div class="muted" style="width:100%;margin-top:4px">만든 뒤 「관리」에서 담당자 구글 이메일을 넣어야 그 담당자가 기관 콘솔에서 볼 수 있습니다.</div></div></section>';
+      '<button class="primary" id="scCreate">기관 만들기</button> <span id="scMsg" class="muted"></span>' +
+      '<div class="muted" style="width:100%;margin-top:4px">만들면 곧바로 그 기관의 「기관 담당자」 칸이 열립니다.</div></div></section>';
 
     html += '<section><div class="sechead"><div><h2>혜택코드 발급' +
       '<span class="whose">보험사 · B2C 무료체험</span></h2>' +
@@ -1608,8 +1615,8 @@
              "<td" + (d != null && d <= END_SOON_DAYS ? ' class="warn"' : "") + ">" +
                (c.ends_at ? esc(ymd(c.ends_at)) + "까지 · " + leftText(c.ends_at) : "기간 없음") + "</td>" +
              (showBenefit ? "<td>" + (c.benefit_total > 0 ? esc(c.benefit_redeemed) + " / " + esc(c.benefit_total) + " 사용" : "—") + "</td>" : "") +
-             '<td><button class="primary small" data-detail="' + esc(c.id) + '">관리</button> ' +
-             '<a class="ct-out" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 ↗</a></td></tr>';
+             '<td><button class="primary small" data-detail="' + esc(c.id) + '">' + (c.id === openDetailId ? "접기" : "편집") + '</button> ' +
+             '<a class="ct-out" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener" title="기관 담당자가 보는 화면을 새 탭에서 엽니다">기관이 보는 화면 ↗</a></td></tr>';
       });
       box.innerHTML = h + "</table></div>";
       Array.prototype.forEach.call(box.querySelectorAll("[data-detail]"), function(b){
@@ -1683,8 +1690,8 @@
     // ── 머리 ──
     h += '<div class="ctp-head"><div>' +
       '<div class="ctp-name">' + esc(c.name) + ' <button class="link" id="cdRename">이름 바꾸기</button></div>' +
-      '<div class="muted">' + esc(KIND_LABEL[c.kind] || c.kind) + " · 담당자 " + d.staff.length + "명 · 어르신 " + active.length + "분</div></div>" +
-      '<div class="ctp-actions"><a class="btn" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 열기 ↗</a>' +
+      '<div class="muted">' + esc(KIND_LABEL[c.kind] || c.kind) + " · 기관 담당자 " + d.staff.length + "명 · 소속 어르신 " + active.length + "분</div></div>" +
+      '<div class="ctp-actions"><a class="btn" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관이 보는 화면 열기 ↗</a>' +
       '<button id="cdClose">닫기</button></div></div>';
 
     // ── 큰 칸 둘: 인원 · 기간 ──
@@ -1705,9 +1712,9 @@
     // ── 탭 셋 ──
     var logCount = d.attempts.length + d.activity.length;
     h += '<div class="ctp-tabs">' +
-      '<button data-tab="elders"' + (detailTab === "elders" ? ' class="on"' : "") + ">어르신 " + active.length + "</button>" +
-      '<button data-tab="staff"' + (detailTab === "staff" ? ' class="on"' : "") + ">담당자 " + d.staff.length + "</button>" +
-      '<button data-tab="log"' + (detailTab === "log" ? ' class="on"' : "") + ">기록 " + logCount + "</button></div>";
+      '<button data-tab="elders"' + (detailTab === "elders" ? ' class="on"' : "") + ">소속 어르신 " + active.length + "</button>" +
+      '<button data-tab="staff"' + (detailTab === "staff" ? ' class="on"' : "") + ">기관 담당자 " + d.staff.length + (d.staff.length ? "" : ' <span class="warn">!</span>') + "</button>" +
+      '<button data-tab="log"' + (detailTab === "log" ? ' class="on"' : "") + ">활동 기록 " + logCount + "</button></div>";
 
     h += '<div class="ctp-body">';
     if (detailTab === "elders") {
@@ -1729,9 +1736,14 @@
       });
       h += "</table>";
     } else if (detailTab === "staff") {
-      h += '<div class="s muted" style="margin-bottom:8px">담당자는 이 구글 이메일로 기관 콘솔(www.telos.it.kr/gov)에 로그인해 이 기관 어르신만 봅니다.</div>';
+      h += '<div class="ctp-add first"><b>기관 담당자 넣기</b><input id="cdStaffEmail" placeholder="담당자의 구글 이메일 (예: kim@gmail.com)" style="width:280px">' +
+        '<select id="cdStaffRole"><option value="staff">담당자</option><option value="manager">책임자</option></select>' +
+        '<input id="cdStaffNote" placeholder="메모(선택 · 예: 방문간호팀 김○○)" style="width:220px">' +
+        '<button class="primary" id="cdStaffAdd">넣기</button><span id="cdStaffMsg" class="muted"></span>' +
+        '<div class="muted" style="width:100%">넣은 사람은 <b>www.telos.it.kr/gov</b> 에 이 구글 이메일로 로그인하면 <b>' + esc(c.name) + '</b> 어르신만 봅니다. ' +
+        '회사 콘솔에는 들어올 수 없습니다. (책임자·담당자는 지금 하는 일이 같고, 누가 책임자인지 표시만 합니다.)</div></div>';
       h += '<table class="ctp-table"><tr><th>구글 이메일</th><th>역할</th><th>메모</th><th>넣은 날</th><th></th></tr>';
-      if (!d.staff.length) h += '<tr><td colspan="5" class="warn">담당자가 없습니다 — 아래에서 넣어야 기관이 기관 콘솔을 쓸 수 있습니다.</td></tr>';
+      if (!d.staff.length) h += '<tr><td colspan="5" class="warn">아직 없습니다 — 위에서 넣어야 이 기관이 기관 콘솔을 쓸 수 있습니다.</td></tr>';
       d.staff.forEach(function(s){
         h += "<tr><td><b>" + esc(s.email) + "</b></td>" +
           '<td><select data-staff-role="' + esc(s.email) + '" data-note="' + esc(s.note || "") + '">' +
@@ -1740,11 +1752,7 @@
           "<td>" + esc(s.note || "") + "</td><td>" + esc(ymd(s.created_at)) + "</td>" +
           '<td><button class="danger small" data-staff-rm="' + esc(s.email) + '">빼기</button></td></tr>';
       });
-      h += "</table>" +
-        '<div class="ctp-add"><b>담당자 넣기</b><input id="cdStaffEmail" placeholder="구글 이메일" style="width:230px">' +
-        '<select id="cdStaffRole"><option value="staff">담당자</option><option value="manager">책임자</option></select>' +
-        '<input id="cdStaffNote" placeholder="메모(선택 · 예: 방문간호팀)" style="width:200px">' +
-        '<button class="primary" id="cdStaffAdd">넣기</button><span id="cdStaffMsg" class="muted"></span></div>';
+      h += "</table>";
     } else {
       // 두 기록을 시간순으로 한 줄에 — 어르신 추가 시도 + 기관 콘솔 활동
       var rows = d.attempts.map(function(a){
@@ -3505,13 +3513,15 @@
 
   // ── 관리자 관리 ──────────────────────────────────────────────────────
   function adminSection(){
-    return "<section><h2>관리자 관리</h2>" +
-      '<div class="desc">여기 등록된 이메일 계정만 이 콘솔을 열 수 있습니다. 아직 가입하지 않은 사람도 미리 등록해 둘 수 있어요' +
+    return "<section><h2>회사 콘솔 관리자<span class=\"whose\">텔로스 직원만</span></h2>" +
+      '<div class="purpose" style="margin-bottom:10px">★보건소·지자체 등 <b>기관 담당자는 여기에 넣지 않습니다</b> — 여기 넣으면 모든 기관·모든 어르신이 보입니다. ' +
+      '기관 담당자는 위쪽 <b>「기관 관리」</b> 단추 → 기관 줄의 <b>「편집」</b> → <b>「기관 담당자」</b> 칸에 넣습니다.</div>' +
+      '<div class="desc">여기 등록된 이메일 계정만 이 회사 콘솔을 열 수 있습니다. 아직 가입하지 않은 사람도 미리 등록해 둘 수 있어요' +
       "(나중에 같은 이메일로 로그인하면 바로 들어옵니다). 본인은 지울 수 없고, 마지막 한 명도 지울 수 없습니다.</div>" +
       '<div class="row" style="margin-bottom:12px">' +
       '<input id="newAdminEmail" type="email" placeholder="추가할 이메일" style="flex:1;min-width:220px">' +
       '<input id="newAdminNote" type="text" placeholder="메모 (예: 운영팀 김OO)" style="flex:1;min-width:180px">' +
-      '<button class="primary" id="addAdminBtn">관리자 추가</button></div>' +
+      '<button class="primary" id="addAdminBtn">회사 관리자 추가</button></div>' +
       '<div id="adminMsg" style="font-size:13px;margin-bottom:10px"></div>' +
       '<div class="tablewrap"><table id="adminTable"></table></div></section>';
   }
