@@ -57,6 +57,12 @@ main{max-width:1120px;margin:0 auto;padding:18px 22px 40px}
 table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 th{background:#f1f5f9;text-align:left;padding:9px 10px;font-size:12px;color:#475569;font-weight:600}
 td{border-top:1px solid var(--line);padding:9px 10px}
+.addbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;max-width:560px}
+.addbox .grid{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center}
+.addbox input{border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:inherit}
+.addbox #addCode{font-size:20px;letter-spacing:4px}
+.addbox button{background:var(--acc);border:1px solid var(--acc);color:#fff;border-radius:8px;padding:9px 14px;font-weight:600}
+.addbox button:disabled{opacity:.5}
 td .tag{font-size:11px;background:var(--warm);border:1px solid var(--warmline);border-radius:4px;padding:1px 6px;margin-right:4px}
 td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px}
 #viewer{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10}
@@ -88,6 +94,7 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
     <button data-tab="attention" class="on">살펴볼 분</button>
     <button data-tab="all">어르신 전체</button>
     <button data-tab="cohort">걷기 측정 요약</button>
+    <button data-tab="add">어르신 추가</button>
   </nav>
   <main id="main" data-pager-root><div class="empty">불러오는 중…</div></main>
 </div>
@@ -104,6 +111,8 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
   // ★공개 전제값(anon)★ — 회사 콘솔에 박힌 것과 같다. 데이터는 로그인 + 담당자 확인을 지나야 나온다.
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZXJxZHNlZG1hZmJxYmdxb29pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjYzMjksImV4cCI6MjA5MTkwMjMyOX0.Qg91BDcIkfmAt_5TGG5Cro401OXAyW1-Hu9BEObsZks";
   var FN = SUPA + "/functions/v1/get-walk-report";
+  // ★(S697) 어르신 추가는 따로 선 함수 — 보고서(읽기)와 등록(쓰기)은 갈래가 다르다★
+  var FN_ADD = SUPA + "/functions/v1/institution-add-elder";
   var SESS_KEY = "telos_gov_session";   // ★회사 콘솔(telos_session)과 다른 칸★
 
   var state = { contracts: [], contractId: null, tab: "attention", overview: null };
@@ -221,9 +230,78 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
       '<div class="empty"><button class="btn-google" id="cohortBtn" style="max-width:280px">요약 열기</button></div>';
     el("cohortBtn").onclick = function(){ openViewer("걷기 측정 요약", { mode: "cohort" }); };
   }
+  // ★(S697 · 대표 결정 「1로 진행」) 어르신 추가 — 어르신 폰의 연동 번호(6자리 · 10분)를 넣는다★
+  //   담당자는 보호자가 되지 않는다(기관 소속만 켠다 · sql 171). 번호는 어르신이 옆에 계셔야 보인다.
+  var ADD_TEXT = {
+    ok: "추가했습니다.",
+    already: "이미 이 기관에 계신 분입니다.",
+    bad_code: "번호가 맞지 않거나 10분이 지났습니다. 어르신 폰에서 번호를 다시 띄워 주세요.",
+    other_contract: "다른 기관 계약에 속한 분입니다. 옮기시려면 텔로스에 요청해 주세요.",
+    no_seat: "계약한 인원이 다 찼습니다. 인원을 늘리시려면 텔로스에 요청해 주세요.",
+    contract_ended: "계약 기간이 끝났습니다. 텔로스에 문의해 주세요.",
+    alias_too_long: "가명은 20자까지 적을 수 있습니다.",
+    too_many_tries: "틀린 번호를 여러 번 넣으셨습니다. 한 시간 뒤에 다시 해 주세요.",
+  };
+  function renderAdd(){
+    el("main").innerHTML =
+      '<div class="note"><b>어르신 폰에서</b> 「부모님 텔로스 케어」 앱을 열고 홈의 <b>「설정」</b>을 누르면 <b>연동 번호 6자리</b>가 나옵니다. ' +
+      '그 번호를 10분 안에 아래에 넣어 주세요. 어르신 폰에 떠 있는 번호라서 <b>어르신이 곁에 계실 때만</b> 넣을 수 있습니다.<br>' +
+      '추가하셔도 담당자가 보호자로 연결되지는 않습니다. 자녀 연결은 따로입니다.</div>' +
+      '<div class="addbox"><div class="grid">' +
+      '<label for="addCode">연동 번호</label><input id="addCode" inputmode="numeric" maxlength="7" placeholder="000000" autocomplete="off">' +
+      '<label for="addAlias">가명(선택)</label><input id="addAlias" maxlength="20" placeholder="실명 대신 부를 이름">' +
+      '<label for="addMgmt">관리번호(선택)</label><input id="addMgmt" maxlength="40" placeholder="기관 명부의 번호">' +
+      '<span></span><div><button id="addBtn">추가</button></div></div>' +
+      '<div id="addMsg" class="note" style="display:none;margin:14px 0 0"></div></div>';
+    el("addBtn").onclick = function(){
+      var code = el("addCode").value.replace(/\D/g, "");
+      var msg = el("addMsg");
+      msg.style.display = "block";
+      if (code.length !== 6) { msg.textContent = "연동 번호 6자리를 넣어 주세요."; return; }
+      el("addBtn").disabled = true;
+      msg.textContent = "확인하는 중…";
+      callAdd({ contract_id: state.contractId, code: code, alias: el("addAlias").value.trim() || null, mgmt_no: el("addMgmt").value.trim() || null })
+        .then(function(j){
+          el("addBtn").disabled = false;
+          var t = ADD_TEXT[j.result] || ("추가하지 못했습니다 (" + (j.result || j.error || "알 수 없음") + ")");
+          if (j.result === "ok" || j.result === "already") {
+            t += " · " + (j.alias ? "가명 " + j.alias : "가명 없음 — 「어르신 전체」에서 확인해 주세요");
+            if (j.mgmt_no && j.mgmt_no !== "ok") t += " · 관리번호는 적지 못했습니다 — 「어르신 전체」의 「적기」로 다시 적어 주세요";
+            el("addCode").value = ""; el("addAlias").value = ""; el("addMgmt").value = "";
+            // 목록만 새로 받아 둔다 — ★화면을 다시 그리면 이 결과 문구가 지워진다★(다른 탭을 누르면 새 목록이 보인다)
+            call({ mode: "overview" }).then(function(r){ return r.json(); }).then(function(o){ state.overview = o; }).catch(function(){});
+          }
+          msg.textContent = t;
+        })
+        .catch(function(e){
+          el("addBtn").disabled = false;
+          if (e.message === "no_session" || e.message === "session_expired") return fail(e);
+          msg.textContent = "추가하지 못했습니다 — " + e.message;
+        });
+    };
+    el("addCode").onkeydown = function(ev){ if (ev.key === "Enter") el("addBtn").click(); };
+    el("addCode").focus();
+  }
+  function callAdd(body, retried){
+    var s = sess();
+    if (!s) return Promise.reject(new Error("no_session"));
+    return fetch(FN_ADD, {
+      method: "POST",
+      headers: { "apikey": ANON, "Authorization": "Bearer " + s.access_token, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(function(r){
+      if (r.status === 401 && !retried) {
+        return refresh().then(function(ok){ if (!ok) throw new Error("session_expired"); return callAdd(body, true); });
+      }
+      if (r.status === 404) throw new Error("이 계약의 담당자가 아닙니다");
+      return r.json().catch(function(){ return { error: "http_" + r.status }; });
+    });
+  }
+
   function render(){
     Array.prototype.forEach.call(document.querySelectorAll("nav button"), function(b){ b.classList.toggle("on", b.getAttribute("data-tab") === state.tab); });
     if (state.tab === "cohort") return renderCohort();
+    if (state.tab === "add") return renderAdd();
     if (!state.overview) { el("main").innerHTML = '<div class="empty">불러오는 중…</div>'; return; }
     if (state.tab === "all") renderAll(); else renderAttention();
   }
