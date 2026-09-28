@@ -92,6 +92,34 @@
   .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
   input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* (S697) 기관 관리 — 계약 표 · 관리 창 */
+  .ct-bar{display:inline-block;width:70px;height:6px;background:#e5eeec;border-radius:3px;vertical-align:middle;overflow:hidden}
+  .ct-bar span{display:block;height:100%;background:var(--teal)}
+  table.ct-list tr.on td{background:var(--teal-soft)}
+  button.small{padding:4px 10px;font-size:12.5px}
+  button:disabled{opacity:.4;cursor:default}
+  a.ct-out{font-size:13px;color:var(--teal);margin-left:6px}
+  .ct-new{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;padding:12px 14px;border:1px dashed var(--line);border-radius:10px;font-size:13px}
+  .ct-new input,.ct-new select{padding:6px 8px;font-size:13px}
+  .ctp{margin-top:14px;border:2px solid var(--teal);border-radius:12px;padding:16px 18px;background:#fff;text-align:left}
+  .ctp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+  .ctp-name{font-size:18px;font-weight:700}
+  .ctp-actions{display:flex;gap:8px;align-items:center}
+  .ctp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  .ctp-tile{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .ctp-tile .k{font-size:12.5px;color:var(--sub)}
+  .ctp-tile .v{font-size:22px;font-weight:700;margin:2px 0 6px}
+  .ctp-tile .s{font-size:12px;color:var(--sub);margin-top:6px}
+  .ctp-edit{display:flex;gap:6px;align-items:center;margin-top:8px}
+  .ctp-edit input{padding:6px 8px;font-size:14px;width:90px}
+  .ctp-edit input[type=date]{width:160px}
+  .ctp-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:10px}
+  .ctp-tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 14px;color:var(--sub)}
+  .ctp-tabs button.on{color:var(--ink);border-bottom-color:var(--teal);font-weight:700}
+  table.ctp-table th,table.ctp-table td{text-align:left}
+  table.ctp-table tr.dim td{color:#9aaaa8}
+  .ctp-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+  .ctp-add input,.ctp-add select{padding:6px 8px;font-size:13px}
   .note{font-size:12px;color:var(--sub);margin-top:10px;line-height:1.6}
   .sechead{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap}
   .sechead .csv{flex:0 0 auto}
@@ -1483,69 +1511,48 @@
 
   var KIND_LABEL = { gov: "지자체", insurer: "보험사", free_pilot: "무료실증", internal: "내부", other: "기타" };
 
-  // ★무료 기간 임계 = 12개월★ — IR 18p STEP 2 가 약속한 "무료 12개월 운영"이 근거다.
-  var FREE_MONTHS_LIMIT = 12;
-  // ★어르신 1인당 월 LLM 원가 상한(원)★ — S578 실측(하루 10분 = 월 1,000~1,540원)의
-  //   ★윗값★ 을 쓴다. 적게 잡으면 청구서가 넘고, 이 칸은 "각오할 금액"을 보는 자리다.
-  var COST_PER_SEAT_MONTH = 1540;
+  // ★(S697 · 대표 지적 "왜 신흥사랑 월 부담이 2만원 이상이 나가지? ai도 없는데?")★
+  //   종전 "월 부담" 칸 = 좌석 × 1,540원 — S578 의 ★음성 대화 LLM 원가★(하루 10분) 가정이었다.
+  //   음성을 걷어낸(S618) 지금 그 비용은 없고, 그 칸은 ★청구와 무관한 숫자★ 를 보였다 → 뺐다.
+  //   ★되살리지 말 것★ — 원가를 다시 보이려면 실제 청구(서버·AI 요약 호출)에서 재어 온 값이어야 한다.
+  // ★만료 30일 안★ 을 먼저 알린다 — 기간이 기본 1년(sql 173)이라 잊으면 기관 콘솔 추가가 막힌다.
+  var END_SOON_DAYS = 30;
 
-  function isFreeKind(kind){ return kind === "free_pilot" || kind === "other"; }
-
-  /** 시작일로부터 지난 개월 수(정수 · 모르면 null). */
-  function monthsSince(iso){
+  function ymd(iso){ return iso ? String(iso).slice(0, 10) : ""; }
+  /** 오늘부터 그날까지 남은 날(모르면 null · 지났으면 음수). */
+  function daysLeft(iso){
     if (!iso) return null;
     var t = Date.parse(String(iso));
     if (isNaN(t)) return null;
-    var days = (Date.now() - t) / 86400000;
-    if (days < 0) return 0;
-    return Math.floor(days / 30.44);
+    return Math.ceil((t - Date.now()) / 86400000);
   }
-
-  /** 좌석 수 → 월 부담(원). ★0석이면 0원이라 적는다★ — "—"로 두면 모르는 것처럼 읽힌다. */
-  function monthlyCostText(seats){
-    var n = Number(seats) || 0;
-    return "약 " + (n * COST_PER_SEAT_MONTH).toLocaleString("ko-KR") + "원";
+  function leftText(iso){
+    var d = daysLeft(iso);
+    if (d == null) return "기간 없음";
+    return d < 0 ? "끝남" : "남은 " + d + "일";
   }
-
-  /**
-   * 기간·좌석 고치기.
-   * ★연장은 계약과 좌석을 함께 고친다★ — 서버 console_update_contract 가 그 계약의
-   * 켜진 좌석 만료까지 같이 갱신한다(계약만 늘리면 어르신 쪽은 옛 날짜로 잠긴다).
-   * ★무기한으로 되돌리는 것은 이 화면에서 하지 않는다★ — 되돌릴 일이 드물고,
-   * 실수로 눌러 만료를 지우면 유료 계약이 영구 무료가 된다.
-   */
-  function extendContract(id){
-    var months = prompt("기간을 몇 개월로 할까요? (지금부터 · 비우면 기간은 그대로)", "");
-    if (months === null) return;
-    var seats = prompt("좌석 수를 몇 개로 할까요? (비우면 그대로)", "");
-    if (seats === null) return;
-    var args = { p_contract_id: id };
-    if (String(months).trim() !== "") args.p_months = Number(months);
-    if (String(seats).trim() !== "") args.p_seat_total = Number(seats);
-    if (args.p_months == null && args.p_seat_total == null) return;
-    rpc("console_update_contract", args).then(function(r){
-      if (r.ok) { loadContracts(); loadSeats(); }
-      else alert("고치지 못했습니다: " + (r.raw || ""));
-    });
+  function seatBar(used, total){
+    var pct = total > 0 ? Math.min(100, Math.round(used / total * 100)) : 0;
+    return '<span class="ct-bar"><span style="width:' + pct + '%"></span></span>';
   }
 
   function renderSeats(){
     var html = crumb([{ t: "개요", go: { view: "overview" } }, { t: "계약·좌석" }]);
 
-    html += '<section><div class="sechead"><div><h2>계약' +
-      '<span class="whose">지자체 · 보험사 · 무료실증</span></h2>' +
-      '<div class="desc">파는 것은 앱이 아니라 <b>좌석</b>입니다. 계약을 만들면 <b>기관 가입코드</b>가 나오고, ' +
-      '요양사가 그 코드를 앱에 한 번 입력하면 그 뒤 어르신 연동마다 좌석이 자동으로 차감·켜집니다.<br>' +
-      '보험사 계약은 가입코드 대신 <b>혜택코드 묶음</b>을 발급해 전달합니다(1개 1회용 · 기간 내장).</div></div></div>' +
+    html += '<section><div class="sechead"><div><h2>기관' +
+      '<span class="whose">지자체 · 보건소 · 복지관 · 보험사</span></h2>' +
+      '<div class="desc">기관 하나가 계약 하나입니다. <b>「관리」</b>에서 인원·기간·담당자·소속 어르신을 고칩니다. ' +
+      '어르신은 기관 담당자가 <b>기관 콘솔 「어르신 추가」</b>에서 어르신 폰의 연동 번호로 넣습니다.</div></div></div>' +
       '<div id="contractBox" class="desc">불러오는 중…</div>' +
       '<div id="contractDetail"></div>' +
-      '<div class="desc" style="margin-top:12px"><b>새 계약</b> — ' +
-      '<input id="scName" placeholder="이름 (예: ○○시-2027)" style="width:180px"> ' +
-      '<select id="scKind"><option value="gov">지자체</option><option value="insurer">보험사</option>' +
-      '<option value="free_pilot">무료실증</option><option value="other">기타</option></select> ' +
-      '좌석 <input id="scTotal" type="number" min="1" value="100" style="width:70px">개 · ' +
-      '기간 <input id="scMonths" type="number" min="1" placeholder="무기한" style="width:70px">개월 ' +
-      '<button id="scCreate">만들기</button> <span id="scMsg" class="muted"></span></div></section>';
+      '<div class="ct-new"><b>새 기관</b>' +
+      '<label>이름 <input id="scName" placeholder="예: ○○보건소" style="width:180px"></label>' +
+      '<label>종류 <select id="scKind"><option value="gov">지자체·보건소</option><option value="free_pilot">무료실증</option>' +
+      '<option value="insurer">보험사</option><option value="other">기타</option></select></label>' +
+      '<label>인원 <input id="scTotal" type="number" min="1" value="100" style="width:80px">명</label>' +
+      '<label>기간 <input id="scMonths" type="number" min="1" value="12" style="width:70px">개월</label>' +
+      '<button class="primary" id="scCreate">만들기</button> <span id="scMsg" class="muted"></span>' +
+      '<div class="muted" style="width:100%;margin-top:4px">만든 뒤 「관리」에서 담당자 구글 이메일을 넣어야 그 담당자가 기관 콘솔에서 볼 수 있습니다.</div></div></section>';
 
     html += '<section><div class="sechead"><div><h2>혜택코드 발급' +
       '<span class="whose">보험사 · B2C 무료체험</span></h2>' +
@@ -1556,10 +1563,10 @@
       '<button id="bcIssue">발급</button> <span id="bcMsg" class="muted"></span></div>' +
       '<textarea id="bcOut" readonly style="width:100%;margin-top:8px;display:none;height:120px;font-family:monospace"></textarea></section>';
 
-    html += '<section><div class="sechead"><div><h2>어르신별 좌석' +
-      '<span class="whose">가명 · 재원 · 만료</span></h2>' +
-      '<div class="desc">끄기는 지우기가 아닙니다 — 라벨과 이력은 정산 근거로 남습니다. ' +
-      '수동 켜기는 예외 처리용입니다(정상 경로는 계약 코드).</div></div></div>' +
+    html += '<section><div class="sechead"><div><h2>어르신별 소속' +
+      '<span class="whose">가명 · 기관 · 만료</span></h2>' +
+      '<div class="desc">「기관에서 빼기」는 지우기가 아닙니다 — 걸음 기록·자녀 연결은 남고, 그 기관의 관리번호·연락처만 지워집니다. ' +
+      '「켜기」는 기관 없이 좌석만 켜는 예외 처리용입니다.</div></div></div>' +
       '<div id="seatBox" class="desc">불러오는 중…</div></section>';
 
     el("view").innerHTML = html;
@@ -1583,77 +1590,60 @@
           sel.appendChild(o);
         });
       }
-      if (!r.body.length) { box.textContent = "아직 계약이 없습니다. 아래에서 첫 계약을 만드세요."; return; }
-      // ★(S580) 무료로 오래 쓰는 계약을 먼저 알린다★ — 무기한 계약은 잊히기 쉽고,
-      //   그 사이 LLM 비용은 우리가 낸다. IR 18p 가 약속한 무료 기간이 12개월이라
-      //   그것을 임계로 삼는다(근거 있는 값 · 임의의 숫자가 아니다).
-      var aged = r.body.filter(function(c){
-        return isFreeKind(c.kind) && monthsSince(c.starts_at) >= FREE_MONTHS_LIMIT;
-      });
+      if (!r.body.length) { box.textContent = "아직 기관이 없습니다. 아래에서 첫 기관을 만드세요."; return; }
+      var soon = r.body.filter(function(c){ var d = daysLeft(c.ends_at); return d != null && d <= END_SOON_DAYS; });
+      var showBenefit = r.body.some(function(c){ return c.benefit_total > 0; });
       var h = "";
-      if (aged.length) {
-        h += '<div class="desc" style="margin-bottom:10px"><span class="warn">' +
-             "무료로 " + FREE_MONTHS_LIMIT + "개월 넘게 쓰는 계약 " + aged.length + "건" +
-             "</span> — 유료 전환이나 종료를 정하실 때입니다. " +
-             '<span class="muted">그대로 두면 아래 "월 부담"이 계속 나갑니다.</span></div>';
+      if (soon.length) {
+        h += '<div class="desc" style="margin-bottom:10px"><span class="warn">만료가 ' + END_SOON_DAYS + "일 안인 기관 " + soon.length + "곳</span> — " +
+             "「관리」에서 만료일을 늦추지 않으면 그 기관은 어르신을 더 넣을 수 없습니다.</div>";
       }
-      h += '<div class="tablewrap"><table><tr><th>이름</th><th>종류</th><th>좌석</th>' +
-           "<th>쓴 기간</th><th>월 부담</th>" +
-           "<th>기관 가입코드</th><th>혜택코드</th><th>만료</th><th></th></tr>";
+      h += '<div class="tablewrap"><table class="ct-list"><tr><th>이름</th><th>종류</th><th>인원</th><th>기간</th>' +
+           (showBenefit ? "<th>혜택코드</th>" : "") + "<th></th></tr>";
       r.body.forEach(function(c){
-        var months = monthsSince(c.starts_at);
-        var old = isFreeKind(c.kind) && months >= FREE_MONTHS_LIMIT;
-        h += "<tr><td>" + esc(c.name) + "</td>" +
+        var d = daysLeft(c.ends_at);
+        h += '<tr' + (c.id === openDetailId ? ' class="on"' : "") + "><td><b>" + esc(c.name) + "</b></td>" +
              "<td>" + esc(KIND_LABEL[c.kind] || c.kind) + "</td>" +
-             "<td>" + esc(c.seats_used) + " / " + esc(c.seat_total) + "</td>" +
-             "<td" + (old ? ' class="warn"' : "") + ">" +
-               (months == null ? "—" : esc(months) + "개월") + "</td>" +
-             "<td>" + monthlyCostText(c.seats_used) + "</td>" +
-             "<td style='font-family:monospace'>" + (c.join_code ? esc(c.join_code) : "—") + "</td>" +
-             "<td>" + (c.benefit_total > 0 ? esc(c.benefit_redeemed) + " / " + esc(c.benefit_total) + " 사용" : "—") + "</td>" +
-             "<td>" + (c.ends_at ? esc(String(c.ends_at).slice(0, 10)) : "무기한") + "</td>" +
-             '<td><button class="link" data-detail="' + esc(c.id) + '"><b>관리</b></button> ' +
-               '<a class="link" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 ↗</a> ' +
-               '<button class="link" data-extend="' + esc(c.id) + '">기간·좌석</button>' +
-               (c.join_code ? ' <button class="link" data-rotate="' + esc(c.id) + '">코드 재발급</button>' : "") +
-             "</td></tr>";
+             "<td>" + seatBar(Number(c.seats_used) || 0, Number(c.seat_total) || 0) + " " + esc(c.seats_used) + " / " + esc(c.seat_total) + "명</td>" +
+             "<td" + (d != null && d <= END_SOON_DAYS ? ' class="warn"' : "") + ">" +
+               (c.ends_at ? esc(ymd(c.ends_at)) + "까지 · " + leftText(c.ends_at) : "기간 없음") + "</td>" +
+             (showBenefit ? "<td>" + (c.benefit_total > 0 ? esc(c.benefit_redeemed) + " / " + esc(c.benefit_total) + " 사용" : "—") + "</td>" : "") +
+             '<td><button class="primary small" data-detail="' + esc(c.id) + '">관리</button> ' +
+             '<a class="ct-out" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 ↗</a></td></tr>';
       });
       box.innerHTML = h + "</table></div>";
-      Array.prototype.forEach.call(box.querySelectorAll("[data-extend]"), function(b){
-        b.addEventListener("click", function(){ extendContract(b.getAttribute("data-extend")); });
-      });
       Array.prototype.forEach.call(box.querySelectorAll("[data-detail]"), function(b){
-        b.addEventListener("click", function(){ openContractDetail(b.getAttribute("data-detail")); });
+        b.addEventListener("click", function(){
+          var id = b.getAttribute("data-detail");
+          if (openDetailId === id) { closeContractDetail(); return; }   // 같은 단추를 다시 누르면 닫는다
+          openContractDetail(id);
+          loadContracts();
+        });
       });
       // 관리 창이 열려 있었으면 새 숫자로 다시 그린다
       if (openDetailId) openContractDetail(openDetailId);
-      Array.prototype.forEach.call(box.querySelectorAll("[data-rotate]"), function(b){
-        b.addEventListener("click", function(){
-          if (!confirm("가입코드를 새로 만듭니다. 이미 소속된 요양사는 그대로 유지되고, 옛 코드는 더 이상 통하지 않습니다.")) return;
-          rpc("console_rotate_join_code", { p_contract_id: b.getAttribute("data-rotate") }).then(function(rr){
-            if (rr.ok) loadContracts(); else alert("실패: " + (rr.raw || ""));
-          });
-        });
-      });
     });
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // ★★(S697 · 대표 지시) 기관 관리 — 기관 콘솔에서 일어나는 일을 회사 콘솔에서 보고 고친다★★
-  //   대표 원문 = "담당자 칸 추가하고 … 회사 콘솔에서 기관콘솔로 연결링크 붙여두고,
-  //     기관콘솔의 회원수 증감기능, 기관콘솔 여러가지 확인기능 들 회사콘솔에서 가능하게"
-  //   ★셈과 문지기는 서버(sql 172 console_contract_detail 등 · 관리자만)★ — 화면은 받은 것을 그린다.
-  //   ★번호 자체는 오지 않는다★ — 관리번호와 "번호 있음/없음"만(연락처 암호문은 서버 밖으로 안 나간다).
+  // ★★(S697 · 대표 지시) 기관 관리 창 — 기관 콘솔에서 일어나는 일을 회사 콘솔에서 보고 고친다★★
+  //   대표 원문 = "담당자 칸 추가 … 기관콘솔로 연결링크 … 회원수 증감기능, 여러가지 확인기능 회사콘솔에서"
+  //   → (다시 손봄) "관리 열어서 보는 화면이 조금 보기 난잡해보여. 직관적으로 … 쉽게 편집이 가능하도록"
+  //   짜임 = 머리(이름·열기·닫기) → 큰 칸 둘(인원 · 기간 — 그 자리에서 고친다) → 탭 셋(어르신 · 담당자 · 기록)
+  //   ★셈과 문지기는 서버(sql 172·174 · 관리자만)★ — 화면은 받은 것을 그린다.
+  //   ★번호 자체는 오지 않는다★ — 관리번호와 "번호 있음/없음"만.
   // ══════════════════════════════════════════════════════════════════════
   var GOV_URL = "https://www.telos.it.kr/gov/";
   var openDetailId = null;
+  var detailTab = "elders";
   var ADD_RESULT_LABEL = {
-    ok: "추가", already: "이미 소속", bad_code: "번호 틀림·만료", other_contract: "다른 기관 소속",
-    no_seat: "인원 다 참", contract_ended: "계약 끝남", alias_too_long: "가명 너무 김",
+    ok: "넣음", already: "이미 소속", bad_code: "번호 틀림·만료", other_contract: "다른 기관 소속",
+    no_seat: "인원 다 참", contract_ended: "기간 끝남", alias_too_long: "가명 너무 김",
   };
   var GOV_ACTION_LABEL = {
-    "gov:overview": "목록 봄", "gov:cohort": "측정 요약 봄", "gov:report": "보고서 봄",
-    "gov:followup": "연락·확인 기록", "gov:mgmt_no": "관리번호", "gov:add_elder": "어르신 추가",
+    "gov:overview": "목록을 봄", "gov:cohort": "측정 요약을 봄", "gov:report": "보고서를 봄",
+    "gov:followup": "연락·확인 기록을 남김", "gov:mgmt_no": "관리번호를 적음",
+    "gov:remove_elder": "어르신을 기관에서 뺌",
   };
   function shortTime(iso){
     if (!iso) return "—";
@@ -1663,12 +1653,20 @@
     return (d.getMonth() + 1) + "/" + d.getDate() + " " + p(d.getHours()) + ":" + p(d.getMinutes());
   }
 
+  function closeContractDetail(){
+    openDetailId = null;
+    var box = el("contractDetail"); if (box) box.innerHTML = "";
+    loadContracts();
+  }
+
   function openContractDetail(id){
+    if (openDetailId !== id) detailTab = "elders";
     openDetailId = id;
     var box = el("contractDetail"); if (!box) return;
-    box.innerHTML = '<div class="desc" style="margin-top:12px">기관을 불러오는 중…</div>';
+    if (!box.innerHTML) box.innerHTML = '<div class="ctp"><div class="muted">기관을 불러오는 중…</div></div>';
     rpc("console_contract_detail", { p_contract_id: id }).then(function(r){
-      if (!r.ok || !r.body || !r.body.contract) { box.innerHTML = '<div class="desc">불러오지 못했습니다: ' + esc(r.raw || "") + "</div>"; return; }
+      if (openDetailId !== id) return;   // 그사이 다른 기관을 열었다
+      if (!r.ok || !r.body || !r.body.contract) { box.innerHTML = '<div class="ctp">불러오지 못했습니다: ' + esc(r.raw || "") + "</div>"; return; }
       renderContractDetail(r.body);
     });
   }
@@ -1676,80 +1674,93 @@
   function renderContractDetail(d){
     var c = d.contract;
     var box = el("contractDetail");
-    var h = '<div style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px 16px">' +
-      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
-      '<b style="font-size:16px">' + esc(c.name) + "</b>" +
-      '<span class="muted">' + esc(KIND_LABEL[c.kind] || c.kind) + " · 시작 " + esc(String(c.starts_at || "").slice(0, 10)) +
-        " · " + (c.ends_at ? "만료 " + esc(String(c.ends_at).slice(0, 10)) : "기간 없음") + "</span>" +
-      '<button class="link" id="cdRename">이름 바꾸기</button>' +
-      '<a class="link" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 열기 ↗</a>' +
-      '<span style="flex:1"></span><button class="link" id="cdClose">닫기</button></div>';
+    var active = d.elders.filter(function(e){ return !e.archived; });
+    var archived = d.elders.length - active.length;
+    var used = Number(c.seats_used) || 0, total = Number(c.seat_total) || 0;
+    var dl = daysLeft(c.ends_at);
 
-    // ── 인원(좌석 상한) 증감 ──
-    h += '<div class="desc" style="margin-top:10px"><b>인원</b> ' + esc(c.seats_used) + " / " + esc(c.seat_total) + "명 쓰는 중 · " +
-      '<button id="cdMinus10">−10</button> <button id="cdMinus1">−1</button> ' +
-      '<input id="cdTotal" type="number" min="1" value="' + esc(c.seat_total) + '" style="width:80px"> ' +
-      '<button id="cdPlus1">+1</button> <button id="cdPlus10">+10</button> ' +
-      '<button id="cdSaveTotal">인원 저장</button> <span id="cdTotalMsg" class="muted"></span>' +
-      '<br><span class="muted">쓰고 있는 인원보다 적게는 줄일 수 없습니다 — 먼저 아래에서 어르신을 기관에서 빼 주세요.</span></div>';
+    var h = '<div class="ctp">';
+    // ── 머리 ──
+    h += '<div class="ctp-head"><div>' +
+      '<div class="ctp-name">' + esc(c.name) + ' <button class="link" id="cdRename">이름 바꾸기</button></div>' +
+      '<div class="muted">' + esc(KIND_LABEL[c.kind] || c.kind) + " · 담당자 " + d.staff.length + "명 · 어르신 " + active.length + "분</div></div>" +
+      '<div class="ctp-actions"><a class="btn" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 열기 ↗</a>' +
+      '<button id="cdClose">닫기</button></div></div>';
 
-    // ── 담당자 ──
-    h += '<div class="desc" style="margin-top:10px"><b>담당자</b> <span class="muted">— 이 구글 이메일로 기관 콘솔에 로그인하면 이 기관 어르신만 봅니다.</span>' +
-      '<div class="tablewrap"><table><tr><th>이메일</th><th>역할</th><th>메모</th><th>넣은 사람</th><th>넣은 날</th><th></th></tr>';
-    if (!d.staff.length) h += '<tr><td colspan="6" class="muted">담당자가 없습니다 — 이대로면 아무도 기관 콘솔에서 이 기관을 못 봅니다.</td></tr>';
-    d.staff.forEach(function(s){
-      h += "<tr><td>" + esc(s.email) + "</td><td>" + (s.role === "manager" ? "책임자" : "담당자") + "</td><td>" + esc(s.note || "") +
-        "</td><td>" + esc(s.added_by || "—") + "</td><td>" + esc(String(s.created_at || "").slice(0, 10)) + "</td>" +
-        '<td><button class="link" data-staff-rm="' + esc(s.email) + '">빼기</button></td></tr>';
-    });
-    h += "</table></div>" +
-      '<div style="margin-top:6px"><input id="cdStaffEmail" placeholder="담당자 구글 이메일" style="width:240px"> ' +
-      '<select id="cdStaffRole"><option value="staff">담당자</option><option value="manager">책임자</option></select> ' +
-      '<input id="cdStaffNote" placeholder="메모(예: ○○보건소 방문간호팀)" style="width:220px"> ' +
-      '<button id="cdStaffAdd">담당자 넣기</button> <span id="cdStaffMsg" class="muted"></span></div></div>';
+    // ── 큰 칸 둘: 인원 · 기간 ──
+    h += '<div class="ctp-tiles">' +
+      '<div class="ctp-tile"><div class="k">인원</div>' +
+        '<div class="v">' + used + ' <span class="muted">/ ' + total + "명</span></div>" + seatBar(used, total) +
+        '<div class="ctp-edit"><button id="cdMinus">−</button><input id="cdTotal" type="number" min="1" value="' + total + '">' +
+        '<button id="cdPlus">+</button><button class="primary" id="cdSaveTotal" disabled>저장</button></div>' +
+        '<div class="s" id="cdTotalMsg">쓰는 인원(' + used + "명)보다 적게는 줄일 수 없습니다.</div></div>" +
+      '<div class="ctp-tile"><div class="k">기간</div>' +
+        '<div class="v' + (dl != null && dl <= END_SOON_DAYS ? " warn" : "") + '">' + (c.ends_at ? esc(ymd(c.ends_at)) + "까지" : "기간 없음") + "</div>" +
+        '<div class="s">시작 ' + esc(ymd(c.starts_at)) + " · " + leftText(c.ends_at) + "</div>" +
+        '<div class="ctp-edit"><input id="cdEnd" type="date" value="' + esc(ymd(c.ends_at)) + '">' +
+        '<button class="primary" id="cdSaveEnd" disabled>저장</button><button id="cdPlusYear">1년 늘리기</button></div>' +
+        '<div class="s" id="cdEndMsg">만료일이 지나면 기관 콘솔에서 어르신을 더 넣을 수 없습니다.</div></div>' +
+      "</div>";
 
-    // ── 소속 어르신 ──
-    var active = d.elders.filter(function(e){ return !e.archived; }).length;
-    h += '<div class="desc" style="margin-top:10px"><b>소속 어르신</b> ' + active + "분" +
-      (d.elders.length > active ? ' <span class="muted">(보관함 ' + (d.elders.length - active) + "분 — 기관 콘솔에는 안 보임)</span>" : "") +
-      ' · <span class="muted">담당자 기록(연락함·확인함) ' + esc(d.followups) + "건</span>" +
-      '<div class="tablewrap"><table><tr><th>가명</th><th>좌석</th><th>들어온 날</th><th>마지막 걸음 기록</th><th>관리번호</th>' +
-      "<th>어르신 번호</th><th>보호자 번호</th><th>자녀 연결</th><th></th></tr>";
-    if (!d.elders.length) h += '<tr><td colspan="9" class="muted">아직 없습니다 — 기관 콘솔 「어르신 추가」에서 연동 번호로 넣습니다.</td></tr>';
-    d.elders.forEach(function(e){
-      h += "<tr><td>" + esc(e.alias) + (e.archived ? ' <span class="muted">(보관)</span>' : "") + "</td>" +
-        "<td>" + (e.seat_active ? "켜짐" : '<span class="muted">꺼짐</span>') + "</td>" +
-        "<td>" + esc(String(e.activated_at || "").slice(0, 10) || "—") + "</td>" +
-        "<td>" + esc(e.last_day || "아직 없음") + "</td>" +
-        "<td>" + esc(e.mgmt_no || "없음") + "</td>" +
-        "<td>" + (e.elder_phone ? "있음" : (e.elder_declined ? '<span class="muted">거절</span>' : '<span class="muted">없음</span>')) + "</td>" +
-        "<td>" + (e.guardian_phones ? esc(e.guardian_phones) + "명" : '<span class="muted">없음</span>') + "</td>" +
-        "<td>" + (e.guardians ? esc(e.guardians) + "명" : '<span class="muted">없음</span>') + "</td>" +
-        '<td><button class="link" data-elder-rm="' + esc(e.id) + '" data-alias="' + esc(e.alias) + '">기관에서 빼기</button></td></tr>';
-    });
-    h += "</table></div></div>";
+    // ── 탭 셋 ──
+    var logCount = d.attempts.length + d.activity.length;
+    h += '<div class="ctp-tabs">' +
+      '<button data-tab="elders"' + (detailTab === "elders" ? ' class="on"' : "") + ">어르신 " + active.length + "</button>" +
+      '<button data-tab="staff"' + (detailTab === "staff" ? ' class="on"' : "") + ">담당자 " + d.staff.length + "</button>" +
+      '<button data-tab="log"' + (detailTab === "log" ? ' class="on"' : "") + ">기록 " + logCount + "</button></div>";
 
-    // ── 어르신 추가 시도 ──
-    h += '<div class="desc" style="margin-top:10px"><b>어르신 추가 시도</b> <span class="muted">— 최근 30건 · 틀린 번호가 몰리면 담당자에게 번호 확인을 안내해 주세요.</span>' +
-      '<div class="tablewrap"><table><tr><th>때</th><th>담당자</th><th>결과</th></tr>';
-    if (!d.attempts.length) h += '<tr><td colspan="3" class="muted">없음</td></tr>';
-    d.attempts.forEach(function(a){
-      h += "<tr><td>" + shortTime(a.at) + "</td><td>" + esc(a.email) + "</td><td" + (a.ok ? "" : ' class="warn"') + ">" +
-        esc(ADD_RESULT_LABEL[a.result] || a.result) + "</td></tr>";
-    });
-    h += "</table></div></div>";
-
-    // ── 기관 콘솔 활동 ──
-    h += '<div class="desc" style="margin-top:10px"><b>기관 콘솔 활동</b> <span class="muted">— 최근 50건 · 누가 언제 무엇을 봤는지(어르신 자료는 안 적힘)</span>' +
-      '<div class="tablewrap"><table><tr><th>때</th><th>누가</th><th>무엇</th><th>몇 분</th></tr>';
-    if (!d.activity.length) h += '<tr><td colspan="4" class="muted">없음</td></tr>';
-    d.activity.forEach(function(a){
-      var detail = String(a.detail || "");
-      var tail = detail.indexOf(" · ") >= 0 ? detail.slice(detail.indexOf(" · ") + 3) : "";
-      h += "<tr><td>" + shortTime(a.at) + "</td><td>" + esc(a.email) + "</td><td>" + esc(GOV_ACTION_LABEL[a.action] || a.action) +
-        (tail ? ' <span class="muted">' + esc(tail) + "</span>" : "") + "</td><td>" + (a.n == null ? "—" : esc(a.n)) + "</td></tr>";
-    });
-    h += "</table></div></div></div>";
+    h += '<div class="ctp-body">';
+    if (detailTab === "elders") {
+      h += '<div class="s muted" style="margin-bottom:8px">어르신은 기관 담당자가 기관 콘솔 「어르신 추가」에서 연동 번호로 넣습니다.' +
+        (archived ? " 보관함에 계신 " + archived + "분은 기관 콘솔에 안 보입니다(회색)." : "") + "</div>";
+      h += '<table class="ctp-table"><tr><th>가명</th><th>들어온 날</th><th>마지막 걸음</th><th>관리번호</th><th>연락처</th><th>자녀</th><th></th></tr>';
+      if (!d.elders.length) h += '<tr><td colspan="7" class="muted">아직 없습니다.</td></tr>';
+      d.elders.forEach(function(e){
+        var contact = [];
+        if (e.elder_phone) contact.push("어르신"); else if (e.elder_declined) contact.push('<span class="muted">어르신 거절</span>');
+        if (e.guardian_phones) contact.push("보호자 " + e.guardian_phones);
+        h += "<tr" + (e.archived ? ' class="dim"' : "") + "><td><b>" + esc(e.alias) + "</b>" + (e.archived ? " (보관)" : "") + "</td>" +
+          "<td>" + esc(ymd(e.activated_at) || "—") + "</td>" +
+          "<td>" + esc(e.last_day || "아직 없음") + "</td>" +
+          "<td>" + esc(e.mgmt_no || "—") + "</td>" +
+          "<td>" + (contact.length ? contact.join(" · ") : '<span class="muted">없음</span>') + "</td>" +
+          "<td>" + (e.guardians ? e.guardians + "명" : '<span class="muted">없음</span>') + "</td>" +
+          '<td><button class="danger small" data-elder-rm="' + esc(e.id) + '" data-alias="' + esc(e.alias) + '">기관에서 빼기</button></td></tr>';
+      });
+      h += "</table>";
+    } else if (detailTab === "staff") {
+      h += '<div class="s muted" style="margin-bottom:8px">담당자는 이 구글 이메일로 기관 콘솔(www.telos.it.kr/gov)에 로그인해 이 기관 어르신만 봅니다.</div>';
+      h += '<table class="ctp-table"><tr><th>구글 이메일</th><th>역할</th><th>메모</th><th>넣은 날</th><th></th></tr>';
+      if (!d.staff.length) h += '<tr><td colspan="5" class="warn">담당자가 없습니다 — 아래에서 넣어야 기관이 기관 콘솔을 쓸 수 있습니다.</td></tr>';
+      d.staff.forEach(function(s){
+        h += "<tr><td><b>" + esc(s.email) + "</b></td>" +
+          '<td><select data-staff-role="' + esc(s.email) + '" data-note="' + esc(s.note || "") + '">' +
+            '<option value="staff"' + (s.role === "staff" ? " selected" : "") + ">담당자</option>" +
+            '<option value="manager"' + (s.role === "manager" ? " selected" : "") + ">책임자</option></select></td>" +
+          "<td>" + esc(s.note || "") + "</td><td>" + esc(ymd(s.created_at)) + "</td>" +
+          '<td><button class="danger small" data-staff-rm="' + esc(s.email) + '">빼기</button></td></tr>';
+      });
+      h += "</table>" +
+        '<div class="ctp-add"><b>담당자 넣기</b><input id="cdStaffEmail" placeholder="구글 이메일" style="width:230px">' +
+        '<select id="cdStaffRole"><option value="staff">담당자</option><option value="manager">책임자</option></select>' +
+        '<input id="cdStaffNote" placeholder="메모(선택 · 예: 방문간호팀)" style="width:200px">' +
+        '<button class="primary" id="cdStaffAdd">넣기</button><span id="cdStaffMsg" class="muted"></span></div>';
+    } else {
+      // 두 기록을 시간순으로 한 줄에 — 어르신 추가 시도 + 기관 콘솔 활동
+      var rows = d.attempts.map(function(a){
+        return { at: a.at, who: a.email, what: "어르신 추가 — " + (ADD_RESULT_LABEL[a.result] || a.result), bad: !a.ok };
+      }).concat(d.activity.filter(function(a){ return a.action !== "gov:add_elder"; }).map(function(a){
+        return { at: a.at, who: a.email, what: (GOV_ACTION_LABEL[a.action] || a.action) + (a.n ? " (" + a.n + "분)" : ""), bad: false };
+      })).sort(function(x, y){ return String(y.at).localeCompare(String(x.at)); });
+      h += '<div class="s muted" style="margin-bottom:8px">기관 콘솔에서 누가 언제 무엇을 했는지입니다(최근 80건 · 어르신 자료는 적히지 않습니다). 담당자 연락·확인 기록 누적 ' + esc(d.followups) + "건.</div>";
+      h += '<table class="ctp-table"><tr><th>때</th><th>누가</th><th>한 일</th></tr>';
+      if (!rows.length) h += '<tr><td colspan="3" class="muted">아직 없습니다.</td></tr>';
+      rows.forEach(function(x){
+        h += "<tr><td>" + shortTime(x.at) + "</td><td>" + esc(x.who) + "</td><td" + (x.bad ? ' class="warn"' : "") + ">" + esc(x.what) + "</td></tr>";
+      });
+      h += "</table>";
+    }
+    h += "</div></div>";
 
     box.innerHTML = h;
     bindContractDetail(c);
@@ -1757,7 +1768,10 @@
 
   function bindContractDetail(c){
     function refresh(){ loadContracts(); loadSeats(); }   // loadContracts 가 열린 관리 창을 다시 그린다
-    el("cdClose").onclick = function(){ openDetailId = null; el("contractDetail").innerHTML = ""; };
+    el("cdClose").onclick = closeContractDetail;
+    Array.prototype.forEach.call(document.querySelectorAll(".ctp-tabs [data-tab]"), function(b){
+      b.onclick = function(){ detailTab = b.getAttribute("data-tab"); openContractDetail(c.id); };
+    });
     el("cdRename").onclick = function(){
       var v = prompt("기관 이름(40자까지 · 기관 콘솔과 보고서에 그대로 나옵니다)", c.name);
       if (v === null || !v.trim() || v.trim() === c.name) return;
@@ -1765,31 +1779,61 @@
         if (r.ok && r.body === "ok") refresh(); else alert("바꾸지 못했습니다: " + (r.body || r.raw || ""));
       });
     };
-    function bump(n){ var t = el("cdTotal"); t.value = Math.max(1, (Number(t.value) || 0) + n); }
-    el("cdMinus10").onclick = function(){ bump(-10); };
-    el("cdMinus1").onclick = function(){ bump(-1); };
-    el("cdPlus1").onclick = function(){ bump(1); };
-    el("cdPlus10").onclick = function(){ bump(10); };
-    el("cdSaveTotal").onclick = function(){
-      var n = Number(el("cdTotal").value), msg = el("cdTotalMsg");
-      if (!(n >= 1)) { msg.textContent = "1 이상으로 적어 주세요."; return; }
-      if (n < Number(c.seats_used)) { msg.textContent = "쓰는 인원(" + c.seats_used + ")보다 적게는 줄일 수 없습니다."; return; }
-      msg.textContent = "저장하는 중…";
+
+    // 인원 — 바뀌었을 때만 「저장」이 켜진다
+    var totalIn = el("cdTotal"), saveTotal = el("cdSaveTotal");
+    function totalChanged(){ saveTotal.disabled = Number(totalIn.value) === Number(c.seat_total) || !(Number(totalIn.value) >= 1); }
+    totalIn.oninput = totalChanged;
+    el("cdMinus").onclick = function(){ totalIn.value = Math.max(1, (Number(totalIn.value) || 0) - 1); totalChanged(); };
+    el("cdPlus").onclick = function(){ totalIn.value = (Number(totalIn.value) || 0) + 1; totalChanged(); };
+    saveTotal.onclick = function(){
+      var n = Number(totalIn.value), msg = el("cdTotalMsg");
+      if (n < Number(c.seats_used)) { msg.innerHTML = '<span class="warn">쓰는 인원(' + c.seats_used + "명)보다 적게는 줄일 수 없습니다.</span>"; return; }
+      saveTotal.disabled = true; msg.textContent = "저장하는 중…";
       rpc("console_update_contract", { p_contract_id: c.id, p_seat_total: n }).then(function(r){
         if (r.ok) refresh();
-        else msg.textContent = /SEAT_TOTAL_BELOW_USED/.test(r.raw || "") ? "쓰는 인원보다 적게는 줄일 수 없습니다." : "저장하지 못했습니다: " + (r.raw || "");
+        else msg.innerHTML = '<span class="warn">' + (/SEAT_TOTAL_BELOW_USED/.test(r.raw || "") ? "쓰는 인원보다 적게는 줄일 수 없습니다." : "저장하지 못했습니다: " + esc(r.raw || "")) + "</span>";
       });
     };
-    el("cdStaffAdd").onclick = function(){
+
+    // 기간 — 날짜를 고르면 「저장」이 켜진다 · 「1년 늘리기」는 곧바로 저장
+    var endIn = el("cdEnd"), saveEnd = el("cdSaveEnd");
+    endIn.oninput = function(){ saveEnd.disabled = !endIn.value || endIn.value === ymd(c.ends_at); };
+    function saveEndDate(v){
+      var msg = el("cdEndMsg");
+      msg.textContent = "저장하는 중…";
+      rpc("console_set_contract_end", { p_contract_id: c.id, p_ends: v }).then(function(r){
+        if (r.ok && r.body === "ok") refresh();
+        else msg.innerHTML = '<span class="warn">' + (r.body === "past_date" ? "오늘 이후 날짜를 골라 주세요." : "저장하지 못했습니다: " + esc(r.body || r.raw || "")) + "</span>";
+      });
+    }
+    saveEnd.onclick = function(){ saveEndDate(endIn.value); };
+    el("cdPlusYear").onclick = function(){
+      var base = c.ends_at && daysLeft(c.ends_at) > 0 ? new Date(c.ends_at) : new Date();
+      base.setFullYear(base.getFullYear() + 1);
+      var v = base.getFullYear() + "-" + ("0" + (base.getMonth() + 1)).slice(-2) + "-" + ("0" + base.getDate()).slice(-2);
+      if (!confirm("만료일을 " + v + " 로 늘립니다.")) return;
+      saveEndDate(v);
+    };
+
+    // 담당자
+    var addBtn = el("cdStaffAdd");
+    if (addBtn) addBtn.onclick = function(){
       var email = el("cdStaffEmail").value.trim(), msg = el("cdStaffMsg");
       if (!email) { msg.textContent = "이메일을 적어 주세요."; return; }
       msg.textContent = "넣는 중…";
       rpc("console_set_contract_staff", { p_contract_id: c.id, p_email: email, p_role: el("cdStaffRole").value, p_remove: false, p_note: el("cdStaffNote").value.trim() || null })
         .then(function(r){
           if (r.ok && r.body === "ok") refresh();
-          else msg.textContent = r.body === "bad_email" ? "이메일 모양이 아닙니다." : "넣지 못했습니다: " + (r.body || r.raw || "");
+          else msg.innerHTML = '<span class="warn">' + (r.body === "bad_email" ? "이메일 모양이 아닙니다." : "넣지 못했습니다: " + esc(r.body || r.raw || "")) + "</span>";
         });
     };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-staff-role]"), function(s){
+      s.onchange = function(){
+        rpc("console_set_contract_staff", { p_contract_id: c.id, p_email: s.getAttribute("data-staff-role"), p_role: s.value, p_remove: false, p_note: null })
+          .then(function(r){ if (r.ok && r.body === "ok") refresh(); else alert("바꾸지 못했습니다: " + (r.body || r.raw || "")); });
+      };
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-staff-rm]"), function(b){
       b.onclick = function(){
         var email = b.getAttribute("data-staff-rm");
@@ -1799,34 +1843,45 @@
         });
       };
     });
+
+    // 어르신
     Array.prototype.forEach.call(document.querySelectorAll("[data-elder-rm]"), function(b){
-      b.onclick = function(){
-        if (!confirm(b.getAttribute("data-alias") + " 님을 " + c.name + " 에서 뺍니다.\n" +
-                     "· 이 기관의 관리번호와 연락처(어르신·보호자 번호)는 곧바로 지워집니다.\n" +
-                     "· 걸음 기록과 자녀 연결은 그대로 남습니다.\n" +
-                     "· 다시 넣으려면 어르신 폰의 연동 번호가 필요합니다.")) return;
-        rpc("console_remove_elder_from_contract", { p_elderly_id: b.getAttribute("data-elder-rm"), p_contract_id: c.id }).then(function(r){
-          if (r.ok && r.body === "ok") refresh(); else alert("빼지 못했습니다: " + (r.body || r.raw || ""));
-        });
-      };
+      b.onclick = function(){ removeFromContract(b.getAttribute("data-elder-rm"), b.getAttribute("data-alias"), c.name, c.id); };
     });
+  }
+
+  /** 기관에서 빼기 — 관리 창과 「어르신별 소속」이 같은 확인 문구·같은 길을 쓴다. */
+  function removeFromContract(elderlyId, alias, contractName, contractId){
+    if (!confirm(alias + " 님을 " + contractName + " 에서 뺍니다.\n" +
+                 "· 이 기관의 관리번호와 연락처(어르신·보호자 번호)는 곧바로 지워집니다.\n" +
+                 "· 걸음 기록과 자녀 연결은 그대로 남습니다.\n" +
+                 "· 다시 넣으려면 어르신 폰의 연동 번호가 필요합니다.")) return;
+    var done = function(r){
+      if (r.ok && (r.body === "ok" || r.body === null)) { loadContracts(); loadSeats(); }
+      else alert("빼지 못했습니다: " + (r.body || r.raw || ""));
+    };
+    if (contractId) rpc("console_remove_elder_from_contract", { p_elderly_id: elderlyId, p_contract_id: contractId }).then(done);
+    else rpc("console_set_seat", { p_elderly_id: elderlyId, p_active: false }).then(done);   // (173) 끄기 = 기관에서 빼기
   }
 
   function createContract(){
     var name = el("scName").value.trim();
     var kind = el("scKind").value;
     var total = Number(el("scTotal").value);
-    var months = Number(el("scMonths").value) || null;
+    var months = Number(el("scMonths").value) || 12;   // (173) 기본 1년
     var msg = el("scMsg");
     if (!name) { msg.textContent = "이름을 적어 주세요."; return; }
-    if (!(total > 0)) { msg.textContent = "좌석 수를 적어 주세요."; return; }
+    if (!(total > 0)) { msg.textContent = "인원을 적어 주세요."; return; }
     msg.textContent = "만드는 중…";
     rpc("console_create_contract", { p_name: name, p_kind: kind, p_seat_total: total, p_months: months })
       .then(function(r){
         if (!r.ok || !Array.isArray(r.body) || !r.body.length) { msg.textContent = "실패: " + (r.raw || ""); return; }
         var row = r.body[0];
-        msg.textContent = row.join_code ? ("만들었습니다 · 가입코드 " + row.join_code) : "만들었습니다";
+        msg.textContent = "만들었습니다 — 이어서 담당자를 넣어 주세요.";
         el("scName").value = "";
+        detailTab = "staff";
+        openDetailId = row.id;
+        el("contractDetail").innerHTML = "";
         loadContracts();
       });
   }
@@ -1856,24 +1911,26 @@
       var box = el("seatBox"); if (!box) return;
       if (!r.ok || !Array.isArray(r.body)) { box.textContent = "불러오지 못했습니다: " + (r.raw || ""); return; }
       if (!r.body.length) { box.textContent = "어르신이 없습니다."; return; }
-      var h = '<div class="tablewrap"><table><tr><th>가명</th><th>동네</th><th>좌석</th>' +
-              "<th>재원</th><th>만료</th><th></th></tr>";
+      var h = '<div class="tablewrap"><table><tr><th>가명</th><th>동네</th><th>기관</th><th>만료</th><th></th></tr>';
       r.body.forEach(function(s){
+        var inContract = !!s.contract_name;
         h += "<tr><td>" + esc(s.alias || "") + (s.is_internal ? ' <span class="muted">(내부)</span>' : "") + "</td>" +
              "<td>" + esc(s.region || "") + "</td>" +
-             "<td>" + (s.seat_active ? "<b>켜짐</b>" : '<span class="muted">꺼짐</span>') + "</td>" +
-             "<td>" + esc(s.contract_name || s.seat_funded_by || "—") + "</td>" +
-             "<td>" + (s.seat_valid_until ? esc(String(s.seat_valid_until).slice(0, 10)) : "—") + "</td>" +
-             '<td><button class="link" data-seat="' + esc(s.elderly_id) + '" data-on="' + (s.seat_active ? "0" : "1") + '">' +
-             (s.seat_active ? "끄기" : "켜기") + "</button></td></tr>";
+             "<td>" + (s.seat_active ? esc(s.contract_name || s.seat_funded_by || "좌석만 켜짐") : '<span class="muted">없음</span>') + "</td>" +
+             "<td>" + (s.seat_active && s.seat_valid_until ? esc(ymd(s.seat_valid_until)) : "—") + "</td>" +
+             "<td>" + (s.seat_active
+               ? '<button class="link" data-leave="' + esc(s.elderly_id) + '" data-alias="' + esc(s.alias || "") + '" data-cname="' + esc(s.contract_name || s.seat_funded_by || "좌석") + '">' + (inContract ? "기관에서 빼기" : "끄기") + "</button>"
+               : '<button class="link" data-seat-on="' + esc(s.elderly_id) + '">켜기</button>') + "</td></tr>";
       });
       box.innerHTML = h + "</table></div>";
-      Array.prototype.forEach.call(box.querySelectorAll("[data-seat]"), function(b){
+      Array.prototype.forEach.call(box.querySelectorAll("[data-leave]"), function(b){
+        // ★(S697 · 대표 지시 "좌석끄기도 기관에서 빼기로") 서버 console_set_seat 끄기가 기관 연결까지 끊는다(sql 173)★
+        b.addEventListener("click", function(){ removeFromContract(b.getAttribute("data-leave"), b.getAttribute("data-alias"), b.getAttribute("data-cname"), null); });
+      });
+      Array.prototype.forEach.call(box.querySelectorAll("[data-seat-on]"), function(b){
         b.addEventListener("click", function(){
-          var on = b.getAttribute("data-on") === "1";
-          if (!confirm(on ? "이 어르신 좌석을 수동으로 켭니다(무기한 · 라벨 manual)." :
-                            "이 어르신 좌석을 끕니다. 대화가 하루 예비분(약 10턴)으로 줄어듭니다.")) return;
-          rpc("console_set_seat", { p_elderly_id: b.getAttribute("data-seat"), p_active: on }).then(function(rr){
+          if (!confirm("이 어르신 좌석을 기관 없이 수동으로 켭니다(예외 처리용 · 라벨 manual).")) return;
+          rpc("console_set_seat", { p_elderly_id: b.getAttribute("data-seat-on"), p_active: true }).then(function(rr){
             if (rr.ok) { loadSeats(); loadContracts(); } else alert("실패: " + (rr.raw || ""));
           });
         });
