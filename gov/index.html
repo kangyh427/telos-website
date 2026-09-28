@@ -180,6 +180,8 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
     html += '<div class="plist">';   // ★(S695) 카드 묶음 — 20장씩 쪽 나눔·찾기가 여기에 붙는다★
     list.forEach(function(p){
       html += '<div class="card warm"><div><h3>' + esc(p.alias) + '</h3>';
+      // ★(S696 · 대표 지적 "누군지 가명이고 주소도 모르잖아") 관리번호·연락처 — 동의하신 분만 번호가 있다★
+      html += '<div class="reason"><b>관리번호 ' + esc(p.mgmt_no || "없음") + '</b><span>연락처 ' + esc(p.contact || "없음") + '</span></div>';
       p.attention.forEach(function(a){
         html += '<div class="reason"><b>' + esc(a.title) + '</b><span>' + esc(a.detail) + '</span><small>' + esc(a.basis) + '</small></div>';
       });
@@ -202,9 +204,11 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
   function renderAll(){
     var o = state.overview;
     var html = '<div class="note">' + esc(o.contract.name) + ' · 어르신 ' + o.people.length + '분 · 최근 ' + o.weeks + '주 기록. 걸음 수는 휴대폰이 스스로 잰 값이라 휴대폰을 두고 다니신 시간은 빠집니다.</div>';
-    html += "<table><tr><th>가명</th><th>잰 날(" + o.weeks + "주)</th><th>최근 7일 하루 걸음</th><th>평소 4주</th><th>마지막 기록</th><th>살펴볼 까닭</th><th></th></tr>";
+    html += "<table><tr><th>가명</th><th>관리번호</th><th>연락처</th><th>잰 날(" + o.weeks + "주)</th><th>최근 7일 하루 걸음</th><th>평소 4주</th><th>마지막 기록</th><th>살펴볼 까닭</th><th></th></tr>";
     o.people.forEach(function(p){
-      html += "<tr><td>" + esc(p.alias) + "</td><td>" + p.measured_days + "일</td><td>" + (p.recent_steps ? esc(p.recent_steps) + "보" : "—") +
+      html += "<tr><td>" + esc(p.alias) + "</td><td>" + esc(p.mgmt_no || "없음") +
+        ' <button data-mgmt="' + esc(p.id) + '" data-cur="' + esc(p.mgmt_no || "") + '">적기</button></td><td>' + esc(p.contact || "없음") +
+        "</td><td>" + p.measured_days + "일</td><td>" + (p.recent_steps ? esc(p.recent_steps) + "보" : "—") +
         "</td><td>" + (p.usual_steps ? esc(p.usual_steps) + "보" : "—") + "</td><td>" + esc(p.last_measured || "아직 없음") + "</td><td>" +
         p.attention.map(function(a){ return '<span class="tag">' + esc(a.title) + "</span>"; }).join("") +
         '</td><td><button data-report="' + esc(p.id) + '" data-alias="' + esc(p.alias) + '"' + (p.measured_days ? "" : " disabled") + ">보고서</button></td></tr>";
@@ -225,6 +229,17 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
   }
 
   function bindCardButtons(){
+    // ★(S696) 기관 관리번호 적기 — 기관 명부의 번호(최대 40자) · 빈칸이면 지운다★
+    Array.prototype.forEach.call(document.querySelectorAll("[data-mgmt]"), function(b){
+      b.onclick = function(){
+        var v = prompt("기관 관리번호(기관 명부의 번호 · 비우면 지웁니다)", b.getAttribute("data-cur") || "");
+        if (v === null) return;
+        b.disabled = true;
+        call({ mode: "set_mgmt_no", elderly_id: b.getAttribute("data-mgmt"), mgmt_no: v.trim().slice(0, 40) })
+          .then(function(){ return loadOverview(); })
+          .catch(function(e){ b.disabled = false; alert("적지 못했습니다: " + e.message); });
+      };
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-report]"), function(b){
       b.onclick = function(){ openViewer(b.getAttribute("data-alias") + " 걷기 분석 보고서", { mode: "report", elderly_id: b.getAttribute("data-report") }); };
     });
