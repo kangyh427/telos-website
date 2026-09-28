@@ -133,6 +133,17 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
     var back = location.origin + location.pathname;
     location.href = SUPA + "/auth/v1/authorize?provider=" + provider + "&redirect_to=" + encodeURIComponent(back);
   }
+  // ★(S697) ?contract=<id> — 회사 콘솔에서 넘어올 때 고른 기관. 구글 로그인을 다녀오면 주소가 바뀌므로 잠시 적어 둔다★
+  var WANT_KEY = "telos_gov_want_contract";
+  (function rememberWanted(){
+    var q = new URLSearchParams(location.search).get("contract");
+    if (q) { try { sessionStorage.setItem(WANT_KEY, q); } catch(e){} }
+  })();
+  function wantedContract(){
+    var q = new URLSearchParams(location.search).get("contract");
+    if (q) return q;
+    try { return sessionStorage.getItem(WANT_KEY); } catch(e){ return null; }
+  }
   function captureHashSession(){
     if (!location.hash || location.hash.indexOf("access_token") < 0) return;
     var p = new URLSearchParams(location.hash.slice(1));
@@ -359,7 +370,11 @@ td button{border:1px solid var(--line);background:#fff;border-radius:6px;padding
       sel.innerHTML = j.contracts.map(function(k){ return '<option value="' + esc(k.id) + '">' + esc(k.name) + "</option>"; }).join("");
       sel.style.display = j.contracts.length > 1 ? "" : "none";
       if (!j.contracts.length) { el("main").innerHTML = '<div class="empty">연결된 계약이 없습니다.</div>'; return; }
-      state.contractId = j.contracts[0].id;
+      // ★(S697) 회사 콘솔의 「기관 콘솔 열기」가 준 기관을 먼저 연다(없거나 볼 수 없는 기관이면 첫 기관)★
+      var want = wantedContract();
+      var hit = j.contracts.filter(function(k){ return k.id === want; })[0];
+      state.contractId = hit ? hit.id : j.contracts[0].id;
+      sel.value = state.contractId;
       sel.onchange = function(){ state.contractId = sel.value; state.overview = null; render(); loadOverview().catch(fail); };
       render();
       return loadOverview();

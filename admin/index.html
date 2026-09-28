@@ -1538,6 +1538,7 @@
       '요양사가 그 코드를 앱에 한 번 입력하면 그 뒤 어르신 연동마다 좌석이 자동으로 차감·켜집니다.<br>' +
       '보험사 계약은 가입코드 대신 <b>혜택코드 묶음</b>을 발급해 전달합니다(1개 1회용 · 기간 내장).</div></div></div>' +
       '<div id="contractBox" class="desc">불러오는 중…</div>' +
+      '<div id="contractDetail"></div>' +
       '<div class="desc" style="margin-top:12px"><b>새 계약</b> — ' +
       '<input id="scName" placeholder="이름 (예: ○○시-2027)" style="width:180px"> ' +
       '<select id="scKind"><option value="gov">지자체</option><option value="insurer">보험사</option>' +
@@ -1611,7 +1612,9 @@
              "<td style='font-family:monospace'>" + (c.join_code ? esc(c.join_code) : "—") + "</td>" +
              "<td>" + (c.benefit_total > 0 ? esc(c.benefit_redeemed) + " / " + esc(c.benefit_total) + " 사용" : "—") + "</td>" +
              "<td>" + (c.ends_at ? esc(String(c.ends_at).slice(0, 10)) : "무기한") + "</td>" +
-             '<td><button class="link" data-extend="' + esc(c.id) + '">기간·좌석</button>' +
+             '<td><button class="link" data-detail="' + esc(c.id) + '"><b>관리</b></button> ' +
+               '<a class="link" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 ↗</a> ' +
+               '<button class="link" data-extend="' + esc(c.id) + '">기간·좌석</button>' +
                (c.join_code ? ' <button class="link" data-rotate="' + esc(c.id) + '">코드 재발급</button>' : "") +
              "</td></tr>";
       });
@@ -1619,6 +1622,11 @@
       Array.prototype.forEach.call(box.querySelectorAll("[data-extend]"), function(b){
         b.addEventListener("click", function(){ extendContract(b.getAttribute("data-extend")); });
       });
+      Array.prototype.forEach.call(box.querySelectorAll("[data-detail]"), function(b){
+        b.addEventListener("click", function(){ openContractDetail(b.getAttribute("data-detail")); });
+      });
+      // 관리 창이 열려 있었으면 새 숫자로 다시 그린다
+      if (openDetailId) openContractDetail(openDetailId);
       Array.prototype.forEach.call(box.querySelectorAll("[data-rotate]"), function(b){
         b.addEventListener("click", function(){
           if (!confirm("가입코드를 새로 만듭니다. 이미 소속된 요양사는 그대로 유지되고, 옛 코드는 더 이상 통하지 않습니다.")) return;
@@ -1627,6 +1635,180 @@
           });
         });
       });
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ★★(S697 · 대표 지시) 기관 관리 — 기관 콘솔에서 일어나는 일을 회사 콘솔에서 보고 고친다★★
+  //   대표 원문 = "담당자 칸 추가하고 … 회사 콘솔에서 기관콘솔로 연결링크 붙여두고,
+  //     기관콘솔의 회원수 증감기능, 기관콘솔 여러가지 확인기능 들 회사콘솔에서 가능하게"
+  //   ★셈과 문지기는 서버(sql 172 console_contract_detail 등 · 관리자만)★ — 화면은 받은 것을 그린다.
+  //   ★번호 자체는 오지 않는다★ — 관리번호와 "번호 있음/없음"만(연락처 암호문은 서버 밖으로 안 나간다).
+  // ══════════════════════════════════════════════════════════════════════
+  var GOV_URL = "https://www.telos.it.kr/gov/";
+  var openDetailId = null;
+  var ADD_RESULT_LABEL = {
+    ok: "추가", already: "이미 소속", bad_code: "번호 틀림·만료", other_contract: "다른 기관 소속",
+    no_seat: "인원 다 참", contract_ended: "계약 끝남", alias_too_long: "가명 너무 김",
+  };
+  var GOV_ACTION_LABEL = {
+    "gov:overview": "목록 봄", "gov:cohort": "측정 요약 봄", "gov:report": "보고서 봄",
+    "gov:followup": "연락·확인 기록", "gov:mgmt_no": "관리번호", "gov:add_elder": "어르신 추가",
+  };
+  function shortTime(iso){
+    if (!iso) return "—";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return esc(iso);
+    function p(n){ return (n < 10 ? "0" : "") + n; }
+    return (d.getMonth() + 1) + "/" + d.getDate() + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+
+  function openContractDetail(id){
+    openDetailId = id;
+    var box = el("contractDetail"); if (!box) return;
+    box.innerHTML = '<div class="desc" style="margin-top:12px">기관을 불러오는 중…</div>';
+    rpc("console_contract_detail", { p_contract_id: id }).then(function(r){
+      if (!r.ok || !r.body || !r.body.contract) { box.innerHTML = '<div class="desc">불러오지 못했습니다: ' + esc(r.raw || "") + "</div>"; return; }
+      renderContractDetail(r.body);
+    });
+  }
+
+  function renderContractDetail(d){
+    var c = d.contract;
+    var box = el("contractDetail");
+    var h = '<div style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px 16px">' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+      '<b style="font-size:16px">' + esc(c.name) + "</b>" +
+      '<span class="muted">' + esc(KIND_LABEL[c.kind] || c.kind) + " · 시작 " + esc(String(c.starts_at || "").slice(0, 10)) +
+        " · " + (c.ends_at ? "만료 " + esc(String(c.ends_at).slice(0, 10)) : "기간 없음") + "</span>" +
+      '<button class="link" id="cdRename">이름 바꾸기</button>' +
+      '<a class="link" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관 콘솔 열기 ↗</a>' +
+      '<span style="flex:1"></span><button class="link" id="cdClose">닫기</button></div>';
+
+    // ── 인원(좌석 상한) 증감 ──
+    h += '<div class="desc" style="margin-top:10px"><b>인원</b> ' + esc(c.seats_used) + " / " + esc(c.seat_total) + "명 쓰는 중 · " +
+      '<button id="cdMinus10">−10</button> <button id="cdMinus1">−1</button> ' +
+      '<input id="cdTotal" type="number" min="1" value="' + esc(c.seat_total) + '" style="width:80px"> ' +
+      '<button id="cdPlus1">+1</button> <button id="cdPlus10">+10</button> ' +
+      '<button id="cdSaveTotal">인원 저장</button> <span id="cdTotalMsg" class="muted"></span>' +
+      '<br><span class="muted">쓰고 있는 인원보다 적게는 줄일 수 없습니다 — 먼저 아래에서 어르신을 기관에서 빼 주세요.</span></div>';
+
+    // ── 담당자 ──
+    h += '<div class="desc" style="margin-top:10px"><b>담당자</b> <span class="muted">— 이 구글 이메일로 기관 콘솔에 로그인하면 이 기관 어르신만 봅니다.</span>' +
+      '<div class="tablewrap"><table><tr><th>이메일</th><th>역할</th><th>메모</th><th>넣은 사람</th><th>넣은 날</th><th></th></tr>';
+    if (!d.staff.length) h += '<tr><td colspan="6" class="muted">담당자가 없습니다 — 이대로면 아무도 기관 콘솔에서 이 기관을 못 봅니다.</td></tr>';
+    d.staff.forEach(function(s){
+      h += "<tr><td>" + esc(s.email) + "</td><td>" + (s.role === "manager" ? "책임자" : "담당자") + "</td><td>" + esc(s.note || "") +
+        "</td><td>" + esc(s.added_by || "—") + "</td><td>" + esc(String(s.created_at || "").slice(0, 10)) + "</td>" +
+        '<td><button class="link" data-staff-rm="' + esc(s.email) + '">빼기</button></td></tr>';
+    });
+    h += "</table></div>" +
+      '<div style="margin-top:6px"><input id="cdStaffEmail" placeholder="담당자 구글 이메일" style="width:240px"> ' +
+      '<select id="cdStaffRole"><option value="staff">담당자</option><option value="manager">책임자</option></select> ' +
+      '<input id="cdStaffNote" placeholder="메모(예: ○○보건소 방문간호팀)" style="width:220px"> ' +
+      '<button id="cdStaffAdd">담당자 넣기</button> <span id="cdStaffMsg" class="muted"></span></div></div>';
+
+    // ── 소속 어르신 ──
+    var active = d.elders.filter(function(e){ return !e.archived; }).length;
+    h += '<div class="desc" style="margin-top:10px"><b>소속 어르신</b> ' + active + "분" +
+      (d.elders.length > active ? ' <span class="muted">(보관함 ' + (d.elders.length - active) + "분 — 기관 콘솔에는 안 보임)</span>" : "") +
+      ' · <span class="muted">담당자 기록(연락함·확인함) ' + esc(d.followups) + "건</span>" +
+      '<div class="tablewrap"><table><tr><th>가명</th><th>좌석</th><th>들어온 날</th><th>마지막 걸음 기록</th><th>관리번호</th>' +
+      "<th>어르신 번호</th><th>보호자 번호</th><th>자녀 연결</th><th></th></tr>";
+    if (!d.elders.length) h += '<tr><td colspan="9" class="muted">아직 없습니다 — 기관 콘솔 「어르신 추가」에서 연동 번호로 넣습니다.</td></tr>';
+    d.elders.forEach(function(e){
+      h += "<tr><td>" + esc(e.alias) + (e.archived ? ' <span class="muted">(보관)</span>' : "") + "</td>" +
+        "<td>" + (e.seat_active ? "켜짐" : '<span class="muted">꺼짐</span>') + "</td>" +
+        "<td>" + esc(String(e.activated_at || "").slice(0, 10) || "—") + "</td>" +
+        "<td>" + esc(e.last_day || "아직 없음") + "</td>" +
+        "<td>" + esc(e.mgmt_no || "없음") + "</td>" +
+        "<td>" + (e.elder_phone ? "있음" : (e.elder_declined ? '<span class="muted">거절</span>' : '<span class="muted">없음</span>')) + "</td>" +
+        "<td>" + (e.guardian_phones ? esc(e.guardian_phones) + "명" : '<span class="muted">없음</span>') + "</td>" +
+        "<td>" + (e.guardians ? esc(e.guardians) + "명" : '<span class="muted">없음</span>') + "</td>" +
+        '<td><button class="link" data-elder-rm="' + esc(e.id) + '" data-alias="' + esc(e.alias) + '">기관에서 빼기</button></td></tr>';
+    });
+    h += "</table></div></div>";
+
+    // ── 어르신 추가 시도 ──
+    h += '<div class="desc" style="margin-top:10px"><b>어르신 추가 시도</b> <span class="muted">— 최근 30건 · 틀린 번호가 몰리면 담당자에게 번호 확인을 안내해 주세요.</span>' +
+      '<div class="tablewrap"><table><tr><th>때</th><th>담당자</th><th>결과</th></tr>';
+    if (!d.attempts.length) h += '<tr><td colspan="3" class="muted">없음</td></tr>';
+    d.attempts.forEach(function(a){
+      h += "<tr><td>" + shortTime(a.at) + "</td><td>" + esc(a.email) + "</td><td" + (a.ok ? "" : ' class="warn"') + ">" +
+        esc(ADD_RESULT_LABEL[a.result] || a.result) + "</td></tr>";
+    });
+    h += "</table></div></div>";
+
+    // ── 기관 콘솔 활동 ──
+    h += '<div class="desc" style="margin-top:10px"><b>기관 콘솔 활동</b> <span class="muted">— 최근 50건 · 누가 언제 무엇을 봤는지(어르신 자료는 안 적힘)</span>' +
+      '<div class="tablewrap"><table><tr><th>때</th><th>누가</th><th>무엇</th><th>몇 분</th></tr>';
+    if (!d.activity.length) h += '<tr><td colspan="4" class="muted">없음</td></tr>';
+    d.activity.forEach(function(a){
+      var detail = String(a.detail || "");
+      var tail = detail.indexOf(" · ") >= 0 ? detail.slice(detail.indexOf(" · ") + 3) : "";
+      h += "<tr><td>" + shortTime(a.at) + "</td><td>" + esc(a.email) + "</td><td>" + esc(GOV_ACTION_LABEL[a.action] || a.action) +
+        (tail ? ' <span class="muted">' + esc(tail) + "</span>" : "") + "</td><td>" + (a.n == null ? "—" : esc(a.n)) + "</td></tr>";
+    });
+    h += "</table></div></div></div>";
+
+    box.innerHTML = h;
+    bindContractDetail(c);
+  }
+
+  function bindContractDetail(c){
+    function refresh(){ loadContracts(); loadSeats(); }   // loadContracts 가 열린 관리 창을 다시 그린다
+    el("cdClose").onclick = function(){ openDetailId = null; el("contractDetail").innerHTML = ""; };
+    el("cdRename").onclick = function(){
+      var v = prompt("기관 이름(40자까지 · 기관 콘솔과 보고서에 그대로 나옵니다)", c.name);
+      if (v === null || !v.trim() || v.trim() === c.name) return;
+      rpc("console_rename_contract", { p_contract_id: c.id, p_name: v.trim() }).then(function(r){
+        if (r.ok && r.body === "ok") refresh(); else alert("바꾸지 못했습니다: " + (r.body || r.raw || ""));
+      });
+    };
+    function bump(n){ var t = el("cdTotal"); t.value = Math.max(1, (Number(t.value) || 0) + n); }
+    el("cdMinus10").onclick = function(){ bump(-10); };
+    el("cdMinus1").onclick = function(){ bump(-1); };
+    el("cdPlus1").onclick = function(){ bump(1); };
+    el("cdPlus10").onclick = function(){ bump(10); };
+    el("cdSaveTotal").onclick = function(){
+      var n = Number(el("cdTotal").value), msg = el("cdTotalMsg");
+      if (!(n >= 1)) { msg.textContent = "1 이상으로 적어 주세요."; return; }
+      if (n < Number(c.seats_used)) { msg.textContent = "쓰는 인원(" + c.seats_used + ")보다 적게는 줄일 수 없습니다."; return; }
+      msg.textContent = "저장하는 중…";
+      rpc("console_update_contract", { p_contract_id: c.id, p_seat_total: n }).then(function(r){
+        if (r.ok) refresh();
+        else msg.textContent = /SEAT_TOTAL_BELOW_USED/.test(r.raw || "") ? "쓰는 인원보다 적게는 줄일 수 없습니다." : "저장하지 못했습니다: " + (r.raw || "");
+      });
+    };
+    el("cdStaffAdd").onclick = function(){
+      var email = el("cdStaffEmail").value.trim(), msg = el("cdStaffMsg");
+      if (!email) { msg.textContent = "이메일을 적어 주세요."; return; }
+      msg.textContent = "넣는 중…";
+      rpc("console_set_contract_staff", { p_contract_id: c.id, p_email: email, p_role: el("cdStaffRole").value, p_remove: false, p_note: el("cdStaffNote").value.trim() || null })
+        .then(function(r){
+          if (r.ok && r.body === "ok") refresh();
+          else msg.textContent = r.body === "bad_email" ? "이메일 모양이 아닙니다." : "넣지 못했습니다: " + (r.body || r.raw || "");
+        });
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-staff-rm]"), function(b){
+      b.onclick = function(){
+        var email = b.getAttribute("data-staff-rm");
+        if (!confirm(email + " 를 이 기관 담당자에서 뺍니다. 그 계정은 이 기관을 더 이상 못 봅니다.")) return;
+        rpc("console_set_contract_staff", { p_contract_id: c.id, p_email: email, p_role: null, p_remove: true, p_note: null }).then(function(r){
+          if (r.ok) refresh(); else alert("빼지 못했습니다: " + (r.raw || ""));
+        });
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-elder-rm]"), function(b){
+      b.onclick = function(){
+        if (!confirm(b.getAttribute("data-alias") + " 님을 " + c.name + " 에서 뺍니다.\n" +
+                     "· 이 기관의 관리번호와 연락처(어르신·보호자 번호)는 곧바로 지워집니다.\n" +
+                     "· 걸음 기록과 자녀 연결은 그대로 남습니다.\n" +
+                     "· 다시 넣으려면 어르신 폰의 연동 번호가 필요합니다.")) return;
+        rpc("console_remove_elder_from_contract", { p_elderly_id: b.getAttribute("data-elder-rm"), p_contract_id: c.id }).then(function(r){
+          if (r.ok && r.body === "ok") refresh(); else alert("빼지 못했습니다: " + (r.body || r.raw || ""));
+        });
+      };
     });
   }
 
