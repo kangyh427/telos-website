@@ -1561,19 +1561,36 @@
       '<button class="primary" id="scCreate">기관 만들기</button> <span id="scMsg" class="muted"></span>' +
       '<div class="muted" style="width:100%;margin-top:4px">만들면 곧바로 그 기관의 「기관 담당자」 칸이 열립니다.</div></div></section>';
 
-    html += '<section><div class="sechead"><div><h2>혜택코드 발급' +
-      '<span class="whose">보험사 · B2C 무료체험</span></h2>' +
-      '<div class="desc">발급한 개수가 곧 그 계약의 좌석 상한입니다. 발급 결과는 아래에 한 번만 표시되니 복사해 전달하세요.</div></div></div>' +
-      '<div class="desc"><select id="bcContract"></select> ' +
-      '<input id="bcCount" type="number" min="1" max="10000" value="10" style="width:80px">개 · ' +
-      '기간 <input id="bcDays" type="number" min="1" value="180" style="width:70px">일 ' +
-      '<button id="bcIssue">발급</button> <span id="bcMsg" class="muted"></span></div>' +
-      '<textarea id="bcOut" readonly style="width:100%;margin-top:8px;display:none;height:120px;font-family:monospace"></textarea></section>';
+    // ★(S697 · 대표 지시 "혜택코드는 어떻게 되는거지? 함께 만들어줘") 이용권 코드 = 자녀 앱 Pro ★
+    //   선물(TP-) = 회사가 고른 분께 · 기관 혜택(TB-) = 기관·보험사에 묶어 나눠 줌(sql 176).
+    //   자녀 앱 설정 「선물 코드 입력」 한 칸이 둘 다 받는다 — ★이미 나간 앱에서도 된다★(서버가 머리글자로 가른다).
+    html += '<section><div class="sechead"><div><h2>이용권 코드' +
+      '<span class="whose">자녀 앱 Pro · 선물 · 기관 혜택</span></h2>' +
+      '<div class="desc">자녀가 자녀 앱 <b>설정 → 「선물 코드 입력」</b>에 넣으면 그 자녀 계정이 <b>Pro 를 정한 날수만큼</b> 씁니다(이미 Pro 이면 그 뒤로 늘어납니다). 한 코드는 한 번만 쓸 수 있습니다.<br>' +
+      '<b>선물 코드(TP-)</b> = 회사가 고른 분께 드리는 것 · <b>기관 혜택코드(TB-)</b> = 보건소·보험사 등 기관에 묶어 나눠 주는 것(기관별로 몇 장 썼는지 세고, 기관 기간이 끝나면 못 씁니다).</div></div></div>' +
+      '<div class="ct-new" style="margin-top:0"><b>코드 만들기</b>' +
+      '<label>종류 <select id="pcKind"><option value="gift">선물 코드(TP-)</option><option value="benefit">기관 혜택코드(TB-)</option></select></label>' +
+      '<label id="pcContractWrap" style="display:none">기관 <select id="bcContract"></select></label>' +
+      '<label>개수 <input id="pcCount" type="number" min="1" max="200" value="1" style="width:70px">장</label>' +
+      '<label>Pro 기간 <input id="pcDays" type="number" min="1" max="366" value="365" style="width:70px">일</label>' +
+      '<label id="pcNoteWrap">메모 <input id="pcNote" placeholder="누구에게 드리는지(선택)" style="width:200px"></label>' +
+      '<button class="primary" id="pcIssue">만들기</button> <span id="pcMsg" class="muted"></span></div>' +
+      '<div id="pcOutWrap" style="display:none;margin-top:10px"><div class="muted" style="margin-bottom:4px">방금 만든 코드 — 복사해 전달하세요(아래 목록에도 남습니다).</div>' +
+      '<textarea id="pcOut" readonly style="width:100%;height:110px;font-family:monospace"></textarea> <button id="pcCopy">모두 복사</button></div>' +
+      '<div style="margin-top:14px;display:flex;gap:8px;align-items:center"><b style="font-size:13px">목록</b>' +
+      '<select id="pcFilter"><option value="all">전체</option><option value="unused">아직 안 쓴 것</option><option value="used">쓴 것</option>' +
+      '<option value="gift">선물 코드만</option><option value="benefit">기관 혜택코드만</option></select></div>' +
+      '<div id="pcBox" class="desc" style="margin-top:8px">불러오는 중…</div></section>';
 
+    // ★(S697 · 대표 지시 "정리해서 표시 · 정렬 · 소속별로 · 검색") 어르신별 소속★
+    //   찾기 칸은 목록 조각(pager)이 붙인다 · 소속 고르기와 머리 눌러 정렬은 여기서 한다.
     html += '<section><div class="sechead"><div><h2>어르신별 소속' +
-      '<span class="whose">가명 · 기관 · 만료</span></h2>' +
-      '<div class="desc">「기관에서 빼기」는 지우기가 아닙니다 — 걸음 기록·자녀 연결은 남고, 그 기관의 관리번호·연락처만 지워집니다. ' +
-      '「켜기」는 기관 없이 좌석만 켜는 예외 처리용입니다.</div></div></div>' +
+      '<span class="whose">기관별로 보기 · 머리를 누르면 정렬</span></h2>' +
+      '<div class="desc">「기관에서 빼기」는 지우기가 아닙니다 — 걸음 기록·자녀 연결은 남고, 그 기관의 관리번호·연락처만 지워집니다.</div></div></div>' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">' +
+      '<label style="font-size:13px">소속 <select id="msFilter"><option value="all">전체</option><option value="none">기관 없음</option></select></label>' +
+      '<label style="font-size:13px"><input type="checkbox" id="msArchived"> 보관함 어르신도 보기</label>' +
+      '<span id="msCount" class="muted" style="font-size:12.5px"></span></div>' +
       '<div id="seatBox" class="desc">불러오는 중…</div></section>';
 
     el("view").innerHTML = html;
@@ -1581,7 +1598,7 @@
     loadContracts();
     loadSeats();
     el("scCreate").addEventListener("click", createContract);
-    el("bcIssue").addEventListener("click", issueBenefit);
+    bindPassCodes();
   }
 
   function loadContracts(){
@@ -1894,55 +1911,157 @@
       });
   }
 
-  function issueBenefit(){
-    var cid = el("bcContract").value;
-    var cnt = Number(el("bcCount").value);
-    var days = Number(el("bcDays").value);
-    var msg = el("bcMsg");
-    if (!cid) { msg.textContent = "계약을 먼저 만들어 주세요."; return; }
-    if (!(cnt > 0)) { msg.textContent = "개수를 적어 주세요."; return; }
-    msg.textContent = "발급 중…";
-    rpc("console_issue_benefit_codes", { p_contract_id: cid, p_count: cnt, p_duration_days: days || 180 })
-      .then(function(r){
-        if (!r.ok || !Array.isArray(r.body)) { msg.textContent = "실패: " + (r.raw || ""); return; }
-        var codes = r.body.map(function(x){ return x.code; });
-        var out = el("bcOut");
-        out.value = codes.join(String.fromCharCode(10));
-        out.style.display = "block";
-        msg.textContent = codes.length + "개 발급 — 아래에서 복사하세요.";
-        loadContracts();
-      });
+  // ── 이용권 코드(자녀 앱 Pro) — sql 176 ─────────────────────────────────
+  var PASS_KIND = { gift: "선물", benefit: "기관 혜택" };
+  function bindPassCodes(){
+    var kind = el("pcKind");
+    function sync(){
+      var isB = kind.value === "benefit";
+      el("pcContractWrap").style.display = isB ? "" : "none";
+      el("pcNoteWrap").style.display = isB ? "none" : "";
+      el("pcDays").value = isB ? 180 : 365;
+      el("pcCount").max = isB ? 10000 : 200;
+    }
+    kind.onchange = sync;
+    el("pcIssue").onclick = issuePassCodes;
+    el("pcFilter").onchange = loadPassCodes;
+    el("pcCopy").onclick = function(){
+      var t = el("pcOut"); t.select();
+      try { navigator.clipboard.writeText(t.value); el("pcMsg").textContent = "복사했습니다."; } catch(e) { document.execCommand("copy"); }
+    };
+    loadPassCodes();
   }
 
-  function loadSeats(){
-    rpc("console_list_seats", {}).then(function(r){
-      var box = el("seatBox"); if (!box) return;
+  function issuePassCodes(){
+    var isB = el("pcKind").value === "benefit";
+    var cnt = Number(el("pcCount").value), days = Number(el("pcDays").value), msg = el("pcMsg");
+    var max = isB ? 10000 : 200;
+    if (!(cnt >= 1 && cnt <= max)) { msg.textContent = "개수는 1~" + max + "장입니다."; return; }
+    if (!(days >= 1 && days <= 366)) { msg.textContent = "Pro 기간은 1~366일입니다."; return; }
+    if (isB && !el("bcContract").value) { msg.textContent = "기관을 먼저 만들어 주세요."; return; }
+    msg.textContent = "만드는 중…";
+    var call = isB
+      ? rpc("console_issue_benefit_codes", { p_contract_id: el("bcContract").value, p_count: cnt, p_duration_days: days })
+      : rpc("console_issue_pro_gift_codes", { p_count: cnt, p_duration_days: days, p_note: el("pcNote").value.trim() || null });
+    call.then(function(r){
+      if (!r.ok || !Array.isArray(r.body)) { msg.textContent = "만들지 못했습니다: " + (r.raw || ""); return; }
+      var codes = r.body.map(function(x){ return typeof x === "string" ? x : (x.code || x.console_issue_pro_gift_codes || ""); });
+      el("pcOut").value = codes.join(String.fromCharCode(10));
+      el("pcOutWrap").style.display = "";
+      msg.textContent = codes.length + "장 만들었습니다.";
+      loadPassCodes();
+    });
+  }
+
+  function loadPassCodes(){
+    rpc("console_list_pass_codes", { p_limit: 2000 }).then(function(r){
+      var box = el("pcBox"); if (!box) return;
       if (!r.ok || !Array.isArray(r.body)) { box.textContent = "불러오지 못했습니다: " + (r.raw || ""); return; }
-      if (!r.body.length) { box.textContent = "어르신이 없습니다."; return; }
-      var h = '<div class="tablewrap"><table><tr><th>가명</th><th>동네</th><th>기관</th><th>만료</th><th></th></tr>';
-      r.body.forEach(function(s){
-        var inContract = !!s.contract_name;
-        h += "<tr><td>" + esc(s.alias || "") + (s.is_internal ? ' <span class="muted">(내부)</span>' : "") + "</td>" +
-             "<td>" + esc(s.region || "") + "</td>" +
-             "<td>" + (s.seat_active ? esc(s.contract_name || s.seat_funded_by || "좌석만 켜짐") : '<span class="muted">없음</span>') + "</td>" +
-             "<td>" + (s.seat_active && s.seat_valid_until ? esc(ymd(s.seat_valid_until)) : "—") + "</td>" +
-             "<td>" + (s.seat_active
-               ? '<button class="link" data-leave="' + esc(s.elderly_id) + '" data-alias="' + esc(s.alias || "") + '" data-cname="' + esc(s.contract_name || s.seat_funded_by || "좌석") + '">' + (inContract ? "기관에서 빼기" : "끄기") + "</button>"
-               : '<button class="link" data-seat-on="' + esc(s.elderly_id) + '">켜기</button>') + "</td></tr>";
+      var f = (el("pcFilter") || {}).value || "all";
+      var rows = r.body.filter(function(c){
+        if (f === "unused") return !c.redeemed_at;
+        if (f === "used") return !!c.redeemed_at;
+        if (f === "gift" || f === "benefit") return c.kind === f;
+        return true;
+      });
+      if (!rows.length) { box.textContent = "없습니다."; return; }
+      var h = '<div class="tablewrap"><table class="ctp-table"><tr><th>코드</th><th>종류</th><th>기관</th><th>Pro 기간</th><th>만든 날</th><th>쓴 날</th><th>쓴 자녀 계정</th><th>Pro 끝</th><th>메모</th></tr>';
+      rows.forEach(function(c){
+        h += "<tr><td style='font-family:monospace'>" + esc(c.code) + "</td><td>" + esc(PASS_KIND[c.kind] || c.kind) + "</td>" +
+          "<td>" + esc(c.contract_name || "—") + "</td><td>" + esc(c.duration_days) + "일</td>" +
+          "<td>" + esc(ymd(c.created_at)) + "</td>" +
+          "<td>" + (c.redeemed_at ? esc(ymd(c.redeemed_at)) : '<span class="muted">안 씀</span>') + "</td>" +
+          "<td>" + esc(c.redeemed_email || "—") + "</td><td>" + (c.pro_until ? esc(ymd(c.pro_until)) : "—") + "</td>" +
+          "<td>" + esc(c.note || "") + "</td></tr>";
       });
       box.innerHTML = h + "</table></div>";
-      Array.prototype.forEach.call(box.querySelectorAll("[data-leave]"), function(b){
-        // ★(S697 · 대표 지시 "좌석끄기도 기관에서 빼기로") 서버 console_set_seat 끄기가 기관 연결까지 끊는다(sql 173)★
-        b.addEventListener("click", function(){ removeFromContract(b.getAttribute("data-leave"), b.getAttribute("data-alias"), b.getAttribute("data-cname"), null); });
-      });
-      Array.prototype.forEach.call(box.querySelectorAll("[data-seat-on]"), function(b){
-        b.addEventListener("click", function(){
-          if (!confirm("이 어르신 좌석을 기관 없이 수동으로 켭니다(예외 처리용 · 라벨 manual).")) return;
-          rpc("console_set_seat", { p_elderly_id: b.getAttribute("data-seat-on"), p_active: true }).then(function(rr){
-            if (rr.ok) { loadSeats(); loadContracts(); } else alert("실패: " + (rr.raw || ""));
-          });
-        });
-      });
+    });
+  }
+
+  // ── 어르신별 소속 — sql 176 console_list_memberships · 정렬·소속 고르기는 화면이 한다 ──
+  var MS = { rows: [], sort: "contract", dir: 1 };
+  var MS_COLS = [
+    { k: "alias", t: "가명" }, { k: "region", t: "동네" }, { k: "contract", t: "소속" },
+    { k: "activated", t: "들어온 날" }, { k: "until", t: "만료" }, { k: "last", t: "마지막 걸음" },
+    { k: "guardians", t: "자녀 연결" }, { k: "mgmt", t: "관리번호" },
+  ];
+  function msVal(e, k){
+    switch (k) {
+      case "alias": return (e.alias || "").toLowerCase();
+      case "region": return (e.region || "").toLowerCase();
+      case "contract": return e.contract_name ? "0" + e.contract_name : "1";   // 소속 있는 분이 먼저
+      case "activated": return e.seat_activated_at || "";
+      case "until": return e.seat_valid_until || "";
+      case "last": return e.last_day || "";
+      case "guardians": return Number(e.guardians) || 0;
+      case "mgmt": return e.mgmt_no || "";
+    }
+    return "";
+  }
+  function loadSeats(){
+    rpc("console_list_memberships", {}).then(function(r){
+      var box = el("seatBox"); if (!box) return;
+      if (!r.ok || !Array.isArray(r.body)) { box.textContent = "불러오지 못했습니다: " + (r.raw || ""); return; }
+      MS.rows = r.body;
+      // 소속 고르기 — 지금 있는 기관 이름으로 채운다(고른 값은 지킨다)
+      var sel = el("msFilter"), keep = sel.value, names = {};
+      r.body.forEach(function(e){ if (e.contract_id) names[e.contract_id] = e.contract_name; });
+      sel.innerHTML = '<option value="all">전체</option>' +
+        Object.keys(names).sort(function(a, b){ return String(names[a]).localeCompare(String(names[b])); })
+          .map(function(id){
+            var n = r.body.filter(function(e){ return e.contract_id === id && !e.archived; }).length;
+            return '<option value="' + esc(id) + '">' + esc(names[id]) + " (" + n + "분)</option>";
+          }).join("") +
+        '<option value="none">기관 없음</option>';
+      if ([].some.call(sel.options, function(o){ return o.value === keep; })) sel.value = keep;
+      sel.onchange = drawSeats;
+      el("msArchived").onchange = drawSeats;
+      drawSeats();
+    });
+  }
+  function drawSeats(){
+    var box = el("seatBox"); if (!box) return;
+    var f = el("msFilter").value, withArch = el("msArchived").checked;
+    var rows = MS.rows.filter(function(e){
+      if (!withArch && e.archived) return false;
+      if (f === "none") return !e.contract_id;
+      if (f !== "all") return e.contract_id === f;
+      return true;
+    }).sort(function(a, b){
+      var x = msVal(a, MS.sort), y = msVal(b, MS.sort);
+      if (x < y) return -MS.dir; if (x > y) return MS.dir;
+      return String(a.alias || "").localeCompare(String(b.alias || ""));
+    });
+    el("msCount").textContent = rows.length + "분";
+    var h = '<div class="tablewrap"><table class="ctp-table ms-table"><tr>' + MS_COLS.map(function(c){
+      var on = MS.sort === c.k;
+      return '<th data-sort="' + c.k + '" style="cursor:pointer;user-select:none" title="눌러서 정렬">' + c.t + (on ? (MS.dir > 0 ? " ▲" : " ▼") : ' <span class="muted">↕</span>') + "</th>";
+    }).join("") + "<th></th></tr>";
+    if (!rows.length) h += '<tr><td colspan="9" class="muted">없습니다.</td></tr>';
+    rows.forEach(function(e){
+      h += "<tr" + (e.archived ? ' class="dim"' : "") + "><td><b>" + esc(e.alias || "") + "</b>" + (e.is_internal ? ' <span class="muted">(내부)</span>' : "") + (e.archived ? " (보관)" : "") + "</td>" +
+        "<td>" + esc(e.region || "—") + "</td>" +
+        "<td>" + (e.contract_name ? esc(e.contract_name) : (e.seat_active ? '<span class="muted">좌석만(' + esc(e.seat_funded_by || "manual") + ")</span>" : '<span class="muted">없음</span>')) + "</td>" +
+        "<td>" + (e.contract_id ? esc(ymd(e.seat_activated_at)) : "—") + "</td>" +
+        "<td>" + (e.seat_active && e.seat_valid_until ? esc(ymd(e.seat_valid_until)) : "—") + "</td>" +
+        "<td>" + esc(e.last_day || "아직 없음") + "</td>" +
+        "<td>" + (e.guardians ? e.guardians + "명" : '<span class="muted">없음</span>') + "</td>" +
+        "<td>" + esc(e.mgmt_no || "—") + "</td>" +
+        "<td>" + (e.seat_active
+          ? '<button class="danger small" data-leave="' + esc(e.elderly_id) + '" data-alias="' + esc(e.alias || "") + '" data-cname="' + esc(e.contract_name || "좌석") + '" data-cid="' + esc(e.contract_id || "") + '">' + (e.contract_id ? "기관에서 빼기" : "좌석 끄기") + "</button>"
+          : "") + "</td></tr>";
+    });
+    box.innerHTML = h + "</table></div>";
+    Array.prototype.forEach.call(box.querySelectorAll("th[data-sort]"), function(th){
+      th.onclick = function(){
+        var k = th.getAttribute("data-sort");
+        if (MS.sort === k) MS.dir = -MS.dir; else { MS.sort = k; MS.dir = (k === "last" || k === "activated" || k === "guardians") ? -1 : 1; }
+        drawSeats();
+      };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-leave]"), function(b){
+      // ★(S697) 좌석 끄기 = 기관에서 빼기(sql 173) · 기관이 있으면 기관 함수로(sql 172)★
+      b.onclick = function(){ removeFromContract(b.getAttribute("data-leave"), b.getAttribute("data-alias"), b.getAttribute("data-cname"), b.getAttribute("data-cid") || null); };
     });
   }
 
