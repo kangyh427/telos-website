@@ -136,10 +136,17 @@ td button.rm{color:#b91c1c;border-color:#f0d5d5}
   }
   // ★(S697) ?contract=<id> — 회사 콘솔에서 넘어올 때 고른 기관. 구글 로그인을 다녀오면 주소가 바뀌므로 잠시 적어 둔다★
   var WANT_KEY = "telos_gov_want_contract";
+  var WANT_NAME_KEY = "telos_gov_want_name";   // ★(S698) 볼 수 없는 기관일 때 그 이름을 밝히려고 함께 적는다★
   (function rememberWanted(){
-    var q = new URLSearchParams(location.search).get("contract");
-    if (q) { try { sessionStorage.setItem(WANT_KEY, q); } catch(e){} }
+    var p = new URLSearchParams(location.search);
+    var q = p.get("contract");
+    if (q) { try { sessionStorage.setItem(WANT_KEY, q); sessionStorage.setItem(WANT_NAME_KEY, p.get("name") || ""); } catch(e){} }
   })();
+  function wantedName(){
+    var n = new URLSearchParams(location.search).get("name");
+    if (n) return n;
+    try { return sessionStorage.getItem(WANT_NAME_KEY) || ""; } catch(e){ return ""; }
+  }
   function wantedContract(){
     var q = new URLSearchParams(location.search).get("contract");
     if (q) return q;
@@ -389,12 +396,26 @@ td button.rm{color:#b91c1c;border-color:#f0d5d5}
       sel.innerHTML = j.contracts.map(function(k){ return '<option value="' + esc(k.id) + '">' + esc(k.name) + "</option>"; }).join("");
       sel.style.display = j.contracts.length > 1 ? "" : "none";
       if (!j.contracts.length) { el("main").innerHTML = '<div class="empty">연결된 계약이 없습니다.</div>'; return; }
-      // ★(S697) 회사 콘솔의 「기관 콘솔 열기」가 준 기관을 먼저 연다(없거나 볼 수 없는 기관이면 첫 기관)★
+      // ★(S697) 회사 콘솔의 「기관 콘솔 열기」가 준 기관을 먼저 연다★
       var want = wantedContract();
       var hit = j.contracts.filter(function(k){ return k.id === want; })[0];
       state.contractId = hit ? hit.id : j.contracts[0].id;
       sel.value = state.contractId;
       sel.onchange = function(){ state.contractId = sel.value; state.overview = null; render(); loadOverview().catch(fail); };
+      // ★(S698 · 대표 지적) 볼 수 없는 기관을 요청받으면 ★말없이 다른 기관을 열지 않는다★ —
+      //   qhtn77(시험3 담당)로 신흥사랑을 열었더니 시험3 의 빈 목록이 떠서 "한 명도 안 나온다"로 보였다.
+      if (want && !hit) {
+        var nm = wantedName();
+        sel.style.display = "";
+        el("main").innerHTML = '<div class="empty">이 계정(<b>' + esc(j.email) + '</b>)은 ' +
+          (nm ? "「<b>" + esc(nm) + "</b>」" : "요청하신 기관") + "의 담당자가 아닙니다.<br>" +
+          "그 기관 담당자 이메일로 로그인하시거나, 회사 콘솔 「기관 관리」→「편집」→「기관 담당자」에 이 이메일을 넣어 주세요.<br><br>" +
+          "이 계정으로 볼 수 있는 기관: <b>" + j.contracts.map(function(k){ return esc(k.name); }).join(", ") + "</b>" +
+          '<br><button class="btn-google" id="openOwn" style="max-width:280px;margin-top:14px">볼 수 있는 기관 열기</button></div>';
+        try { sessionStorage.removeItem(WANT_KEY); sessionStorage.removeItem(WANT_NAME_KEY); } catch(e){}
+        el("openOwn").onclick = function(){ render(); loadOverview().catch(fail); };
+        return;
+      }
       render();
       return loadOverview();
     }).catch(fail);

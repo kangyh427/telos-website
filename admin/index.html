@@ -1628,12 +1628,14 @@
         var d = daysLeft(c.ends_at);
         h += '<tr' + (c.id === openDetailId ? ' class="on"' : "") + "><td><b>" + esc(c.name) + "</b></td>" +
              "<td>" + esc(KIND_LABEL[c.kind] || c.kind) + "</td>" +
-             "<td>" + seatBar(Number(c.seats_used) || 0, Number(c.seat_total) || 0) + " " + esc(c.seats_used) + " / " + esc(c.seat_total) + "명</td>" +
+             "<td>" + seatBar(Number(c.seats_used) || 0, Number(c.seat_total) || 0) + " " + esc(c.seats_used) + " / " + esc(c.seat_total) + "명" +
+             // ★(S698 · sql 180) 보관 수를 함께 — 기관 화면은 보관된 분을 빼고 보여 준다(13 대 9 로 헷갈리셨다)★
+             (Number(c.seats_archived) > 0 ? ' <span class="muted">(기관 화면 ' + (Number(c.seats_used) - Number(c.seats_archived)) + "분 · 보관 " + esc(c.seats_archived) + "분)</span>" : "") + "</td>" +
              "<td" + (d != null && d <= END_SOON_DAYS ? ' class="warn"' : "") + ">" +
                (c.ends_at ? esc(ymd(c.ends_at)) + "까지 · " + leftText(c.ends_at) : "기간 없음") + "</td>" +
              (showBenefit ? "<td>" + (c.benefit_total > 0 ? esc(c.benefit_redeemed) + " / " + esc(c.benefit_total) + " 사용" : "—") + "</td>" : "") +
              '<td><button class="primary small" data-detail="' + esc(c.id) + '">' + (c.id === openDetailId ? "접기" : "편집") + '</button> ' +
-             '<a class="ct-out" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener" title="기관 담당자가 보는 화면을 새 탭에서 엽니다">기관이 보는 화면 ↗</a></td></tr>';
+             '<a class="ct-out" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + "&name=" + encodeURIComponent(c.name) + '" target="_blank" rel="noopener" title="기관 담당자가 보는 화면을 새 탭에서 엽니다">기관이 보는 화면 ↗</a></td></tr>';
       });
       box.innerHTML = h + "</table></div>";
       Array.prototype.forEach.call(box.querySelectorAll("[data-detail]"), function(b){
@@ -1707,8 +1709,9 @@
     // ── 머리 ──
     h += '<div class="ctp-head"><div>' +
       '<div class="ctp-name">' + esc(c.name) + ' <button class="link" id="cdRename">이름 바꾸기</button></div>' +
-      '<div class="muted">' + esc(KIND_LABEL[c.kind] || c.kind) + " · 기관 담당자 " + d.staff.length + "명 · 소속 어르신 " + active.length + "분</div></div>" +
-      '<div class="ctp-actions"><a class="btn" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">기관이 보는 화면 열기 ↗</a>' +
+      '<div class="muted">' + esc(KIND_LABEL[c.kind] || c.kind) + " · 기관 담당자 " + d.staff.length + "명 · 소속 어르신 " + active.length + "분" +
+        (archived > 0 ? " · 보관 " + archived + "분(기관 화면에 안 보임)" : "") + "</div></div>" +
+      '<div class="ctp-actions"><a class="btn" href="' + GOV_URL + "?contract=" + encodeURIComponent(c.id) + "&name=" + encodeURIComponent(c.name) + '" target="_blank" rel="noopener">기관이 보는 화면 열기 ↗</a>' +
       '<button id="cdClose">닫기</button></div></div>';
 
     // ── 큰 칸 둘: 인원 · 기간 ──
