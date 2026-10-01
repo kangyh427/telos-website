@@ -182,6 +182,7 @@
   <a class="btn" id="reportLink" href="/admin/report/" target="_blank" rel="noopener" title="어르신별 걷기 분석 보고서 · 코호트 요약 (A4)">걷기 보고서</a>
   <button id="seatBtn" title="보건소·지자체 등 기관 만들기 · 기관 담당자 넣기 · 인원·기간">기관 관리</button>
   <button id="growthBtn" title="월별 설치·이탈·연동률·좌석">성장판</button>
+  <button id="investorBtn" title="DAU·WAU·MAU · 잔존 곡선 · 연동 깔때기 · 가족 쌍 (IR 용)">투자 지표</button>
   <button id="secBtn" title="2단계 인증 · 열람 기록">보안</button>
   <button id="refreshBtn">지금 새로고침</button>
   <button id="logoutBtn" title="로그인 상태는 이 브라우저에 유지됩니다. 공용 PC 에서는 반드시 로그아웃하세요.">로그아웃</button>
@@ -2195,9 +2196,166 @@
     bindGo();
   }
 
+  // ── 투자 지표 (S701 · 대표 지시 2026-10-01) ─────────────────────────────
+  //  ★무엇을 묻나★ = 성장판이 "몇 명이 깔았나"라면 여기는 ★"몇 명이 쓰고 남는가"★(트랙션).
+  //  ★셈은 서버(sql 184 investor_metrics)가 한다★ — 화면은 그대로 그린다.
+  //  ★활성 넷을 섞지 않는다★ — 어르신 "걸음이 잡힌 분"은 자동 측정이지 사용이 아니다.
+  //    투자자에게 DAU 로 내밀면 부풀린 지표로 읽힌다. 앱 열기는 다음 판부터 쌓인다.
+  //  ★업계 기준은 참고로만★ — 판정에 쓰지 않는다(표본이 작다).
+  var INVESTOR = SUPA + "/functions/v1/get-investor-metrics";
+  var INVESTOR_DATA = null;   // ★열었을 때만 받는다★ — 60초 자동 갱신에 얹지 않는다.
+  var INV_KIND = {
+    elder_measured: ["어르신 — 걸음이 잡힌 분", "자동 측정 · 사용이 아니라 측정"],
+    child_engaged:  ["자녀 — 응원·보고서·용돈을 한 분", "행동 기준 · DAU 의 하한"],
+    child_open:     ["자녀 — 앱을 연 분", "진짜 DAU"],
+    elder_open:     ["어르신 — 앱을 직접 여신 분", "앱 열기"],
+  };
+
+  function investorFetch(){
+    el("liveText").textContent = "투자 지표 불러오는 중…";
+    apiFetch(INVESTOR, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days: 90 }) })
+      .then(function(r){ if (!r.ok) throw new Error("http " + r.status); return r.json(); })
+      .then(function(d){
+        INVESTOR_DATA = d.metrics || "failed";
+        el("liveText").textContent = "실측 연결됨 · " + new Date().toLocaleTimeString("ko-KR");
+        renderInvestor();
+      })
+      .catch(function(){
+        INVESTOR_DATA = "failed";
+        el("liveText").textContent = "투자 지표를 불러오지 못했습니다";
+        renderInvestor();
+      });
+  }
+
+  function invNum(v){ return (v === null || v === undefined) ? "—" : String(v); }
+  /** 남음/분모 — ★분모 0 이면 "아직 안 굳음"★(거짓 0 금지). */
+  function invRatio(kept, n){
+    return n ? esc(kept + "/" + n + " · " + (kept / n * 100).toFixed(1) + "%") : "<span class='muted'>아직 안 굳음</span>";
+  }
+  function invTable(head, rows){
+    return "<div class='tablewrap'><table><tr>" + head.map(function(h){ return "<th>" + esc(h) + "</th>"; }).join("") + "</tr>" +
+      (rows.length ? rows.join("") : "<tr><td colspan='" + head.length + "' class='muted'>아직 기록이 없습니다.</td></tr>") +
+      "</table></div>";
+  }
+  function invSection(title, note, extra){
+    return '<section><div class="sechead"><div><h2>' + esc(title) + '</h2><p class="muted">' + note + "</p></div>" + (extra || "") + "</div>";
+  }
+
+  function renderInvestor(){
+    var html = crumb([{ t: "홈", go: { view: "overview" } }, { t: "투자 지표" }]);
+    if (INVESTOR_DATA === null || INVESTOR_DATA === "failed") {
+      el("view").innerHTML = html + (INVESTOR_DATA === null
+        ? "<section><p class='muted'>불러오는 중입니다…</p></section>"
+        : "<section><h2 class='warn'>투자 지표를 불러오지 못했습니다</h2><p class='muted'>잠시 후 다시 눌러 보세요.</p></section>");
+      bindGo();
+      if (INVESTOR_DATA === null) investorFetch();
+      return;
+    }
+    var M = INVESTOR_DATA, n = M.now || {}, f = M.funnel || {};
+
+    // ── 지금 ──
+    html += invSection("지금", "내부 시험 기기 " + esc(invNum(n.excluded_internal)) + "대 · 기관 담당자 계정 " +
+      esc(invNum(n.excluded_staff)) + "개는 세지 않았습니다. 기준일 " + esc(String(M.today || "")) + ".");
+    html += '<div class="cards">' +
+      cardHtml("어르신", invNum(n.elders), "개인 " + invNum(n.elders_personal) + " · 기관 " + invNum(n.elders_institution)) +
+      cardHtml("가족 쌍", invNum(n.family_pairs), "자녀 " + invNum(n.children_linked) + "명 · 어르신 1명당 자녀 " + invNum(n.children_per_linked_elder)) +
+      cardHtml("개인 설치 연동률", pct(n.link_rate_personal), "자녀가 연동된 개인 설치 어르신") +
+      cardHtml("Pro 자녀", invNum(n.pro_children), "연동 자녀 대비 " + pct(n.pro_rate_linked) + " · 선물 코드 포함") +
+      "</div></section>";
+
+    // ── 활성 ──
+    html += invSection("활성 (DAU · WAU · MAU)",
+      "평균·주·월은 ★어제까지 끝난 날★ 로 셉니다. 고착도 = 최근 30일 하루 평균 ÷ MAU. " +
+      "참고 — 건강 앱 고착도 20~30% 양호 · 소셜 앱 25% 보통 · 40% 좋음(a16z).",
+      '<button class="csv" id="invCsvDaily">일별 CSV</button>');
+    html += invTable(["누구", "어제", "7일 평균", "WAU(7일)", "MAU(30일)", "고착도", "기록 시작"],
+      (M.activity || []).map(function(a){
+        var k = INV_KIND[a.kind] || [a.kind, ""];
+        var head = "<tr><td><b>" + esc(k[0]) + "</b><br><span class='muted'>" + esc(k[1]) + "</span></td>";
+        if (a.since == null) return head + "<td colspan='6' class='muted'>아직 기록 없음 — 앱 다음 판부터 쌓입니다</td></tr>";
+        return head + [a.dau_yesterday, a.dau_avg7, a.wau, a.mau].map(function(v){ return "<td>" + esc(invNum(v)) + "</td>"; }).join("") +
+          "<td>" + pct(a.stickiness) + "</td><td>" + esc(String(a.since)) + "</td></tr>";
+      })) + "</section>";
+
+    // ── 잔존 곡선 ──
+    html += invSection("잔존 곡선 (설치 주별)",
+      "어르신 = 설치 다음날(D1) · 7~13일째(D7) · 30~36일째(D30)에 걸음이 잡혔나. 자녀 = 첫 연동 뒤 같은 창에 행동·앱 열기가 있었나. " +
+      "★창이 안 끝난 분은 분모에서 뺍니다.★ 투자자가 보는 것은 ★곡선이 평평해지는가★. 참고 — 건강 앱 중앙값 D1 25% · D7 10% · D30 5%.",
+      '<button class="csv" id="invCsvRet">잔존 CSV</button>');
+    ["elder", "child"].forEach(function(side){
+      var rows = (M.retention || {})[side] || [];
+      var tot = { size: 0, d1_n: 0, d1_kept: 0, d7_n: 0, d7_kept: 0, d30_n: 0, d30_kept: 0 };
+      var trs = rows.map(function(r){
+        Object.keys(tot).forEach(function(key){ tot[key] += Number(r[key] || 0); });
+        return "<tr><td>" + esc(String(r.cohort)) + "</td><td>" + esc(String(r.size)) + "</td><td>" + invRatio(r.d1_kept, r.d1_n) +
+          "</td><td>" + invRatio(r.d7_kept, r.d7_n) + "</td><td>" + invRatio(r.d30_kept, r.d30_n) + "</td></tr>";
+      });
+      if (rows.length > 1) trs.push("<tr><td><b>전체</b></td><td><b>" + tot.size + "</b></td><td>" + invRatio(tot.d1_kept, tot.d1_n) +
+        "</td><td>" + invRatio(tot.d7_kept, tot.d7_n) + "</td><td>" + invRatio(tot.d30_kept, tot.d30_n) + "</td></tr>");
+      html += "<h3>" + (side === "elder" ? "어르신" : "자녀") + "</h3>" + invTable(["설치 주(월요일)", "인원", "D1", "D7", "D30"], trs);
+    });
+    html += "</section>";
+
+    // ── 깔때기 ──
+    html += invSection("연동 깔때기",
+      "고객은 자녀이고 자녀가 먼저 깝니다. 가입에는 옛 계정·내부 계정이 섞일 수 있습니다. 참고 — 설치→유료 건강 앱 중앙 2.9%(RevenueCat 2026).");
+    [["자녀", [["자녀 가입", f.signed_up], ["부모님 연동", f.linked], ["연동 뒤 부모님 걸음이 잡힘", f.parent_measured], ["첫 응원", f.first_cheer], ["Pro", f.pro]]],
+     ["어르신(개인 설치)", [["개인 설치", f.elders_installed], ["자녀 연동", f.elders_linked], ["걸음이 7일 이상 잡힘", f.elders_measured_7d]]]
+    ].forEach(function(p){
+      // ★처음 단계 대비로 적는다★ — 단계가 꼭 포개지지는 않는다(응원 없이 Pro 인 자녀 · 연동 없이 오래 재는 어르신).
+      //   앞 단계 대비로 적으면 100% 를 넘는 칸이 생겨 거짓처럼 읽힌다(실측 2026-10-01: 7일 측정 4 > 연동 2).
+      var first = Number(p[1][0][1] || 0);
+      html += "<h3>" + esc(p[0]) + "</h3>" + invTable(["단계", "인원", "처음 대비"], p[1].map(function(s, i){
+        return "<tr><td>" + esc(s[0]) + "</td><td>" + esc(invNum(s[1])) + "</td><td>" +
+          (i && first ? (Number(s[1] || 0) / first * 100).toFixed(1) + "%" : "—") + "</td></tr>";
+      }));
+    });
+    html += "</section>";
+
+    // ── 가족 확산 ──
+    html += invSection("가족 확산",
+      "가족 쌍 = 자녀 한 분과 어르신 한 분의 연결(Life360 이 공시하는 가족 묶음과 같은 축). 참고 — 추천 계수 0.3 이상 쓸모 · 0.5 강함.");
+    html += '<div class="cards">' +
+      cardHtml("자녀 2명 이상 가족", invNum(n.families_2plus), "연동된 어르신 " + invNum(n.elders_with_child) + "분 중") +
+      cardHtml("새 가족 합류", invNum(n.new_member_notices), "이미 있는 가족에 자녀가 더 들어온 횟수") +
+      cardHtml("응원 · 보고서 · 용돈", invNum(n.cheers_total) + " · " + invNum(n.report_views_total) + " · " + invNum(n.allowance_total), "자녀가 실제로 한 일(누적)") +
+      "</div>" + invTable(["주(월요일)", "새 가족 쌍", "누적"], (M.family_weekly || []).map(function(w){
+        return "<tr><td>" + esc(String(w.week)) + "</td><td>" + esc(String(w.new_pairs)) + "</td><td>" + esc(String(w.cumulative)) + "</td></tr>";
+      })) + "</section>";
+
+    // ── 일별 (최근 30일) ──
+    var DAILY_COLS = ["day", "elder_measured", "child_engaged", "child_open", "elder_open", "elders_installed", "family_pairs"];
+    var DAILY_HEAD = ["날", "걸음 잡힌 어르신", "행동한 자녀", "앱 연 자녀", "앱 여신 어르신", "설치 누적", "가족 쌍 누적"];
+    html += invSection("일별 (최근 30일)", "오늘 줄은 아직 차는 중입니다.") +
+      invTable(DAILY_HEAD, (M.daily || []).slice(-30).reverse().map(function(d){
+        return "<tr>" + DAILY_COLS.map(function(c){ return "<td>" + esc(String(d[c])) + "</td>"; }).join("") + "</tr>";
+      })) + "</section>";
+
+    html += "<section><p class='muted'>참고 출처 — a16z 소셜 앱 기준 · RevenueCat State of Subscription Apps 2026 · Life360 2026 Q2 공시 · " +
+      "카카오벤처스 핵심 지표(2025-12) · 잔존 중앙값은 2차 출처 모음(UXCam 2026). ★표본이 작아 기준 비교는 참고로만 봅니다.★</p></section>";
+
+    el("view").innerHTML = html;
+    bindGo();
+    el("invCsvDaily").onclick = function(){
+      downloadCsv("텔로스_투자지표_일별_" + today() + ".csv", DAILY_HEAD,
+        (M.daily || []).map(function(d){ return DAILY_COLS.map(function(c){ return d[c]; }); }));
+    };
+    el("invCsvRet").onclick = function(){
+      var rows = [];
+      ["elder", "child"].forEach(function(side){
+        ((M.retention || {})[side] || []).forEach(function(r){
+          rows.push([side === "elder" ? "어르신" : "자녀", r.cohort, r.size, r.d1_kept, r.d1_n, r.d7_kept, r.d7_n, r.d30_kept, r.d30_n]);
+        });
+      });
+      downloadCsv("텔로스_투자지표_잔존_" + today() + ".csv",
+        ["누구", "설치 주", "인원", "D1 남음", "D1 분모", "D7 남음", "D7 분모", "D30 남음", "D30 분모"], rows);
+    };
+  }
+
   function renderRoute(){
     if (!DATA) return;
-    if (route.view === "growth") renderGrowth();
+    if (route.view === "investor") renderInvestor();
+    else if (route.view === "growth") renderGrowth();
     else if (route.view === "security") renderSecurity();
     else if (route.view === "seats") renderSeats();
     else if (route.view === "elder") renderElder(route.id);
@@ -3703,6 +3861,7 @@
   el("refreshBtn").addEventListener("click", load);
   el("homeBtn").addEventListener("click", function(){ go({ view: "overview" }); });
   el("growthBtn").addEventListener("click", function(){ go({ view: "growth" }); });
+  el("investorBtn").addEventListener("click", function(){ INVESTOR_DATA = null; go({ view: "investor" }); });
   el("secBtn").addEventListener("click", function(){ go({ view: "security" }); });
   el("seatBtn").addEventListener("click", function(){ go({ view: "seats" }); });
   el("logoutBtn").addEventListener("click", function(){ setSess(null); showLogin(null); });
