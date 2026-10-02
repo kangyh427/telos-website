@@ -263,6 +263,7 @@
   <a class="btn" id="reportLink" href="/admin/report/" target="_blank" rel="noopener" title="어르신별 걷기 분석 보고서 · 코호트 요약 (A4)">걷기 보고서</a>
   <button id="seatBtn" title="보건소·지자체 등 기관 만들기 · 기관 담당자 넣기 · 인원·기간">기관 관리</button>
   <button id="growthBtn" title="월별 설치·이탈·연동률·좌석">성장판</button>
+  <button id="aiCostBtn" title="AI(Gemini) 토큰 실측 30일 · 한 분당 한 달 추산 · 모델별 비교">AI 비용</button>
   <button id="investorBtn" title="DAU·WAU·MAU · 잔존 곡선 · 연동 깔때기 · 가족 쌍 (IR 용)">투자 지표</button>
   <button id="secBtn" title="2단계 인증 · 열람 기록">보안</button>
   <button id="refreshBtn">지금 새로고침</button>
@@ -2445,10 +2446,143 @@
     };
   }
 
+  // ── AI 비용 (S705 · 대표 "api 비용도 추산해서 회사 콘솔에 정리해줘") ───────────────────
+  //  재료 = DATA.ai_usage(get-effect-dashboard v73 · sql 194 ai_usage_overview) — summarize-walk 가 부를 때마다 적은 토큰 수.
+  //  ★금액은 여기서 계산한다★ — 요금이 바뀌면 AI_PRICES 한 곳만 고친다(서버·DB 에는 요금이 없다).
+  //  ★요금표 기준일·환율은 화면에 늘 적는다★ — 낡은 값을 지금 값으로 읽지 않게.
+  var AI_PRICE_DATE = "2026-10-02";
+  var AI_KRW_PER_USD = 1400; // ★가정★ — 화면에 적는다
+  // [모델, 회사, 입력 $/1M, 출력 $/1M, 메모, 지금 쓰는가]
+  var AI_PRICES = [
+    ["gemini-3.1-flash-lite", "Google", 0.25, 1.50, "지금 · 한 줄 요약·브리핑·보고서 「한눈에」", true],
+    ["gemini-2.5-flash", "Google", 0.30, 2.50, "지금 · AI 해설(생각 토큰도 출력 요금)", true],
+    ["gemini-2.5-flash-lite", "Google", 0.10, 0.40, "같은 회사 · 더 싼 앞 세대", false],
+    ["gpt-5-nano", "OpenAI", 0.05, 0.40, "가장 싼 축 · 추론형(생각 토큰이 출력으로 붙고 첫 글자가 늦다)", false],
+    ["gpt-5.4-nano", "OpenAI", 0.20, 1.25, "나노 새 판", false],
+    ["deepseek-v4-flash", "DeepSeek", 0.30, 1.20, "혼잡 시간 값(비혼잡 반값) · ★중국 서버 — 국외 이전 동의 필요★", false],
+    ["claude-haiku-4.5", "Anthropic", 1.00, 5.00, "", false],
+    ["claude-sonnet-5.5", "Anthropic", 2.00, 10.00, "", false],
+    ["gpt-6.1-sol", "OpenAI", 2.00, 10.00, "", false]
+  ];
+  // 한 분·한 달 쓰임 가정 — ★실측이 쌓이면 위 '실측' 칸이 정본이다★. [갈래, 횟수, 입력, 출력, 생각, 지금 모델]
+  var AI_SCENARIO = [
+    ["한 줄 요약(자녀 앱)", 8, 250, 50, 0, "gemini-3.1-flash-lite"],
+    ["보고서 「한눈에」", 8, 3000, 250, 0, "gemini-3.1-flash-lite"],
+    ["AI 해설", 4, 3500, 600, 1000, "gemini-2.5-flash"],
+    ["건강 시계 AI 확인(예정 · 매일)", 30, 1500, 120, 0, "gemini-3.1-flash-lite"]
+  ];
+  var AI_MODE_NAME = { line: "한 줄 요약", brief: "콘솔 브리핑", report: "보고서 「한눈에」", insight: "AI 해설" };
+  function aiPrice(model){
+    for (var i = 0; i < AI_PRICES.length; i++) if (AI_PRICES[i][0] === model) return AI_PRICES[i];
+    return null;
+  }
+  /** 토큰 → 원. 생각 토큰은 출력 요금. 요금표에 없는 모델이면 null. */
+  function aiWon(model, inTok, outTok, thinkTok){
+    var p = aiPrice(model);
+    if (!p) return null;
+    return ((inTok * p[2]) + ((outTok + (thinkTok || 0)) * p[3])) / 1e6 * AI_KRW_PER_USD;
+  }
+  function won(v){
+    if (v === null || v === undefined || isNaN(v)) return "—";
+    if (v < 1) return "₩" + v.toFixed(2);
+    if (v < 10) return "₩" + v.toFixed(1);
+    return "₩" + Math.round(v).toLocaleString("ko-KR");
+  }
+  function tok(v){ return Number(v || 0).toLocaleString("ko-KR"); }
+
+  function renderAiCost(){
+    var html = crumb([{ t: "홈", go: { view: "overview" } }, { t: "AI 비용" }]);
+    var U = (DATA && DATA.ai_usage) || null;
+
+    // ① 실측 30일
+    html += invSection("실측 · 최근 30일",
+      "자녀 앱·콘솔이 AI 를 부를 때마다 ★토큰 수만★ 적습니다(글·누구의 것인지는 적지 않음). 한 분당 = 합계 ÷ 같은 30일에 걸음이 잡힌 어르신(시험 기기 제외). " +
+      "환율 ₩" + AI_KRW_PER_USD.toLocaleString("ko-KR") + "/$ 가정 · 요금 기준일 " + AI_PRICE_DATE + ".");
+    if (!U || U.error) {
+      html += "<p class='warn'>사용량을 불러오지 못했습니다" + (U && U.error ? " — " + esc(U.error) : "") + "</p></section>";
+    } else {
+      var rows = U.by_model_mode || [];
+      var totWon = 0, totCalls = 0;
+      var trs = rows.map(function(r){
+        var w = aiWon(r.model, Number(r.input_tokens), Number(r.output_tokens), Number(r.thinking_tokens));
+        totWon += w || 0; totCalls += Number(r.calls || 0);
+        return "<tr><td>" + esc(AI_MODE_NAME[r.mode] || r.mode) + "</td><td>" + esc(r.model) + "</td><td>" + tok(r.calls) +
+          "</td><td>" + tok(r.input_tokens) + "</td><td>" + tok(r.output_tokens) + "</td><td>" + tok(r.thinking_tokens) +
+          "</td><td><b>" + won(w) + "</b></td></tr>";
+      });
+      if (rows.length) trs.push("<tr><td><b>합계</b></td><td></td><td><b>" + tok(totCalls) + "</b></td><td></td><td></td><td></td><td><b>" + won(totWon) + "</b></td></tr>");
+      html += invTable(["쓰임", "모델", "호출", "입력 토큰", "출력 토큰", "생각 토큰", "금액"], trs);
+      var elders = Number(U.active_elders || 0);
+      var since = U.first_logged_at ? String(U.first_logged_at).slice(0, 10) : null;
+      html += "<p>활동 어르신 <b>" + elders + "명</b> · 한 분당 30일 <b>" + (elders > 0 ? won(totWon / elders) : "—") + "</b>" +
+        (since ? " · <span class='muted'>기록 시작 " + esc(since) + (totCalls < 30 ? " — ★아직 표본이 적습니다. 아래 추산을 함께 보세요★" : "") + "</span>"
+               : " · <span class='muted'>아직 기록이 없습니다(2026-10-02 부터 적습니다)</span>") + "</p></section>";
+    }
+
+    // ② 추산 — 한 분·한 달
+    var scen = AI_SCENARIO.map(function(s){
+      return { s: s, w: aiWon(s[5], s[1] * s[2], s[1] * s[3], s[1] * s[4]) };
+    });
+    var scenNow = scen.reduce(function(a, x){ return a + (x.w || 0); }, 0);
+    var scenIn = 0, scenOut = 0, scenThink = 0;
+    AI_SCENARIO.forEach(function(s){ scenIn += s[1] * s[2]; scenOut += s[1] * s[3]; scenThink += s[1] * s[4]; });
+    html += invSection("추산 · 한 분 한 달",
+      "자녀가 한 달에 한 줄 요약 8번·보고서 8번·AI 해설 4번을 보고, 건강 시계 AI 확인(설계 S5 · 아직 없음)이 매일 1번이라고 가정합니다. " +
+      "★실측이 쌓이면 위 칸이 정본입니다.★");
+    html += invTable(["쓰임", "횟수/월", "입력/회", "출력/회", "생각/회", "지금 모델", "금액/월"],
+      scen.map(function(x){
+        return "<tr><td>" + esc(x.s[0]) + "</td><td>" + x.s[1] + "</td><td>" + tok(x.s[2]) + "</td><td>" + tok(x.s[3]) + "</td><td>" + tok(x.s[4]) +
+          "</td><td>" + esc(x.s[5]) + "</td><td>" + won(x.w) + "</td></tr>";
+      }).concat(["<tr><td><b>합계 (지금 구성)</b></td><td></td><td>" + tok(scenIn) + "</td><td>" + tok(scenOut) + "</td><td>" + tok(scenThink) +
+        "</td><td></td><td><b>" + won(scenNow) + "</b></td></tr>"]));
+    html += "</section>";
+
+    // ③ 모델을 바꾸면 — 같은 쓰임 전부를 그 모델로
+    var maxW = 0;
+    var alt = AI_PRICES.map(function(p){
+      var w = aiWon(p[0], scenIn, scenOut, scenThink);
+      if (w > maxW) maxW = w;
+      return { p: p, w: w };
+    });
+    html += invSection("모델을 바꾸면 · 같은 쓰임 전부를 그 모델로",
+      "한 분·한 달 금액과 규모별 월 금액. 회사 한도 = 한 분 월 ₩10,000(응급 예비분 포함). 요금 출처 — " +
+      "<a href='https://ai.google.dev/gemini-api/docs/pricing' target='_blank' rel='noopener'>Google</a> · " +
+      "<a href='https://developers.openai.com/api/docs/pricing' target='_blank' rel='noopener'>OpenAI</a> · " +
+      "<a href='https://claude.com/pricing' target='_blank' rel='noopener'>Anthropic</a> · " +
+      "<a href='https://api-docs.deepseek.com/quick_start/pricing' target='_blank' rel='noopener'>DeepSeek</a>.");
+    html += invTable(["모델", "회사", "입력·출력 $/1M", "한 분·한 달", "", "1,000명/월", "10만 명/월", "메모"],
+      alt.map(function(x){
+        var p = x.p, barW = maxW > 0 ? Math.max(2, Math.round(x.w / maxW * 120)) : 0;
+        return "<tr" + (p[5] ? " style='background:#eef7f5'" : "") + "><td>" + (p[5] ? "<b>" + esc(p[0]) + "</b>" : esc(p[0])) + "</td><td>" + esc(p[1]) +
+          "</td><td>" + p[2].toFixed(2) + " · " + p[3].toFixed(2) + "</td><td><b>" + won(x.w) + "</b></td>" +
+          "<td><span style='display:inline-block;height:9px;border-radius:4px;background:" + (p[5] ? "#17857A" : "#94a3b8") + ";width:" + barW + "px'></span></td>" +
+          "<td>" + won(x.w * 1000) + "</td><td>" + won(x.w * 100000) + "</td><td class='muted'>" + esc(p[4]) + "</td></tr>";
+      }));
+    html += "</section>";
+
+    // ④ 품질 — GPT-5 nano 와 지금 모델
+    html += invSection("품질 · GPT-5 nano 와 지금 쓰는 Gemini 3.1 Flash-Lite",
+      "공개 벤치마크 기준(우리 한국어 문장으로 맞대어 본 것은 아직 없습니다 — OpenAI 키가 서버에 없음).");
+    html += invTable(["항목", "Gemini 3.1 Flash-Lite (지금)", "GPT-5 nano", "출처"], [
+      "<tr><td>종합 지능 지수</td><td><b>16</b></td><td>13 (high · 추정)</td><td><a href='https://artificialanalysis.ai/models/comparisons/gemini-3-1-flash-lite-preview-vs-gpt-5-nano' target='_blank' rel='noopener'>Artificial Analysis</a></td></tr>",
+      "<tr><td>대학원 과학 문제 (GPQA)</td><td><b>86.9%</b></td><td>71.2%</td><td><a href='https://anotherwrapper.com/tools/llm-pricing/gemini-31-flash-lite-preview/gpt-5-nano' target='_blank' rel='noopener'>비교 집계</a></td></tr>",
+      "<tr><td>글 나오는 속도</td><td><b>267 토큰/초</b></td><td>151 토큰/초</td><td>Artificial Analysis</td></tr>",
+      "<tr><td>첫 글자까지</td><td><b>5.5초</b></td><td>85.8초 (high 추론)</td><td>Artificial Analysis</td></tr>",
+      "<tr><td>입력·출력 $/1M</td><td>0.25 · 1.50</td><td><b>0.05 · 0.40</b></td><td>각 회사</td></tr>"
+    ]);
+    html += "<p><b>판단</b> — GPT-5 nano 는 값이 약 1/4 이지만 지수·과학 문제·속도가 모두 낮고, ★추론형이라 생각 토큰이 출력 요금으로 붙어★ " +
+      "실제 요금 차이는 표보다 작습니다. 자녀가 보고서를 열고 기다리는 자리에는 첫 글자 지연이 치명적입니다. " +
+      "한 분·한 달 차이는 수십 원이라 ★지금 모델 유지★ 가 권장안이고, 바꾸려면 우리 문장으로 맞대어 본 뒤에 정합니다.</p></section>";
+
+    el("view").innerHTML = html;
+    bindGo();
+  }
+
   function renderRoute(){
     if (!DATA) return;
     if (route.view === "investor") renderInvestor();
     else if (route.view === "growth") renderGrowth();
+    else if (route.view === "aicost") renderAiCost();
     else if (route.view === "security") renderSecurity();
     else if (route.view === "seats") renderSeats();
     else if (route.view === "elder") renderElder(route.id);
@@ -3956,6 +4090,7 @@
   el("growthBtn").addEventListener("click", function(){ go({ view: "growth" }); });
   el("investorBtn").addEventListener("click", function(){ INVESTOR_DATA = null; go({ view: "investor" }); });
   el("secBtn").addEventListener("click", function(){ go({ view: "security" }); });
+  el("aiCostBtn").addEventListener("click", function(){ go({ view: "aicost" }); });
   el("seatBtn").addEventListener("click", function(){ go({ view: "seats" }); });
   el("logoutBtn").addEventListener("click", function(){ setSess(null); showLogin(null); });
   el("rangeSelect").value = String(rangeDays());
