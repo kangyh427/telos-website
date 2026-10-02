@@ -74,6 +74,87 @@ td button.rm{color:#b91c1c;border-color:#f0d5d5}
 #viewer .bar button.close{background:#fff;color:var(--ink);border-color:var(--line)}
 #viewer iframe{flex:1;border:0;background:#e9edf1}
 </style>
+<!-- ★★(S704 · 대표 결정 2026-10-02) 30분 동안 손대지 않으면 로그아웃★★
+     까닭 = 개인정보의 안전성 확보조치 기준 제6조 ④ · 위치정보 보호조치 고시 제9조 2호
+     ("일정시간 이상 업무처리를 하지 않는 경우 자동으로 접속이 차단"). S517 의 "로그인 유지"를 이 때문에 바꿨다.
+     ★사람의 입력만 센다★ — 60초 자동 갱신은 손댄 것이 아니다(그것을 세면 영영 안 끊긴다).
+     ★탭끼리 마지막 손댄 시각을 나눠 쓴다★(localStorage) — 한 탭에서 일하는 동안 다른 탭이 끊어 버리지 않게.
+     ★다시 열었을 때도 본다★ — 로그인은 이 브라우저에 남으므로, 어제 열어 둔 채 닫은 PC 를 오늘 켜면 여기서 끊긴다.
+     ★끊을 땐 새로 고친다★ — 이미 날아가던 자료 요청이 돌아와 화면을 다시 띄우는 일이 없게.
+     ★<head> 에 둔다★ — 본 스크립트가 세션을 읽기 전에 낡은 세션을 먼저 치워야 한다.
+     ★세 화면에 글자 그대로 같은 조각★(회사 콘솔 · 기관 콘솔 · 보고서 쪽) — CSP 가 외부 스크립트를 막아
+     한 파일로 못 나눈다. 한쪽만 고치지 말 것. -->
+<script>
+(function(){
+  "use strict";
+  var IDLE_MS = 30 * 60 * 1000;                              // 30분(대표 결정)
+  var KEYS = ["telos_session", "telos_gov_session"];         // 회사 콘솔·보고서 · 기관 콘솔
+  var LAST = "telos_last_active";
+  var FLAG = "telos_idle_out";
+  var SUPA = "https://xeerqdsedmafbqbgqooi.supabase.co";
+  var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZXJxZHNlZG1hZmJxYmdxb29pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjYzMjksImV4cCI6MjA5MTkwMjMyOX0.Qg91BDcIkfmAt_5TGG5Cro401OXAyW1-Hu9BEObsZks";
+  var armed = false;   // 이 탭이 로그인된 화면을 본 적이 있나
+
+  function get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function hasSession(){ for (var i = 0; i < KEYS.length; i++) if (get(KEYS[i])) return true; return false; }
+  function lastActive(){ var v = Number(get(LAST)); return v > 0 ? v : 0; }
+  function touch(){ try { localStorage.setItem(LAST, String(Date.now())); } catch(e){} }
+  function stale(){ var t = lastActive(); return t > 0 && Date.now() - t > IDLE_MS; }
+
+  /** 이 브라우저의 콘솔 세션을 치운다. 서버 쪽 갱신 열쇠도 이 기기 것만 거둔다(다른 기기는 그대로). */
+  function clearAll(){
+    KEYS.forEach(function(k){
+      var v = get(k);
+      if (!v) return;
+      try {
+        var s = JSON.parse(v);
+        if (s && s.access_token) {
+          fetch(SUPA + "/auth/v1/logout?scope=local", {
+            method: "POST", keepalive: true,
+            headers: { "apikey": ANON, "Authorization": "Bearer " + s.access_token },
+          }).catch(function(){});
+        }
+      } catch(e){}
+      try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch(e){}
+    });
+    try { sessionStorage.setItem(FLAG, "1"); } catch(e){}
+  }
+
+  // ① 열 때 — 낡은 세션이면 본 스크립트가 읽기 전에 치운다. 그리고 여는 것 자체를 손댄 것으로 센다.
+  if (hasSession() && stale()) clearAll();
+  touch();
+
+  // ② 사람의 입력 — 10초에 한 번만 적는다(마우스가 움직일 때마다 쓰지 않게)
+  var lastWrite = 0;
+  function onInput(){ var n = Date.now(); if (n - lastWrite > 10000) { lastWrite = n; touch(); } }
+  ["pointerdown", "keydown", "wheel", "touchstart", "mousemove"].forEach(function(ev){
+    window.addEventListener(ev, onInput, { passive: true, capture: true });
+  });
+
+  // ③ 30초마다 — 손댄 지 30분이 넘었으면 끊고 새로 고친다
+  setInterval(function(){
+    if (hasSession()) armed = true;
+    if (armed && stale()) { clearAll(); location.reload(); }
+  }, 30000);
+
+  // ④ 다른 탭이 끊었으면 이 탭도 따라 닫는다(자료가 화면에 남지 않게)
+  window.addEventListener("storage", function(e){
+    if (KEYS.indexOf(e.key) >= 0 && !e.newValue && armed && stale()) location.reload();
+  });
+
+  // ⑤ 끊긴 뒤 로그인 화면에 까닭을 한 줄 적는다
+  function notice(){
+    var f = null; try { f = sessionStorage.getItem(FLAG); sessionStorage.removeItem(FLAG); } catch(e){}
+    if (!f) return;
+    var box = document.getElementById("loginErr");
+    if (!box) return;
+    box.textContent = "30분 동안 사용하지 않아 안전을 위해 로그아웃했습니다. 다시 로그인해 주세요.";
+    box.style.display = "block";
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function(){ setTimeout(notice, 0); });
+  else setTimeout(notice, 0);
+})();
+</script>
 </head>
 <body>
 <div id="login">
