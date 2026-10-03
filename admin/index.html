@@ -2357,6 +2357,22 @@
       cardHtml("Pro 자녀", invNum(n.pro_children), "연동 자녀 대비 " + pct(n.pro_rate_linked) + " · 선물 코드 포함") +
       "</div></section>";
 
+    // ── 측정 상태 (S706 · 대표 2026-10-03 "측정이 안되는 사람들은 … 잘 걸러내야해. 태블릿도 제외") ──
+    //  ★셈은 서버(sql 196 metric_elder_measure_status)★ · 지우지 않고 규칙으로만 가른다.
+    var ms = M.measure || {};
+    html += invSection("측정 상태",
+      "위 어르신 수를 셋으로 가릅니다. 측정 중 = 지난 7일 안에 걸음이 잡힘 · 멈춤 = 전에는 잡혔는데 7일 넘게 없음(앱 삭제·기기 꺼짐 추정) · " +
+      "측정 불가 = 한 번도 안 잡힘(걸음 센서 없는 기기 · 걸음 권한 없음). 투자 자료에는 측정된 적 있는 기기만 씁니다.");
+    html += '<div class="cards">' +
+      cardHtml("측정된 적 있는 기기", invNum(ms.measurable), "측정 불가 " + invNum(ms.never) + "대 제외") +
+      cardHtml("지금 측정 중", invNum(ms.measuring), "지난 7일 안에 걸음이 잡힌 분") +
+      cardHtml("멈춤", invNum(ms.stopped), "7일 넘게 걸음 없음 · 앱 삭제·기기 꺼짐 추정") +
+      cardHtml("측정 불가", invNum(ms.never), "걸음 센서 없음 " + invNum(ms.never_no_sensor) + " · 걸음 권한 없음 " + invNum(ms.never_no_permission) +
+        (ms.never_unknown ? " · 모름 " + invNum(ms.never_unknown) : "")) +
+      cardHtml("측정 중 분들의 측정일", pct(ms.measuring_day_ratio),
+        "최근 30일(설치 뒤) " + invNum(ms.measuring_alive_days) + "일 중 " + invNum(ms.measuring_step_days) + "일 걸음이 잡힘") +
+      "</div></section>";
+
     // ── 활성 ──
     html += invSection("활성 (DAU · WAU · MAU)",
       "평균·주·월은 ★어제까지 끝난 날★ 로 셉니다. 고착도 = 최근 30일 하루 평균 ÷ MAU. " +
