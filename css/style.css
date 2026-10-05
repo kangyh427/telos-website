@@ -2,7 +2,7 @@
 ================================================================================
  파일명: css/style.css
  저장소 경로: kangyh427/telos-website/css/style.css
- 설명: 텔로스 케어(TELOS Care) 전용 랜딩 스타일시트
+ 설명: 나이노트(옛 이름 텔로스 케어) 전용 랜딩 스타일시트
  버전: 2.4.0
  작성일: 2026.07.10
  v2.4.0 변경: 헤더 상시 흰 배경 고정(투명→흰 전환 방식 제거, 상태버그 차단)
@@ -554,4 +554,49 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 }
 @media (max-width: 720px) {
     .trust-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/*
+================================================================================
+ [추가 2026.10.05 · v2.5.0] IR v86 기준 개편 — 문제 카드 숫자 · 걷기 건강 섹션
+ 기존 스타일 무수정, 파일 끝에 순수 추가
+ 걷기 건강 색 = 자녀 앱 게이지와 같은 뜻(나아짐 파랑 · 유지 초록 · 줄어듦 빨강 · 쉬어 가요 회색)
+================================================================================
+*/
+.problem-card-stat { font-size: clamp(28px, 3.2vw, 36px); font-weight: 800; color: var(--color-care-dark); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 10px; }
+.problem-card-src { margin-top: 14px; font-size: 12.5px; color: var(--color-text-muted); }
+
+.health { background: #fff; }
+.health-wrap { display: grid; grid-template-columns: minmax(220px, 320px) 1fr; gap: var(--space-lg); align-items: start; }
+.health-shot { margin: 0; text-align: center; }
+.health-shot img { width: 100%; height: auto; border-radius: 22px; border: 1px solid var(--color-border); box-shadow: 0 12px 32px rgba(10, 31, 68, 0.12); }
+.health-shot figcaption { margin-top: 10px; font-size: 13px; color: var(--color-text-muted); }
+
+.health-states { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 var(--space-lg); padding: 0; }
+.health-state { border-radius: 14px; padding: 18px 14px; text-align: center; border: 1px solid transparent; }
+.health-state b { display: block; font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.health-state span { display: block; font-size: 14px; line-height: 1.55; color: var(--color-text-light); }
+.health-state.is-up   { background: #eaf2fd; border-color: #c9dcf7; }
+.health-state.is-up b { color: #2f6fd1; }
+.health-state.is-keep   { background: #e8f6ec; border-color: #c4e7cf; }
+.health-state.is-keep b { color: #2e8b4a; }
+.health-state.is-down   { background: #fdecec; border-color: #f5cccc; }
+.health-state.is-down b { color: #c94848; }
+.health-state.is-rest   { background: #f1f3f5; border-color: #dde2e7; }
+.health-state.is-rest b { color: #5f6b78; }
+
+.health-subtitle { font-size: 19px; font-weight: 700; color: var(--color-primary); margin-bottom: 14px; }
+.health-items { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 0 0 var(--space-lg); padding: 0; }
+.health-items li { background: var(--color-bg-soft); border-radius: 12px; padding: 14px; font-size: 14px; color: var(--color-text-light); line-height: 1.5; }
+.health-items b { display: block; font-size: 16px; color: var(--color-primary); margin-bottom: 4px; }
+
+.health-note { background: var(--color-bg-light); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); margin-bottom: var(--space-md); }
+.health-note p { font-size: 15.5px; color: var(--color-text-light); line-height: 1.8; }
+.health-foot { font-size: 13px; color: var(--color-text-muted); }
+
+@media (max-width: 1024px) {
+    .health-wrap { grid-template-columns: 1fr; }
+    .health-shot { max-width: 300px; margin: 0 auto; }
+    .health-states { grid-template-columns: repeat(2, 1fr); }
+    .health-items { grid-template-columns: repeat(2, 1fr); }
 }

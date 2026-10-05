@@ -3,12 +3,16 @@
 ================================================================================
  파일명: index.html
  저장소 경로: kangyh427/telos-website/index.html  (로컬 C:\TELOS\telos-website\index.html)
- 설명: 나이노트(옛 이름 텔로스 케어) 전용 랜딩 페이지 — 독거 어르신 정서케어 서비스
- 버전: 2.4.0
+ 설명: 나이노트(옛 이름 텔로스 케어) 전용 랜딩 페이지 — 부모님 걷기 건강
+ 버전: 2.5.0
  작성일: 2026.07.10
  도메인: https://www.telos.it.kr
  작성자: 강윤혁
  변경이력:
+   - 2026.10.05 (v2.5.0): IR v86 기준 개편 — 히어로 「부모님 걷기 건강」 · 문제(740만·89.7%·평생 세 번)
+                          / 걷기 건강 게이지 섹션 신설(images/walk-health.jpg = 자녀 앱 실제 화면)
+                          / 걸으며 멈추면 묻는 안전 기능 서술 삭제(2026-09-23 앱에서 걷어냄)
+                          / 비교·대상별·신뢰·FAQ 를 IR 내용으로 갱신 · 소비자 화면 규칙(결과만) 적용
    - 2026.07.10 (v2.4.0): 로고 정리 — 이미지에 인쇄돼 있던 "주식회사 텔로스" 글자를
                           잘라낸 TELOS-only 로고로 교체(logo.png=네이비/logo_white.png=흰색).
                           / 헤더·회사소개 로고를 존재하지 않던 logo_black.png → logo.png 로 교체(깨진 이미지 해결)
@@ -42,31 +46,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="나이노트: 앱을 켜지 않아도 어르신의 걸음과 산책을 저절로 기록하고 자녀에게 전해 드립니다. 걷는 동안 안전을 살피고, 걸으신 만큼 자녀가 용돈을 보내실 수 있습니다. 주식회사 텔로스.">
-    <meta name="keywords" content="나이노트, 텔로스 케어, TELOS Care, 텔로스, 어르신 만보기, 노인 걷기, 산책 기록, 부모님 안부, 자녀 알림, 걷기 용돈, 노인 돌봄, 복지관, 지자체 돌봄">
+    <meta name="description" content="나이노트: 나이 들며 어느새 달라지는 부모님의 걷기, 아무도 몰랐던 그 변화를 자녀가 알아봅니다. 부모님은 폰만 지니고 다니시면 됩니다. 주식회사 텔로스.">
+    <meta name="keywords" content="나이노트, 부모님 걷기 건강, 텔로스 케어, TELOS Care, 텔로스, 어르신 만보기, 노인 걷기, 산책 기록, 부모님 안부, 자녀 알림, 걷기 용돈, 노인 돌봄, 복지관, 지자체 돌봄">
     <meta name="author" content="주식회사 텔로스">
 
     <!-- Open Graph (SNS 공유 시 미리보기) -->
-    <meta property="og:title" content="나이노트 | 앱을 켜지 않아도 걸음이 쌓입니다">
-    <meta property="og:description" content="앱을 켜지 않아도 걸음이 쌓입니다. 걸으신 만큼 자녀가 압니다.">
+    <meta property="og:title" content="나이노트 | 부모님 걷기 건강">
+    <meta property="og:description" content="아무도 몰랐던 부모님 걷기의 변화, 이제 자녀가 알아봅니다.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.telos.it.kr">
     <meta property="og:image" content="https://www.telos.it.kr/images/hero.jpg">
-    <meta property="og:image:alt" content="나이노트 - 어르신의 걷기를 저절로 기록합니다">
+    <meta property="og:image:alt" content="나이노트 - 부모님 걷기 건강">
     <meta property="og:site_name" content="나이노트">
     <meta property="og:locale" content="ko_KR">
 
     <!-- Twitter 카드(트위터/X 공유 미리보기) -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="나이노트 | 앱을 켜지 않아도 걸음이 쌓입니다">
-    <meta name="twitter:description" content="앱을 켜지 않아도 걸음이 쌓입니다. 걸으신 만큼 자녀가 압니다.">
+    <meta name="twitter:title" content="나이노트 | 부모님 걷기 건강">
+    <meta name="twitter:description" content="아무도 몰랐던 부모님 걷기의 변화, 이제 자녀가 알아봅니다.">
     <meta name="twitter:image" content="https://www.telos.it.kr/images/hero.jpg">
 
     <!-- 검색엔진 표준 URL(중복 색인 방지) -->
     <link rel="canonical" href="https://www.telos.it.kr/">
     <meta name="robots" content="index, follow">
 
-    <title>나이노트 | 앱을 켜지 않아도 걸음이 쌓이고, 자녀가 함께 봅니다</title>
+    <title>나이노트 | 부모님 걷기 건강</title>
 
     <!-- 구조화 데이터(JSON-LD): 검색결과에 회사 정보가 리치하게 노출되도록 -->
     <script type="application/ld+json">
@@ -77,7 +81,7 @@
       "alternateName": "TELOS Co., Ltd.",
       "url": "https://www.telos.it.kr",
       "logo": "https://www.telos.it.kr/images/logo.png",
-      "description": "앱을 켜지 않아도 어르신의 걸음과 산책을 저절로 기록하고 자녀에게 전해 드리는 '나이노트'를 개발하는 회사입니다.",
+      "description": "부모님의 걷기를 저절로 재어 걷기 능력의 유지·나아짐·줄어듦을 자녀에게 알려 드리는 '나이노트'를 개발하는 회사입니다.",
       "email": "contact@telos.it.kr",
       "address": {
         "@type": "PostalAddress",
@@ -111,6 +115,7 @@
             <nav class="nav" id="nav" aria-label="주요 메뉴">
                 <ul class="nav-list">
                     <li><a href="#solution">서비스 소개</a></li>
+                    <li><a href="#health">걷기 건강</a></li>
                     <li><a href="#features">특장점</a></li>
                     <li><a href="#audience">대상별 안내</a></li>
                     <li><a href="#process">도입 안내</a></li>
@@ -138,15 +143,16 @@
         <div class="hero-overlay"></div>
 
         <div class="hero-content">
-            <p class="hero-tagline">TELOS CARE · WALK &amp; SAFETY FOR SENIORS</p>
+            <p class="hero-tagline">NAINOTE · 부모님 걷기 건강</p>
             <h1 class="hero-title">
-                앱을 켜지 않아도<br>
-                걸음이 쌓이고,<br>
-                자녀가 함께 봅니다
+                아무도 몰랐던<br>
+                부모님 걷기의 변화,<br>
+                자녀가 알아봅니다
             </h1>
             <p class="hero-subtitle">
-                <span class="kbr">버튼을 누르지 않아도 걸음과 산책을 저절로 기록하고,</span>
-                <span class="kbr">걷는 동안 안전을 살펴 자녀에게 전해 드립니다</span>
+                <span class="kbr">나이 들며 걷는 힘은 어느새, 아무도 모르게 달라집니다.</span>
+                <span class="kbr">나이노트는 부모님의 걷기를 매일 재어 그분의 평소와 견주고,</span>
+                <span class="kbr">달라지면 자녀에게 알려 드립니다</span>
             </p>
             <div class="hero-actions">
                 <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=com.naoncare" target="_blank" rel="noopener noreferrer">
@@ -172,34 +178,41 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-label">THE PROBLEM</span>
-                <h2 class="section-title">덜 걸으실수록,<br>혼자 계신 시간이 길어집니다</h2>
+                <h2 class="section-title">부모님은<br>기다려 주지 않습니다</h2>
+                <p class="section-lead">부모님의 걷기와 건강은 어느새, 나도 모르게 달라집니다.</p>
             </div>
 
             <div class="problem-grid reveal">
                 <article class="problem-card">
-                    <h3 class="problem-card-title">밖에 나가는 일이 줄어듭니다</h3>
+                    <p class="problem-card-stat">약 740만 명</p>
+                    <h3 class="problem-card-title">어느새, 나도 모르게</h3>
                     <p class="problem-card-desc">
-                        무릎이 아프고 날이 궂으면 하루가 방 안에서 끝납니다.
-                        걷지 않으면 다음 날은 더 걷기 어려워집니다.
+                        운동이 부족한 65세 이상 부모님입니다.
+                        나이가 들수록 더 부족해집니다(19~64세 53.9% → 65세 이상 66.8%).
                     </p>
+                    <p class="problem-card-src">국가데이터처 2026 고령자통계 · 대한의사협회지 2022</p>
                 </article>
                 <article class="problem-card">
-                    <h3 class="problem-card-title">앱은 어르신께 어렵습니다</h3>
+                    <p class="problem-card-stat">89.7%</p>
+                    <h3 class="problem-card-title">늘 살펴봐야 하지만</h3>
                     <p class="problem-card-desc">
-                        기록해 주는 앱은 많지만, 매번 앱을 켜고 시작 버튼을
-                        누르셔야 합니다. 그 한 번이 실제로는 큰 벽입니다.
+                        65세 이상 부모님 열 분 중 아홉 분은 자녀와 떨어져 사십니다.
+                        자녀가 매일 곁에서 볼 수 없습니다.
                     </p>
+                    <p class="problem-card-src">보건복지부 2023년도 노인실태조사</p>
                 </article>
                 <article class="problem-card">
-                    <h3 class="problem-card-title">자녀는 오늘을 알 길이 없습니다</h3>
+                    <p class="problem-card-stat">평생 세 번</p>
+                    <h3 class="problem-card-title">느린 변화는 알아채기 어렵습니다</h3>
                     <p class="problem-card-desc">
-                        떨어져 사는 자녀는 부모님이 오늘 나가셨는지,
-                        별일은 없으셨는지 전화를 걸기 전엔 알 수 없습니다.
+                        걷는 힘과 균형을 보는 노인신체기능검사는 66·70·80세에만 합니다.
+                        그 사이의 느린 변화는 어디에도 남지 않습니다.
                     </p>
+                    <p class="problem-card-src">국민건강보험공단 일반건강검진 안내</p>
                 </article>
             </div>
             <p class="problem-note">
-                나이노트는 어르신이 아무것도 하지 않으셔도 되는 것에서 출발합니다.
+                검사와 검사 사이, 아무도 보지 못하던 부모님 걷기의 변화를 이제 자녀가 알아봅니다.
             </p>
         </div>
     </section>
@@ -216,8 +229,8 @@
                     <span class="kbr">앱을 켜지 않아도, 시작 버튼을 누르지 않아도 됩니다.</span>
                     <span class="kbr">폰을 지니고 계시면 걸음이 저절로 쌓이고,</span>
                     <span class="kbr">밖에서 걸으시면 <b>산책인 것을 앱이 스스로 알아봅니다.</b></span>
-                    <span class="kbr">걷는 동안 별일이 없는지 살피고,</span>
-                    <span class="kbr">그 하루를 자녀에게 대신 전해 드립니다.</span>
+                    <span class="kbr">걷기 · 자동 기록 · 자녀의 응원 · 걷기 건강이</span>
+                    <span class="kbr">다시 다음 걷기로 이어집니다.</span>
                 </p>
             </div>
 
@@ -231,19 +244,70 @@
                 <li class="flow-step">
                     <span class="flow-num">2</span>
                     <h3 class="flow-title">산책을 알아봅니다</h3>
-                    <p class="flow-desc">밖에서 걸으신 것을 스스로 알아채 시간과 거리를 기록하고, 차로 이동하신 구간은 덜어 냅니다.</p>
+                    <p class="flow-desc">밖에서 걸으신 것을 스스로 알아채 시작·멈춤·마침과 거리를 기록하고, 차로 이동하신 구간은 덜어 냅니다.</p>
                 </li>
                 <li class="flow-step">
                     <span class="flow-num">3</span>
-                    <h3 class="flow-title">걷는 동안 살핍니다</h3>
-                    <p class="flow-desc">걷다가 한동안 멈춰 계시면 먼저 괜찮으신지 여쭙고, 대답이 없을 때에만 자녀에게 알립니다.</p>
+                    <h3 class="flow-title">걷기 건강을 봅니다</h3>
+                    <p class="flow-desc">그분의 평소와 견주어 걷기 능력이 나아졌는지, 유지되는지, 줄었는지 알려 드립니다.</p>
                 </li>
                 <li class="flow-step">
                     <span class="flow-num">4</span>
-                    <h3 class="flow-title">자녀가 함께 봅니다</h3>
-                    <p class="flow-desc">걸으신 걸음과 거리가 자녀 앱에 전해지고, 걸으신 만큼 용돈을 보내실 수도 있습니다.</p>
+                    <h3 class="flow-title">자녀가 응원합니다</h3>
+                    <p class="flow-desc">자녀 앱에서 걷기 시작·마침 소식을 받고, 글이나 목소리로 응원하고, 걸으신 만큼 용돈을 보내실 수 있습니다.</p>
                 </li>
             </ol>
+        </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- ③-2 걷기 건강: 게이지 (IR v86 4·5장)                 -->
+    <!-- 소비자 화면 규칙: 결과만 보이고 비교 기간·민감도는 적지 않는다 -->
+    <!-- ============================================================ -->
+    <section class="section health" id="health">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">WALKING HEALTH</span>
+                <h2 class="section-title">아무도 보지 못하던 변화를,<br>자녀가 먼저 알아봅니다</h2>
+                <p class="section-lead">
+                    <span class="kbr">평균적인 어르신이 아니라 <b>그분의 평소</b>가 기준입니다.</span>
+                    <span class="kbr">어르신은 누르실 것이 없습니다.</span>
+                </p>
+            </div>
+
+            <div class="health-wrap reveal">
+                <figure class="health-shot">
+                    <img src="images/walk-health.jpg" alt="자녀 앱의 부모님 걷기 건강 게이지 화면 — 바늘이 유지를 가리킨다" width="600" height="1020" loading="lazy">
+                    <figcaption>자녀 앱 실제 화면</figcaption>
+                </figure>
+
+                <div class="health-body">
+                    <ul class="health-states" aria-label="걷기 건강 네 가지 판정">
+                        <li class="health-state is-up"><b>나아짐</b><span>평소보다 힘차게 걸으신 주</span></li>
+                        <li class="health-state is-keep"><b>유지</b><span>평소와 비슷한 주</span></li>
+                        <li class="health-state is-down"><b>줄어듦</b><span>평소보다 걷기가 줄어든 주</span></li>
+                        <li class="health-state is-rest"><b>쉬어 가요</b><span>비·더위·나들이가 많았던 주</span></li>
+                    </ul>
+
+                    <h3 class="health-subtitle">다섯 가지 걷기로 봅니다</h3>
+                    <ul class="health-items">
+                        <li><b>걷는 속도</b>산책하실 때의 빠르기</li>
+                        <li><b>걸음 박자</b>1분에 몇 걸음</li>
+                        <li><b>한 번에 걷는 시간</b>쉬지 않고 이어 걸은 시간</li>
+                        <li><b>걸음 고르기</b>걸음 간격이 고른가</li>
+                        <li><b>바깥 나들이</b>집 밖으로 나가신 날</li>
+                    </ul>
+
+                    <div class="health-note">
+                        <h3 class="health-subtitle">비 온 주의 &ldquo;줄어듦&rdquo;은 틀린 알림입니다</h3>
+                        <p>비·눈·폭염·한파, 먼 나들이와 외박, 오르막 길처럼 그분에게 드문 날을 헤아려,
+                        그런 주에는 &ldquo;쉬어 가요&rdquo;로 판정을 쉽니다. 걷기가 줄어든 까닭이 날씨라면
+                        자녀분이 괜한 걱정을 하지 않도록요.</p>
+                    </div>
+
+                    <p class="health-foot">의학적 판정은 아닙니다. 질병이나 위험을 말하지 않고, 그분의 평소와 견준 방향만 보여 드립니다.</p>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -268,7 +332,7 @@
     <section class="section features" id="features">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">WHY TELOS CARE</span>
+                <span class="section-label">WHY NAINOTE</span>
                 <h2 class="section-title">나이노트가 특별한 이유</h2>
             </div>
 
@@ -288,32 +352,32 @@
                     <div class="feature-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </div>
-                    <h3 class="feature-title">스스로 알아보는 산책</h3>
+                    <h3 class="feature-title">차와 걷기를 가려 잽니다</h3>
                     <p class="feature-desc">
-                        밖에서 걸으신 것을 앱이 알아채 시간과 거리를 기록하고,
-                        걸으신 길을 날짜별로 지도에 보여 드립니다.
+                        걸음 센서, 이동 속도, 구글 활동 인식 세 가지를 함께 보아
+                        차·버스로 이동하신 구간과 폰이 흔들린 것을 걷기에서 덜어 냅니다.
                     </p>
                 </article>
 
                 <article class="feature-card">
                     <div class="feature-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                     </div>
-                    <h3 class="feature-title">걷는 동안의 안전</h3>
+                    <h3 class="feature-title">부모님 걷기 건강</h3>
                     <p class="feature-desc">
-                        걷다가 한동안 멈춰 계시면 먼저 괜찮으신지 여쭙고,
-                        대답이 없을 때에만 자녀에게 알려 드립니다.
+                        걷는 속도·걸음 박자·걸음 고르기 등을 그분의 평소와 견주어
+                        나아짐·유지·줄어듦으로 알려 드립니다.
                     </p>
                 </article>
 
                 <article class="feature-card">
                     <div class="feature-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>
                     </div>
-                    <h3 class="feature-title">자녀에게 닿는 하루</h3>
+                    <h3 class="feature-title">자녀의 응원과 용돈</h3>
                     <p class="feature-desc">
-                        걸으신 걸음과 거리가 자녀 앱에 전해집니다.
-                        걸으신 만큼 자녀분이 용돈을 보내실 수도 있습니다.
+                        걷기 시작·마침 소식이 자녀 앱에 오고, 글이나 목소리로 응원을 보내실 수 있습니다.
+                        걸으신 만큼 자녀분이 직접 용돈을 보내실 수도 있습니다.
                     </p>
                 </article>
             </div>
@@ -334,24 +398,24 @@
 
             <div class="compare-grid reveal">
                 <article class="compare-card">
-                    <span class="compare-type">돌봄 로봇·인형</span>
-                    <p class="compare-limit">전용 하드웨어가 필요해 단가·배포 부담이 큽니다.</p>
-                    <p class="compare-ours">나이노트는 전용 기기 없이 <b>쓰시던 폰</b>에 앱만 깔면 됩니다.</p>
+                    <span class="compare-type">걸음 수 리워드 앱</span>
+                    <p class="compare-limit">걸음 수만 셉니다. 챌린지가 끝나면 기록도 끝납니다.</p>
+                    <p class="compare-ours">나이노트는 <b>걷는 모습의 변화</b>를 그분의 평소와 견줍니다.</p>
                 </article>
                 <article class="compare-card">
-                    <span class="compare-type">만보기 앱</span>
-                    <p class="compare-limit">걸음은 세지만, 그 숫자를 자녀가 볼 길이 없습니다.</p>
-                    <p class="compare-ours">나이노트는 <b>자녀 앱으로 그대로 전해집니다</b>.</p>
+                    <span class="compare-type">기기 대여형 건강관리</span>
+                    <p class="compare-limit">정해진 기간만 기기를 빌려 쓰고 반납해야 합니다.</p>
+                    <p class="compare-ours">나이노트는 <b>쓰시던 폰 하나로, 기간 없이</b> 이어집니다.</p>
                 </article>
                 <article class="compare-card">
-                    <span class="compare-type">운동 기록 앱</span>
-                    <p class="compare-limit">나가기 전에 앱을 켜고 시작 버튼을 누르셔야 합니다.</p>
-                    <p class="compare-ours">나이노트는 <b>아무것도 누르지 않으셔도</b> 알아서 기록합니다.</p>
+                    <span class="compare-type">보행 분석 기능</span>
+                    <p class="compare-limit">특정 기종 전용이거나, 본인만 결과를 봅니다.</p>
+                    <p class="compare-ours">나이노트는 <b>갤럭시에서 조작 없이</b> 재고 자녀에게 전합니다.</p>
                 </article>
                 <article class="compare-card">
-                    <span class="compare-type">스마트워치</span>
-                    <p class="compare-limit">따로 사서 차셔야 하고, 매일 충전해 드려야 합니다.</p>
-                    <p class="compare-ours">나이노트는 <b>새로 사실 것도, 차실 것도 없습니다</b>.</p>
+                    <span class="compare-type">안부 확인 앱</span>
+                    <p class="compare-limit">움직임이나 위치만 알려 줄 뿐, 걷기의 변화는 남지 않습니다.</p>
+                    <p class="compare-ours">나이노트는 <b>걷기 건강과 가족의 응원·용돈</b>으로 다시 걷게 합니다.</p>
                 </article>
             </div>
         </div>
@@ -372,9 +436,10 @@
                     <span class="audience-badge">보호자·자녀</span>
                     <h3 class="audience-title">전화를 걸기 전에도, 오늘을 압니다</h3>
                     <ul class="audience-points">
-                        <li>부모님이 오늘 얼마나 걸으셨는지 자녀 앱에서 보십니다.</li>
-                        <li>밖에서 걷기 시작하시면 &ldquo;운동이 시작되었어요&rdquo; 알림이 옵니다.</li>
-                        <li>걸으신 만큼 용돈을 보내실 수 있습니다. 돈은 저희가 맡지 않습니다.</li>
+                        <li>부모님 걷기가 나아지는지, 줄어드는지 <b>부모님 걷기 건강</b>에서 보십니다.</li>
+                        <li>밖에서 걷기 시작하시고 마치시면 알림이 옵니다.</li>
+                        <li>글이나 목소리로 응원을 보내고, 걸으신 만큼 용돈을 보내실 수 있습니다. 돈은 저희가 맡지 않습니다.</li>
+                        <li>부모님 한 분에 자녀 여럿이 함께 연결할 수 있습니다.</li>
                         <li><b>부모님은 아무것도 안 하셔도 됩니다.</b></li>
                     </ul>
                     <a class="btn btn-primary btn-block" href="https://play.google.com/store/apps/details?id=com.naoncare.guardian" target="_blank" rel="noopener noreferrer">
@@ -383,13 +448,13 @@
                 </article>
 
                 <article class="audience-card audience-card-dark">
-                    <span class="audience-badge">지자체·복지관</span>
-                    <h3 class="audience-title">방문 사이의 빈 날을, 걸음으로 채웁니다</h3>
+                    <span class="audience-badge">지자체·보건소·복지관</span>
+                    <h3 class="audience-title">사업이 끝난 뒤에도, 걷기 관리는 이어집니다</h3>
                     <ul class="audience-points">
-                        <li>방문하지 않는 날에도 어르신의 활동을 이어서 살필 수 있습니다.</li>
+                        <li>기기 대여형 건강관리 사업이 끝난 어르신도 쓰시던 폰으로 이어서 관리합니다.</li>
+                        <li>기관 전용 콘솔에서 지역 어르신의 걷기 현황과 요약 보고서를 봅니다.</li>
                         <li>걸음이 재어진다는 것 자체가 &ldquo;오늘도 지내신다&rdquo;는 신호가 됩니다.</li>
-                        <li>전용 기기 없이, 쓰시던 폰에 앱만 깔면 시작합니다.</li>
-                        <li>좌석(이용자) 단위로 유연하게 도입할 수 있습니다.</li>
+                        <li>전용 기기 없이, 이용자 단위로 도입합니다. 나라장터 입찰참가자격 등록을 마쳤습니다.</li>
                     </ul>
                     <button type="button" class="btn btn-primary btn-block js-contact-open" data-contact-topic="b2g">
                         도입 문의하기
@@ -427,16 +492,16 @@
             <!-- 신뢰 지표 배지(핵심 팩트 요약) -->
             <div class="trust-stats reveal" aria-label="핵심 지표">
                 <div class="trust-stat">
-                    <span class="trust-stat-num">2<span class="trust-stat-unit">건</span></span>
-                    <span class="trust-stat-label">특허·상표 출원</span>
+                    <span class="trust-stat-num">101<span class="trust-stat-unit">m</span></span>
+                    <span class="trust-stat-label">지도로 잰 100m 길을 앱이 잰 거리</span>
+                </div>
+                <div class="trust-stat">
+                    <span class="trust-stat-num">0<span class="trust-stat-unit">건</span></span>
+                    <span class="trust-stat-label">차 안 영상 시청 29분 동안 걷기로 오인</span>
                 </div>
                 <div class="trust-stat">
                     <span class="trust-stat-num">4<span class="trust-stat-unit">인</span></span>
-                    <span class="trust-stat-label">전문 자문단</span>
-                </div>
-                <div class="trust-stat">
-                    <span class="trust-stat-num">2<span class="trust-stat-unit">곳</span></span>
-                    <span class="trust-stat-label">협력·실증 기관 MOU</span>
+                    <span class="trust-stat-label">의학·심리·시스템·보안 자문단</span>
                 </div>
                 <div class="trust-stat">
                     <span class="trust-stat-num">0<span class="trust-stat-unit">번</span></span>
@@ -446,33 +511,32 @@
 
             <div class="trust-grid reveal">
                 <article class="trust-card">
-                    <h3 class="trust-card-title">먼저 살피는 기술, 특허 출원</h3>
+                    <h3 class="trust-card-title">실제 길로 맞춰 봤습니다</h3>
                     <p class="trust-card-desc">
-                        어르신이 부르지 않아도 상황을 먼저 살피는 핵심 기술을
-                        특허 출원했습니다.
+                        같은 출근길을 16번 걸어 지도 거리와 견주었고(93~104m · 가운데 101m),
+                        걸음 수는 같은 날 다른 걷기 앱과 같은 9,095보였습니다.
                     </p>
-                    <p class="trust-card-meta">특허 출원 10-2025-0185553</p>
+                    <p class="trust-card-meta">자체 실측 2026-10</p>
                 </article>
                 <article class="trust-card">
-                    <h3 class="trust-card-title">브랜드 상표 출원</h3>
+                    <h3 class="trust-card-title">특허·상표 출원</h3>
                     <p class="trust-card-desc">
-                        브랜드 &lsquo;텔로스 TELOS&rsquo; 상표를 출원해 정체성을 지킵니다.
+                        핵심 기술을 특허 출원했고, 회사 브랜드 &lsquo;텔로스 TELOS&rsquo; 상표를 출원했습니다.
                     </p>
-                    <p class="trust-card-meta">상표 출원 40-2026-0084603</p>
+                    <p class="trust-card-meta">특허 10-2025-0185553 · 상표 40-2026-0084603</p>
                 </article>
                 <article class="trust-card">
-                    <h3 class="trust-card-title">전문 자문단</h3>
+                    <h3 class="trust-card-title">공식 신고·확인</h3>
                     <p class="trust-card-desc">
-                        심리상담·의료·ICT 분야 전문가의 자문을 받아 서비스를
-                        설계하고 있습니다.
+                        위치기반서비스사업 신고, SW사업자 신고, 벤처기업 확인, 소셜벤처 판별을 마쳤습니다.
                     </p>
-                    <p class="trust-card-meta">심리 · 의료 · ICT 자문</p>
+                    <p class="trust-card-meta">위치기반서비스사업 제1557호 · SW사업자 B26-339650</p>
                 </article>
                 <article class="trust-card">
                     <h3 class="trust-card-title">걸으신 길은 폰 안에만</h3>
                     <p class="trust-card-desc">
                         어느 길로 다녀오셨는지는 폰 안에만 남습니다.
-                        저희 서버에도, 자녀에게도 보내지 않습니다.
+                        자녀분께는 걷기를 시작·멈춤·마치신 자리만 보여 드립니다.
                     </p>
                     <p class="trust-card-meta">이동 경로 비전송 · 35일 후 자동 삭제</p>
                 </article>
@@ -535,7 +599,7 @@
             <h2 class="band-title">기술이 곁에 머무는 방식을 고민합니다</h2>
             <p class="band-desc">
                 빠름을 넘어, 사람의 시간 옆에 의미 있게 자리하는 기술.<br>
-                그것이 텔로스가 케어를 만드는 이유입니다.
+                그것이 텔로스가 나이노트를 만드는 이유입니다.
             </p>
         </div>
     </section>
@@ -561,28 +625,36 @@
                     <div class="faq-a">
                         <p>보이지 않습니다. 걸으신 길(이동 경로)은 <b>부모님 폰 안에만</b>
                         남고 저희 서버로도, 자녀분께도 보내지 않습니다. 35일이 지나면 폰에서
-                        자동으로 지워집니다. 자녀분께 가는 것은 걸음 수와 거리, 시간뿐입니다.</p>
+                        자동으로 지워집니다. 자녀분께 가는 것은 걸음 수·거리·시간과
+                        걷기를 시작·멈춤·마치신 자리뿐입니다.</p>
                     </div>
                 </details>
                 <details class="faq-item">
                     <summary class="faq-q">차나 버스로 이동한 것도 걸은 걸로 세나요?</summary>
                     <div class="faq-a">
-                        <p>덜어 냅니다. 이동 속도와 걸음의 간격을 함께 보아 사람이 걸은 것이
-                        아닌 구간은 걷기에서 제외합니다.</p>
+                        <p>덜어 냅니다. 걸음 센서, 이동 속도, 구글 활동 인식을 함께 보아
+                        사람이 걸은 것이 아닌 구간은 걷기에서 제외합니다. 차 안에서 폰으로
+                        영상을 29분 보는 동안 걷기로 잘못 센 것은 0건이었습니다.</p>
                     </div>
                 </details>
                 <details class="faq-item">
-                    <summary class="faq-q">걷다가 무슨 일이 생기면 어떻게 되나요?</summary>
+                    <summary class="faq-q">&ldquo;부모님 걷기 건강&rdquo;은 무엇을 보나요?</summary>
                     <div class="faq-a">
-                        <p>걷던 중 한동안 움직임이 멈추면 앱이 먼저 &ldquo;괜찮으세요?&rdquo;
-                        하고 여쭙습니다. 괜찮다고 누르시거나 다시 걸으시면 그것으로 끝납니다.
-                        <b>대답이 없을 때에만</b> 자녀분께 알림이 갑니다.</p>
-                        <p>다만 이 기능은 응급의료 서비스가 아닙니다. 급한 상황에서는 119 등
-                        공적 응급 체계를 이용하셔야 합니다.</p>
+                        <p>걷는 속도, 걸음 박자, 한 번에 걷는 시간, 걸음 고르기, 바깥 나들이
+                        다섯 가지를 <b>그분의 평소</b>와 견주어
+                        &ldquo;나아짐·유지·줄어듦&rdquo;으로 알려 드립니다. 비·폭염이나 나들이가 많았던 주에는
+                        &ldquo;쉬어 가요&rdquo;로 판정을 쉽니다.</p>
                     </div>
                 </details>
                 <details class="faq-item">
-                    <summary class="faq-q">용돈은 텔로스가 보내 주나요?</summary>
+                    <summary class="faq-q">아이폰에서도 쓸 수 있나요?</summary>
+                    <div class="faq-a">
+                        <p>지금은 갤럭시 등 안드로이드 폰에서 쓰실 수 있습니다. 구글 플레이에서
+                        &lsquo;나이노트&rsquo;를 찾아 받으시면 됩니다.</p>
+                    </div>
+                </details>
+                <details class="faq-item">
+                    <summary class="faq-q">용돈은 나이노트가 보내 주나요?</summary>
                     <div class="faq-a">
                         <p>아닙니다. <b>저희는 돈을 맡아 두지 않습니다.</b> 걸으신 거리를
                         자녀분께 보여 드릴 뿐이고, 보내실지와 얼마를 보내실지는 자녀분이
@@ -592,15 +664,17 @@
                 <details class="faq-item">
                     <summary class="faq-q">요금이 얼마인가요?</summary>
                     <div class="faq-a">
-                        <p>지금은 어르신과 자녀 모두 <b>무료</b>입니다. 앱 안에 결제 기능이
-                        없습니다. 유료 서비스를 도입하게 되면 이용 조건을 미리 알려 드립니다.</p>
+                        <p>지금은 어르신과 자녀 모두 <b>무료</b>입니다. 자녀 앱의 Pro 기능도
+                        지금은 모두에게 무료로 열어 두었습니다. 유료로 바꾸게 되면 이용 조건을
+                        미리 알려 드립니다.</p>
                     </div>
                 </details>
                 <details class="faq-item">
                     <summary class="faq-q">의료·치료 서비스인가요?</summary>
                     <div class="faq-a">
-                        <p>아닙니다. 나이노트는 걷기 활동을 기록하고 안부를 전하는
-                        서비스이며, 질병의 진단·치료를 목적으로 하지 않습니다. 측정값을
+                        <p>아닙니다. 나이노트는 걷기 활동을 기록하고 그분의 평소와 견준
+                        방향을 알려 드리는 일상 건강관리 서비스이며, 질병의 진단·치료를
+                        목적으로 하지 않습니다. <b>의학적 판정은 아닙니다.</b> 측정값을
                         의학적 판단의 근거로 사용하지 마십시오.</p>
                     </div>
                 </details>
@@ -635,7 +709,7 @@
                     </div>
                     <div class="meta-item">
                         <span class="meta-label">분야</span>
-                        <span class="meta-value">고령자 걷기·안전 서비스</span>
+                        <span class="meta-value">부모님 걷기 건강 서비스 &lsquo;나이노트&rsquo;</span>
                     </div>
                 </div>
             </div>
