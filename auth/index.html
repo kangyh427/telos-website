@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<title>텔로스 케어 · 이메일 확인</title>
+<title>나이노트 · 이메일 확인</title>
 <!-- ============================================================================
-  텔로스 케어 · 인증 착지 페이지  (https://www.telos.it.kr/auth/)
+  나이노트 · 인증 착지 페이지  (https://www.telos.it.kr/auth/)
   정본: naoncare-edge/console/auth_landing.html  →  telos-website/auth/index.html
   작성: 2026-07-27 (S497 — Site URL 이 localhost:3000 이라 가입 확인 메일이 죽어 있던 문제)
 
@@ -54,7 +54,7 @@
   <h1 id="title">확인 중입니다…</h1>
   <p id="msg">잠시만 기다려 주세요.</p>
   <div id="extra"></div>
-  <div class="foot">텔로스 케어 · <a href="/">www.telos.it.kr</a></div>
+  <div class="foot">나이노트 · <a href="/">www.telos.it.kr</a></div>
 </div>
 
 <script>
@@ -92,7 +92,7 @@
   if (accessToken) {
     set("ok", "✓", "이메일 확인이 끝났습니다",
         "이제 보호자 앱에서 로그인하실 수 있어요.",
-        '<div class="steps">① 아래 <b>보호자 앱 열기</b>를 누르거나, 휴대폰에서 <b>텔로스 케어 보호자</b> 앱을 실행하세요.<br>' +
+        '<div class="steps">① 아래 <b>보호자 앱 열기</b>를 누르거나, 휴대폰에서 <b>나이노트(보호자)</b> 앱을 실행하세요.<br>' +
         "② 가입하신 <b>이메일과 비밀번호</b>로 로그인하시면 됩니다.</div>" + appBtn);
   } else if (errCode) {
     var expired = /expired|otp_expired/i.test(String(errCode) + " " + errDesc);
