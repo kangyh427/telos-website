@@ -2348,8 +2348,10 @@
     var M = INVESTOR_DATA, n = M.now || {}, f = M.funnel || {};
 
     // ── 지금 ──
+    // ★(S710 · sql 197) 보관함 어르신도 뺀다★(대표 2026-10-06 "투자지표에서도 보관된 기기 빼줘")
     html += invSection("지금", "내부 시험 기기 " + esc(invNum(n.excluded_internal)) + "대 · 기관 담당자 계정 " +
-      esc(invNum(n.excluded_staff)) + "개는 세지 않았습니다. 기준일 " + esc(String(M.today || "")) + ".");
+      esc(invNum(n.excluded_staff)) + "개 · 보관함 어르신 " + esc(invNum(n.excluded_archived)) +
+      "분은 세지 않았습니다. 기준일 " + esc(String(M.today || "")) + ".");
     html += '<div class="cards">' +
       cardHtml("어르신", invNum(n.elders), "개인 " + invNum(n.elders_personal) + " · 기관 " + invNum(n.elders_institution)) +
       cardHtml("가족 쌍", invNum(n.family_pairs), "자녀 " + invNum(n.children_linked) + "명 · 어르신 1명당 자녀 " + invNum(n.children_per_linked_elder)) +
