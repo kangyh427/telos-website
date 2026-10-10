@@ -2424,6 +2424,31 @@
     });
     html += "</section>";
 
+    // ── 초대 링크 · 설치 경로 (S715 · sql 202 investor_install_funnel · 대표 확정 2026-10-09) ──
+    //  ★서버가 못 읽었으면 칸을 안 그린다★(get-investor-metrics 가 install 을 안 싣는다).
+    var ins = M.install;
+    if (ins) {
+      var iv = ins.invite || {}, sent = Number(iv.invites_sent || 0);
+      html += invSection("초대 링크 · 설치 경로",
+        "초대 링크 = 자녀가 「부모님께 설치 링크 보내기」로 만든 일회용 링크(14일). 부모님이 그 링크로 깔거나 열면 저절로 이어집니다. " +
+        "설치 경로 = 앱을 처음 열 때 플레이 스토어가 알려 준 출처(utm). google-play · organic 은 스토어에서 직접 찾은 경우입니다.");
+      html += invTable(["단계", "수", "만든 링크 대비"], [
+        ["링크를 만든 자녀", iv.children_sent, false],
+        ["만든 링크", iv.invites_sent, false],
+        ["부모님 폰에서 이어짐", iv.invites_used, true],
+        ["  새로 깔아 이어짐", iv.used_new_install, true],
+        ["  이미 깔린 폰에서 이어짐", iv.used_installed, true]
+      ].map(function(r){
+        return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(invNum(r[1])) + "</td><td>" +
+          (r[2] && sent ? (Number(r[1] || 0) / sent * 100).toFixed(1) + "%" : "—") + "</td></tr>";
+      }));
+      var INS_APP = { elder: "부모님 앱", guardian: "자녀 앱" };
+      html += "<h3>설치 경로</h3>" + invTable(["앱", "출처", "매체", "수"], (ins.sources || []).map(function(s){
+        return "<tr><td>" + esc(INS_APP[s.app] || s.app) + "</td><td>" + esc(s.source || "(없음)") + "</td><td>" +
+          esc(s.medium || "(없음)") + "</td><td>" + esc(invNum(s.n)) + "</td></tr>";
+      })) + "</section>";
+    }
+
     // ── 가족 확산 ──
     html += invSection("가족 확산",
       "가족 쌍 = 자녀 한 분과 어르신 한 분의 연결(Life360 이 공시하는 가족 묶음과 같은 축). 참고 — 추천 계수 0.3 이상 쓸모 · 0.5 강함.");

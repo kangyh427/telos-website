@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+ 파일명: i/index.html
+ 저장소 경로: kangyh427/telos-website/i/index.html  (웹 주소 = /i/)
+ 설명: ★자녀가 부모님께 보낸 설치 링크가 닿는 자리★ — 링크 하나로 설치와 연결까지
+ 작성일: 2026-10-09 (S715 · 대표 확정 「1,3만 진행」 · 인수인계서 S714 §3-1)
+
+ ─────────────────────────────────────────────────────────────────────────────
+ 이 페이지가 하는 일은 ★셋뿐★
+ ─────────────────────────────────────────────────────────────────────────────
+   ① 카카오톡 안의 브라우저면 → ★바깥 브라우저로 다시 연다★
+      (안쪽 브라우저는 스토어로 넘길 때 설치 경로(referrer)를 잃을 수 있다 · 실기기 시험 대상)
+   ② 부모님 앱이 깔려 있으면 → ★앱을 열고 초대표를 넘긴다★(naoncare://invite?t=…)
+   ③ 깔려 있지 않으면 → ★플레이 스토어로 보내며 초대표를 설치 경로에 싣는다★
+      → 부모님이 깔고 처음 여시면 앱이 그것을 읽어 ★저절로 이어진다★.
+
+ ─────────────────────────────────────────────────────────────────────────────
+ ★넘지 않는 선★
+ ─────────────────────────────────────────────────────────────────────────────
+   · ★아무것도 저장하지 않는다★ — 쿠키·분석 스크립트·서버 호출 ★0★.
+   · ★주소에 실리는 것은 초대표 하나뿐★(소문자 16진수 24자 · 14일 · 1회용).
+     모양이 다르면 쓰지 않는다(그대로 그리면 남의 글을 이 페이지에 띄우는 길이 된다).
+   · ★여기서는 아무도 이어지지 않는다★ — 연결은 부모님 앱이 서버에 표를 낼 때 일어난다.
+   · 외부 자원을 안 쓴다(정적 한 장).
+================================================================================
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ★검색에 걸리지 않게★ — 주소에 초대표가 실린다. -->
+<meta name="robots" content="noindex, nofollow">
+<title>나이노트 설치</title>
+<style>
+  :root{
+    --ink:#121A26; --muted:#4C5765; --bg:#F2F5F9; --card:#FFFFFF;
+    --accent:#00799C; --accent-ink:#FFFFFF; --line:#E3E9F0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px 16px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;
+    line-height:1.55; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:420px; margin:0 auto;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px 18px;}
+  h1{font-size:22px; margin:0 0 6px;}
+  p{margin:8px 0; color:var(--muted); font-size:17px;}
+  a.btn{
+    display:block; text-align:center; text-decoration:none; font-size:19px; font-weight:700;
+    padding:17px 12px; border-radius:10px; margin-top:12px;
+  }
+  a.primary{background:var(--accent); color:var(--accent-ink);}
+  a.secondary{background:#FFFFFF; color:var(--accent); border:1px solid var(--accent);}
+  .foot{margin-top:18px; font-size:13px; color:var(--muted); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>나이노트(부모님)</h1>
+    <p id="lead">설치하신 뒤 앱을 한 번 열어 주세요.</p>
+
+    <a class="btn primary" id="go" href="https://play.google.com/store/apps/details?id=com.naoncare">설치하기</a>
+    <a class="btn secondary" id="store" href="https://play.google.com/store/apps/details?id=com.naoncare">플레이 스토어에서 열기</a>
+
+    <p class="foot">나이노트 · 주식회사 텔로스</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var PKG = "com.naoncare";
+
+  // ★주소에서 초대표만 꺼낸다★ — 모양이 다르면 없는 것으로 본다.
+  function tokenFromQuery() {
+    var m = /[?&]t=([^&#]*)/.exec(window.location.search);
+    if (!m) return null;
+    var raw = decodeURIComponent(m[1] || "").toLowerCase();
+    return /^[0-9a-f]{24}$/.test(raw) ? raw : null;
+  }
+
+  // 스토어가 설치 뒤 앱에 넘겨줄 글 — 앱의 InstallLinkParser 가 읽는 꼴과 짝이다.
+  function referrer(t) {
+    var r = "utm_source=invite&utm_medium=child";
+    return t ? r + "&invite=" + t : r;
+  }
+  function storeHttps(t) {
+    return "https://play.google.com/store/apps/details?id=" + PKG +
+      "&referrer=" + encodeURIComponent(referrer(t));
+  }
+  function storeMarket(t) {
+    return "market://details?id=" + PKG + "&referrer=" + encodeURIComponent(referrer(t));
+  }
+  // ★앱을 여는 주소★ — 앱이 있으면 열리고, 없으면 브라우저가 스스로 스토어로 보낸다.
+  function intentUrl(t) {
+    return "intent://invite" + (t ? "?t=" + t : "") +
+      "#Intent;scheme=naoncare;package=" + PKG +
+      ";S.browser_fallback_url=" + encodeURIComponent(storeHttps(t)) + ";end";
+  }
+
+  var ua = navigator.userAgent || "";
+  var t = tokenFromQuery();
+
+  // ① 카카오톡 안의 브라우저 → 바깥 브라우저로 다시 연다(한 번만).
+  if (/KAKAOTALK/i.test(ua) && !/[?&]ext=1/.test(window.location.search)) {
+    var again = window.location.href + (window.location.search ? "&" : "?") + "ext=1";
+    window.location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(again);
+    return;
+  }
+
+  var go = document.getElementById("go");
+  var store = document.getElementById("store");
+  var isAndroid = /android/i.test(ua);
+
+  if (!isAndroid) {
+    // 부모님 앱은 안드로이드 전용이다.
+    document.getElementById("lead").textContent = "안드로이드 폰에서 열어 주세요.";
+    go.setAttribute("href", storeHttps(t));
+    store.style.display = "none";
+    return;
+  }
+
+  go.setAttribute("href", intentUrl(t));
+  store.setAttribute("href", storeMarket(t));
+
+  // ② ③ 한 번만 저절로 열어 본다 — 앱이 있으면 열리고, 없으면 스토어로 간다.
+  //   ★단추는 그대로 남는다★ — 저절로 안 열리는 브라우저가 있다.
+  window.setTimeout(function () {
+    window.location.href = intentUrl(t);
+  }, 400);
+})();
+</script>
+</body>
+</html>
