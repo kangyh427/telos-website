@@ -29,3 +29,7 @@ node_modules/
 # Build output (필요시)
 dist/
 build/
+
+# Python (블로그 도구 · S713)
+__pycache__/
+*.pyc

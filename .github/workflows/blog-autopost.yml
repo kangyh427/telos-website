@@ -1,0 +1,109 @@
+# ============================================================================
+# 블로그 자동 글쓰기 (S713 · 2026-10-08 · 대표 지시 「하루 2개씩 · 수백 편 · 네이버·구글 검색」)
+#
+#   하루 두 번(오전 7시 · 오후 7시, 한국 시각) 글 한 편씩:
+#     PubMed 실제 논문 → Claude 가 글 → 검사(guard) → 제미나이 그림 → 페이지·사이트맵·RSS
+#     → 커밋·푸시(깃허브 페이지가 배포) → 배포가 끝나면 IndexNow 로 네이버에 새 주소 알림
+#
+#   필요한 저장소 비밀값(Settings → Secrets and variables → Actions):
+#     ANTHROPIC_API_KEY  · Claude API 키(스타트업 크레딧이 들어간 콘솔 계정)
+#     GEMINI_API_KEY     · 그림용 제미나이 키
+#   비밀값이 없으면 글을 쓰지 않고 그냥 끝난다(실패로 남기지 않는다).
+#
+#   손으로 한 편 더: Actions 탭 → 이 작업 → Run workflow (주제 id 를 넣으면 그 주제로)
+# ============================================================================
+name: blog-autopost
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 한국 07:00
+    - cron: "0 10 * * *"   # 한국 19:00
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "주제 id (비우면 가장 적게 쓴 주제)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: blog-autopost
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 비밀값 확인
+        id: keys
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY 가 없어 이번에는 쓰지 않는다"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.keys.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: 도구 설치
+        if: steps.keys.outputs.ready == 'true'
+        run: pip install -r _tools/blog/requirements.txt
+
+      - name: 글 한 편 쓰기
+        id: write
+        if: steps.keys.outputs.ready == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          set +e
+          if [ -n "${{ github.event.inputs.topic }}" ]; then
+            python _tools/blog/write_post.py --topic "${{ github.event.inputs.topic }}"
+          else
+            python _tools/blog/write_post.py
+          fi
+          code=$?
+          # 2 = 논문이 모자람 · 3 = 검사를 두 번 다 못 넘음 → 이번 회차는 건너뛴다(다음 회차가 다른 주제로)
+          if [ $code -eq 2 ] || [ $code -eq 3 ]; then echo "이번 회차는 싣지 않았다 (코드 $code)"; exit 0; fi
+          exit $code
+
+      - name: 커밋·푸시
+        id: push
+        if: steps.write.outputs.urls != ''
+        run: |
+          git config user.name "telos-blog-bot"
+          git config user.email "contact@telos.it.kr"
+          git add blog sitemap.xml
+          git commit -m "blog: 새 글 $(date -u -d '+9 hours' '+%Y-%m-%d %H:%M') KST"
+          git push
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: 배포 기다린 뒤 네이버에 알리기
+        if: steps.push.outputs.sha != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 30); do
+            st=$(gh api "repos/${{ github.repository }}/pages/builds/latest" --jq '.status + " " + .commit')
+            echo "$st"
+            if [ "$st" = "built ${{ steps.push.outputs.sha }}" ]; then
+              python _tools/blog/indexnow.py ${{ steps.write.outputs.urls }}
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "배포 확인 전에 시간이 다 됐다 — 알림은 다음 회차 사이트맵으로 대신한다"

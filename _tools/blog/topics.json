@@ -1,0 +1,359 @@
+{
+ "_note": "블로그 글감 목록. keyword = 노리는 검색어(한국어), pubmed = 근거 논문을 찾을 영어 검색식. 에이전트는 글이 가장 적게 쓰인 주제부터 고른다. 주제를 더하려면 줄만 더하면 된다.",
+ "topics": [
+  {
+   "id": "daily-steps",
+   "keyword": "노인 하루 걸음 수",
+   "category": "걷기 상식",
+   "pubmed": "daily steps mortality older adults meta-analysis"
+  },
+  {
+   "id": "walking-dementia",
+   "keyword": "치매 예방 걷기",
+   "category": "뇌 건강",
+   "pubmed": "(walking OR \"physical activity\") AND dementia AND risk AND meta-analysis"
+  },
+  {
+   "id": "walking-memory",
+   "keyword": "걷기 기억력",
+   "category": "뇌 건강",
+   "pubmed": "aerobic exercise memory older adults randomized"
+  },
+  {
+   "id": "hippocampus",
+   "keyword": "운동 뇌 건강 노인",
+   "category": "뇌 건강",
+   "pubmed": "aerobic exercise hippocampal volume older adults"
+  },
+  {
+   "id": "gait-speed",
+   "keyword": "노인 걷는 속도",
+   "category": "걷기 상식",
+   "pubmed": "gait speed survival older adults"
+  },
+  {
+   "id": "sarcopenia",
+   "keyword": "노인 근감소증 걷기",
+   "category": "몸 건강",
+   "pubmed": "sarcopenia walking intervention older adults"
+  },
+  {
+   "id": "blood-pressure",
+   "keyword": "걷기 혈압 노인",
+   "category": "몸 건강",
+   "pubmed": "walking blood pressure older adults meta-analysis"
+  },
+  {
+   "id": "after-meal-walk",
+   "keyword": "식후 걷기 혈당",
+   "category": "몸 건강",
+   "pubmed": "postprandial walking glucose older adults"
+  },
+  {
+   "id": "depression",
+   "keyword": "노인 우울 걷기",
+   "category": "마음 건강",
+   "pubmed": "walking depression older adults meta-analysis"
+  },
+  {
+   "id": "loneliness",
+   "keyword": "노인 외로움 외출",
+   "category": "마음 건강",
+   "pubmed": "social isolation loneliness physical activity older adults"
+  },
+  {
+   "id": "sleep",
+   "keyword": "노인 수면 운동",
+   "category": "생활 습관",
+   "pubmed": "physical activity sleep quality older adults meta-analysis"
+  },
+  {
+   "id": "green-space",
+   "keyword": "공원 산책 효과",
+   "category": "마음 건강",
+   "pubmed": "green space walking mental health older adults"
+  },
+  {
+   "id": "falls",
+   "keyword": "노인 낙상 운동",
+   "category": "몸 건강",
+   "pubmed": "exercise fall prevention community-dwelling older adults"
+  },
+  {
+   "id": "knee-pain",
+   "keyword": "무릎 아플 때 걷기",
+   "category": "몸 건강",
+   "pubmed": "walking knee osteoarthritis older adults"
+  },
+  {
+   "id": "interval-walking",
+   "keyword": "인터벌 걷기",
+   "category": "걷기 상식",
+   "pubmed": "interval walking training older adults"
+  },
+  {
+   "id": "group-walking",
+   "keyword": "함께 걷기 모임",
+   "category": "마음 건강",
+   "pubmed": "walking groups health benefits systematic review"
+  },
+  {
+   "id": "dog-walking",
+   "keyword": "반려견 산책 노인",
+   "category": "생활 습관",
+   "pubmed": "dog walking physical activity older adults"
+  },
+  {
+   "id": "frailty",
+   "keyword": "노쇠 예방 운동",
+   "category": "몸 건강",
+   "pubmed": "frailty physical activity intervention older adults"
+  },
+  {
+   "id": "sitting-time",
+   "keyword": "오래 앉아 있으면",
+   "category": "생활 습관",
+   "pubmed": "sedentary time older adults health outcomes"
+  },
+  {
+   "id": "heart",
+   "keyword": "걷기 심장 건강",
+   "category": "몸 건강",
+   "pubmed": "walking cardiovascular disease risk older adults"
+  },
+  {
+   "id": "bone",
+   "keyword": "걷기 뼈 건강",
+   "category": "몸 건강",
+   "pubmed": "walking bone mineral density older adults"
+  },
+  {
+   "id": "balance",
+   "keyword": "노인 균형 운동",
+   "category": "몸 건강",
+   "pubmed": "balance training older adults systematic review"
+  },
+  {
+   "id": "pace-not-distance",
+   "keyword": "빨리 걷기 천천히 걷기",
+   "category": "걷기 상식",
+   "pubmed": "walking pace intensity health older adults"
+  },
+  {
+   "id": "start-late",
+   "keyword": "늦게 시작한 운동",
+   "category": "걷기 상식",
+   "pubmed": "physical activity initiation later life mortality"
+  },
+  {
+   "id": "cognition-routine",
+   "keyword": "노인 인지 기능 생활 습관",
+   "category": "뇌 건강",
+   "pubmed": "lifestyle physical activity cognitive decline older adults"
+  },
+  {
+   "id": "heat-cold",
+   "keyword": "더위 추위 노인 운동",
+   "category": "생활 습관",
+   "pubmed": "extreme temperature physical activity older adults"
+  },
+  {
+   "id": "purpose",
+   "keyword": "노년 삶의 의미 활동",
+   "category": "마음 건강",
+   "pubmed": "purpose in life physical activity older adults"
+  },
+  {
+   "id": "family-support",
+   "keyword": "가족 응원 운동 습관",
+   "category": "생활 습관",
+   "pubmed": "social support physical activity older adults"
+  },
+  {
+   "id": "pedometer",
+   "keyword": "만보기 효과",
+   "category": "생활 습관",
+   "pubmed": "pedometer step count intervention older adults"
+  },
+  {
+   "id": "books-walking",
+   "keyword": "걷기 책 추천",
+   "category": "책 이야기",
+   "pubmed": "walking benefits older adults review"
+  },
+  {
+   "id": "nordic-walking",
+   "keyword": "노르딕 워킹",
+   "category": "걷기 상식",
+   "pubmed": "nordic walking older adults"
+  },
+  {
+   "id": "stairs",
+   "keyword": "계단 오르기 운동",
+   "category": "몸 건강",
+   "pubmed": "stair climbing health outcomes"
+  },
+  {
+   "id": "morning-light",
+   "keyword": "아침 산책 햇볕",
+   "category": "생활 습관",
+   "pubmed": "daylight exposure sleep older adults"
+  },
+  {
+   "id": "footwear",
+   "keyword": "노인 운동화 고르기",
+   "category": "걷기 상식",
+   "pubmed": "footwear falls older adults"
+  },
+  {
+   "id": "tai-chi",
+   "keyword": "태극권 균형",
+   "category": "몸 건강",
+   "pubmed": "tai chi balance older adults meta-analysis"
+  },
+  {
+   "id": "strength-training",
+   "keyword": "노인 근력 운동",
+   "category": "몸 건강",
+   "pubmed": "resistance training older adults meta-analysis"
+  },
+  {
+   "id": "chair-exercise",
+   "keyword": "의자 운동",
+   "category": "몸 건강",
+   "pubmed": "chair-based exercise older adults"
+  },
+  {
+   "id": "diabetes-walking",
+   "keyword": "당뇨 걷기 운동",
+   "category": "몸 건강",
+   "pubmed": "walking type 2 diabetes glycemic control"
+  },
+  {
+   "id": "weight",
+   "keyword": "노인 체중 관리 걷기",
+   "category": "몸 건강",
+   "pubmed": "walking weight body composition older adults"
+  },
+  {
+   "id": "dual-task",
+   "keyword": "걸으며 머리 쓰기",
+   "category": "뇌 건강",
+   "pubmed": "dual-task walking cognition older adults"
+  },
+  {
+   "id": "forest",
+   "keyword": "숲길 걷기 효과",
+   "category": "마음 건강",
+   "pubmed": "forest bathing health systematic review"
+  },
+  {
+   "id": "music-walking",
+   "keyword": "음악 들으며 걷기",
+   "category": "생활 습관",
+   "pubmed": "music exercise walking performance"
+  },
+  {
+   "id": "retirement",
+   "keyword": "은퇴 후 활동",
+   "category": "생활 습관",
+   "pubmed": "retirement physical activity change"
+  },
+  {
+   "id": "social-participation",
+   "keyword": "노인 사회 참여",
+   "category": "마음 건강",
+   "pubmed": "social participation health older adults"
+  },
+  {
+   "id": "volunteering",
+   "keyword": "노인 자원봉사 건강",
+   "category": "마음 건강",
+   "pubmed": "volunteering health older adults"
+  },
+  {
+   "id": "hearing",
+   "keyword": "청력과 활동",
+   "category": "몸 건강",
+   "pubmed": "hearing loss physical activity older adults"
+  },
+  {
+   "id": "back-pain",
+   "keyword": "허리 아플 때 걷기",
+   "category": "몸 건강",
+   "pubmed": "walking chronic low back pain"
+  },
+  {
+   "id": "anxiety",
+   "keyword": "불안 걷기",
+   "category": "마음 건강",
+   "pubmed": "physical activity anxiety older adults"
+  },
+  {
+   "id": "habit",
+   "keyword": "운동 습관 만들기",
+   "category": "생활 습관",
+   "pubmed": "habit formation physical activity"
+  },
+  {
+   "id": "goal-setting",
+   "keyword": "걷기 목표 정하기",
+   "category": "생활 습관",
+   "pubmed": "goal setting physical activity intervention older adults"
+  },
+  {
+   "id": "wearables",
+   "keyword": "걸음 측정 기기",
+   "category": "생활 습관",
+   "pubmed": "wearable activity tracker older adults physical activity"
+  },
+  {
+   "id": "indoor-walking",
+   "keyword": "실내 걷기 운동",
+   "category": "걷기 상식",
+   "pubmed": "indoor walking exercise older adults"
+  },
+  {
+   "id": "protein",
+   "keyword": "단백질 근육 노인",
+   "category": "생활 습관",
+   "pubmed": "protein supplementation exercise older adults muscle"
+  },
+  {
+   "id": "light-activity",
+   "keyword": "가벼운 활동 효과",
+   "category": "걷기 상식",
+   "pubmed": "light physical activity mortality older adults"
+  },
+  {
+   "id": "weekend-warrior",
+   "keyword": "주말 몰아서 운동",
+   "category": "걷기 상식",
+   "pubmed": "weekend warrior physical activity mortality"
+  },
+  {
+   "id": "break-sitting",
+   "keyword": "앉아 있다 일어나기",
+   "category": "생활 습관",
+   "pubmed": "breaking up sedentary time health"
+  },
+  {
+   "id": "couples",
+   "keyword": "부부 함께 운동",
+   "category": "생활 습관",
+   "pubmed": "spousal concordance physical activity"
+  },
+  {
+   "id": "walkable-town",
+   "keyword": "걷기 좋은 동네",
+   "category": "생활 습관",
+   "pubmed": "neighborhood walkability physical activity older adults"
+  },
+  {
+   "id": "life-expectancy",
+   "keyword": "운동과 기대수명",
+   "category": "걷기 상식",
+   "pubmed": "physical activity life expectancy"
+  }
+ ]
+}
