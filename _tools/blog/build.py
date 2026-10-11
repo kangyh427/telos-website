@@ -115,7 +115,7 @@ def head(title: str, desc: str, canonical: str, *, og_type="website", image=None
     out += [
         '<link rel="preconnect" href="https://cdn.jsdelivr.net">',
         '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">',
-        '<link rel="stylesheet" href="/css/style.css">',
+        '<link rel="stylesheet" href="/css/style.css?v=20261011">',
         '<link rel="stylesheet" href="/css/blog.css">',
         "<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-weight='bold'>T</text></svg>\">",
     ]
@@ -134,13 +134,13 @@ HEADER = """<body class="blog-body">
         <nav class="nav" id="nav" aria-label="주요 메뉴">
             <ul class="nav-list">
                 <li><a href="/#solution">서비스 소개</a></li>
-                <li><a href="/#health">걷기 건강</a></li>
-                <li><a href="/blog/" aria-current="page">걷기 건강 이야기</a></li>
-                <li><a href="/#faq">자주 묻는 질문</a></li>
+                <li><a href="/blog/" aria-current="page">걷기 이야기</a></li>
+                <li><a href="/#audience">대상·도입 안내</a></li>
+                <li><a href="/#faq">FAQ</a></li>
                 <li><a href="/#company">회사 소개</a></li>
             </ul>
         </nav>
-        <a class="btn btn-primary btn-sm header-cta" href="{play}" rel="noopener">앱 받기</a>
+        <a class="btn btn-primary btn-sm header-cta" href="/#contact">문의하기</a>
         <button class="nav-toggle" id="navToggle" aria-label="메뉴 열기" aria-expanded="false">
             <span></span><span></span><span></span>
         </button>

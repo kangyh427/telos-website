@@ -230,7 +230,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .logo-img { height: 46px; width: auto; display: block; }
 
 .nav-list { display: flex; gap: var(--space-lg); }
-.nav-list a { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.nav-list a { font-size: 15px; font-weight: 600; color: var(--color-text); white-space: nowrap; }
 .header.scrolled .nav-list a { color: var(--color-text); }
 .nav-list a:hover { color: var(--color-care); }
 
