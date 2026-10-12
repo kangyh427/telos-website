@@ -3,19 +3,23 @@
 ================================================================================
  파일명: opensource.html
  저장소 경로: kangyh427/telos-website/opensource.html
- 설명: 나이노트가 쓰는 오픈소스·모델 고지
- 버전: 1.0.0  ·  작성일: 2026.08.11 (S534 · docs/73 R-3 조치)
+ 설명: 나이노트(부모님) · 나이노트(보호자) 두 앱이 쓰는 오픈소스와 제3자 SDK 고지
+ 버전: 2.0.0  ·  작성일: 2026.08.11 (S534)  ·  다시 씀: 2026.10.12 (S717)
 
- ★왜 이 페이지가 있나★
-   앱에 담긴 온디바이스 모델 4종 중 ★SenseVoice 가중치는 출처·모델명 표기를
-   의무로 요구한다★(FunASR Model License §2.2). 그런데 앱의 assets 에는
-   LICENSE/NOTICE 파일이 0건이었고, 앱 어디에도 고지 화면이 없었다.
-   → 지금 지키지 못하고 있던 의무를 지킨다.
+ ★왜 다시 썼나★
+   세종테크노파크 SW 품질 검사(Sparrow SCA)에서 이 페이지가 앱과 다르다는 것이
+   드러났다. 음성을 걷어낸 뒤에도 온디바이스 모델 4종, sherpa-onnx, ONNX Runtime,
+   카카오맵 SDK 가 남아 있었고 지금 쓰는 네이버 지도, Firebase, Supabase 등이 없었다.
 
- ★본문을 앱에 복사하지 않는다★ — 앱은 주소만 들고 있는다(PrivacyPolicyLink 와 같은
-   구조). 복사하면 여기를 고쳐도 앱은 옛말을 하게 되고, 그것이 S504 사고의 구조다.
+ ★목록을 손으로 세지 않았다★
+   두 앱의 출시판 묶음(app-release.aab, 2026-10-10 빌드)에 든
+   BUNDLE-METADATA/com.android.tools.build.libraries/dependencies.pb 를 읽었다.
+   부모님 1.24.0(48) = 230개 모듈 · 보호자 1.29.0(49) = 272개 모듈.
+   라이선스는 각 모듈의 Maven POM 에 적힌 이름으로 정했다.
+   그 뒤 두 앱의 build.gradle.kts, libs.versions.toml 은 바뀌지 않았다.
 
- ★스토어 설명란만으로는 부족하다★ — 케이블로 설치한 기기는 스토어 설명을 아예 못 본다.
+ ★본문을 앱에 복사하지 않는다★ 앱은 주소만 들고 있는다(OpenSourceNoticeLink).
+ ★판을 올리면 이 페이지도 다시 센다★ 위 dependencies.pb 를 다시 읽으면 된다.
 ================================================================================
 -->
 <html lang="ko">
@@ -55,121 +59,216 @@
 
     <main class="legal-wrap">
         <h1 class="legal-title">오픈소스 고지</h1>
-        <p class="legal-updated">최종 갱신: 2026년 8월 11일</p>
+        <p class="legal-updated">기준일 2026년 10월 12일 · 나이노트(부모님) 1.24.0 (48) · 나이노트(보호자) 1.29.0 (49)</p>
 
-        <p>나이노트는 아래의 오픈소스 소프트웨어와 인공지능 모델을 사용합니다.
+        <p>나이노트 두 앱은 아래의 오픈소스 소프트웨어와 제3자 SDK를 사용합니다.
         각 저작권자와 라이선스에 감사드리며, 라이선스가 요구하는 고지를 여기에 둡니다.</p>
+        <p>목록은 두 앱의 출시판에 실제로 담긴 의존성(부모님 230개 모듈, 보호자 272개 모듈)을
+        저작권자와 라이선스 기준으로 묶은 것입니다. 시험용 부품은 출시판에 들지 않으므로 적지 않았습니다.
+        모듈 하나하나의 목록이 필요하시면 아래 문의처로 요청해 주십시오.</p>
 
-        <h2>1. 온디바이스 인공지능 모델</h2>
-        <p>아래 모델은 이용자의 기기 안에서 동작하며, 이 모델들이 처리한 음성은
-        기기 밖으로 전송되지 않습니다.</p>
+        <h2>1. 오픈소스 소프트웨어</h2>
+        <p>판 번호가 두 앱에서 다르면 "부모님 · 보호자" 순서로 적었습니다.</p>
 
         <div class="tablewrap">
         <table class="legal-table">
-            <tr><th>모델</th><th>용도</th><th>저작권 · 라이선스</th></tr>
-            <tr>
-                <td><b>Silero VAD</b><br><span class="hash">silero_vad.onnx</span></td>
-                <td>소리에 사람 목소리가 있는지 판별</td>
-                <td>Copyright © Silero Team<br><b>MIT License</b><br>
-                    <a href="https://github.com/snakers4/silero-vad">github.com/snakers4/silero-vad</a></td>
-            </tr>
-            <tr>
-                <td><b>SenseVoice Small</b><br><span class="hash">model.int8.onnx</span></td>
-                <td>음성을 글자로 옮김(온디바이스)</td>
-                <td>Copyright © Alibaba Group / FunAudioLLM<br>
-                    코드 <b>MIT License</b> · <b>모델 가중치는 FunASR Model License</b><br>
-                    변환본 제공: k2-fsa / sherpa-onnx<br>
-                    <a href="https://github.com/FunAudioLLM/SenseVoice">github.com/FunAudioLLM/SenseVoice</a></td>
-            </tr>
-            <tr>
-                <td><b>3D-Speaker ERes2Net</b><br><span class="hash">3dspeaker_speech_eres2net_…onnx</span></td>
-                <td>등록하신 분의 목소리인지 확인</td>
-                <td>Copyright © Alibaba Group / 3D-Speaker<br>
-                    저장소 <b>Apache License 2.0</b><br>
-                    <a href="https://github.com/modelscope/3D-Speaker">github.com/modelscope/3D-Speaker</a></td>
-            </tr>
-            <tr>
-                <td><b>Zipformer (한국어)</b><br><span class="hash">encoder/decoder/joiner-epoch-99-avg-1.int8.onnx</span></td>
-                <td>호출 이름 인식 보조</td>
-                <td>Copyright © k2-fsa (Next-gen Kaldi)<br>
-                    <b>Apache License 2.0</b><br>
-                    <a href="https://github.com/k2-fsa/sherpa-onnx">github.com/k2-fsa/sherpa-onnx</a></td>
-            </tr>
+            <tr><th>부품</th><th>판</th><th>쓰는 앱</th><th>저작권 · 라이선스</th></tr>
+
+            <tr><td><b>Jetpack Compose</b><br>UI, Foundation, Material 3, Material Icons</td>
+                <td>BOM 2026.03.00 · BOM 2025.09.01</td><td>둘 다</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Room · SQLite</b><br>기기 안 저장소, 생성 코드 포함</td>
+                <td>2.7.0 · 2.8.4</td><td>둘 다</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>AndroidX 기본 부품</b><br>Core, AppCompat, Activity, Fragment, Lifecycle, SavedState 등</td>
+                <td>Core 1.16.0 · 1.18.0<br>Lifecycle 2.9.4 · 2.10.0</td><td>둘 다</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>DataStore</b></td>
+                <td>1.1.1 · 1.1.7</td><td>둘 다</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Profile Installer</b></td>
+                <td>1.4.1 · 1.4.0</td><td>둘 다</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Navigation Compose</b></td>
+                <td>2.8.4</td><td>부모님</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Hilt Navigation Compose</b></td>
+                <td>1.2.0</td><td>부모님</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Credentials</b><br>credentials, credentials-play-services-auth</td>
+                <td>1.3.0</td><td>부모님</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Security Crypto</b></td>
+                <td>1.1.0-alpha06</td><td>보호자</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Browser</b> (Custom Tabs)</td>
+                <td>1.10.0</td><td>보호자</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>그 밖의 AndroidX 모듈</b><br>Collection, Annotation, Window, Emoji2, Startup, Tracing, RecyclerView 등 위 부품이 함께 가져오는 것</td>
+                <td>부품마다 다름</td><td>둘 다</td>
+                <td>The Android Open Source Project<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Protocol Buffers</b><br>DataStore 안에 담긴 사본 (datastore-preferences-external-protobuf)</td>
+                <td>1.1.7</td><td>보호자</td>
+                <td>Copyright &copy; 2008 Google Inc.<br><b>BSD 3-Clause License</b><br>
+                    <a href="https://github.com/protocolbuffers/protobuf">github.com/protocolbuffers/protobuf</a></td></tr>
+
+            <tr><td><b>Kotlin 표준 라이브러리</b><br>stdlib, reflect, parcelize runtime</td>
+                <td>2.2.20 · 2.3.21</td><td>둘 다</td>
+                <td>JetBrains s.r.o. and Kotlin Programming Language contributors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/JetBrains/kotlin">github.com/JetBrains/kotlin</a></td></tr>
+            <tr><td><b>kotlinx.coroutines</b></td>
+                <td>1.9.0 · 1.10.2</td><td>둘 다</td>
+                <td>JetBrains s.r.o. and contributors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/Kotlin/kotlinx.coroutines">github.com/Kotlin/kotlinx.coroutines</a></td></tr>
+            <tr><td><b>kotlinx.serialization</b></td>
+                <td>1.7.3 · 1.11.0</td><td>둘 다</td>
+                <td>JetBrains s.r.o. and contributors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/Kotlin/kotlinx.serialization">github.com/Kotlin/kotlinx.serialization</a></td></tr>
+            <tr><td><b>kotlinx-io</b></td>
+                <td>0.5.4 · 0.9.0</td><td>둘 다</td>
+                <td>JetBrains s.r.o. and contributors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/Kotlin/kotlinx-io">github.com/Kotlin/kotlinx-io</a></td></tr>
+            <tr><td><b>kotlinx-datetime</b></td>
+                <td>0.7.1</td><td>보호자</td>
+                <td>JetBrains s.r.o. and contributors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/Kotlin/kotlinx-datetime">github.com/Kotlin/kotlinx-datetime</a></td></tr>
+            <tr><td><b>kotlinx.collections.immutable</b></td>
+                <td>0.4.0</td><td>보호자</td>
+                <td>JetBrains s.r.o. and contributors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/Kotlin/kotlinx.collections.immutable">github.com/Kotlin/kotlinx.collections.immutable</a></td></tr>
+            <tr><td><b>JetBrains Annotations</b></td>
+                <td>23.0.0</td><td>둘 다</td>
+                <td>JetBrains s.r.o.<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>Ktor</b> (HTTP 클라이언트)</td>
+                <td>3.0.1 · 3.4.3</td><td>둘 다</td>
+                <td>JetBrains s.r.o. and contributors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/ktorio/ktor">github.com/ktorio/ktor</a></td></tr>
+
+            <tr><td><b>Supabase Kotlin</b> (supabase-kt)<br>Auth, Postgrest, Functions, Storage</td>
+                <td>3.6.0</td><td>보호자</td>
+                <td>Copyright &copy; Jan Tennert<br><b>MIT License</b><br>
+                    <a href="https://github.com/supabase-community/supabase-kt">github.com/supabase-community/supabase-kt</a></td></tr>
+            <tr><td><b>cryptography-kotlin</b></td>
+                <td>0.6.0</td><td>보호자</td>
+                <td>Oleg Yukhnevich<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/whyoleg/cryptography-kotlin">github.com/whyoleg/cryptography-kotlin</a></td></tr>
+            <tr><td><b>Multiplatform Settings</b></td>
+                <td>1.3.0</td><td>보호자</td>
+                <td>Russell Wolf<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/russhwolf/multiplatform-settings">github.com/russhwolf/multiplatform-settings</a></td></tr>
+            <tr><td><b>Kermit</b></td>
+                <td>2.1.0</td><td>보호자</td>
+                <td>Touchlab<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/touchlab/Kermit">github.com/touchlab/Kermit</a></td></tr>
+
+            <tr><td><b>Dagger · Hilt</b><br>생성 코드 포함</td>
+                <td>2.51.1</td><td>부모님</td>
+                <td>The Dagger Authors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/google/dagger">github.com/google/dagger</a></td></tr>
+            <tr><td><b>javax.inject</b></td>
+                <td>1</td><td>둘 다</td>
+                <td>The JSR-330 Expert Group<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>OkHttp</b><br>okhttp-brotli 4.10.0 포함</td>
+                <td>4.12.0 · 5.3.2</td><td>둘 다</td>
+                <td>Square, Inc.<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/square/okhttp">github.com/square/okhttp</a></td></tr>
+            <tr><td><b>Okio</b></td>
+                <td>3.9.1 · 3.17.0</td><td>둘 다</td>
+                <td>Square, Inc.<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/square/okio">github.com/square/okio</a></td></tr>
+            <tr><td><b>Brotli 디코더</b> (org.brotli:dec)</td>
+                <td>0.1.2</td><td>둘 다</td>
+                <td>Copyright &copy; 2009, 2010, 2013-2016 by the Brotli Authors<br><b>MIT License</b><br>
+                    <a href="https://github.com/google/brotli">github.com/google/brotli</a></td></tr>
+            <tr><td><b>Guava ListenableFuture</b></td>
+                <td>1.0</td><td>둘 다</td>
+                <td>The Guava Authors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/google/guava">github.com/google/guava</a></td></tr>
+            <tr><td><b>Gson</b></td>
+                <td>2.8.6 · 2.8.9</td><td>둘 다</td>
+                <td>Google Inc.<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/google/gson">github.com/google/gson</a></td></tr>
+            <tr><td><b>Tink</b></td>
+                <td>1.8.0</td><td>보호자</td>
+                <td>Google LLC<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/tink-crypto/tink-java">github.com/tink-crypto/tink-java</a></td></tr>
+            <tr><td><b>Error Prone Annotations</b></td>
+                <td>2.26.0</td><td>보호자</td>
+                <td>The Error Prone Authors<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>JSR 305 Annotations</b> (com.google.code.findbugs)</td>
+                <td>3.0.2</td><td>부모님</td>
+                <td><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>JSpecify</b></td>
+                <td>1.0.0</td><td>둘 다</td>
+                <td>The JSpecify Authors<br><b>Apache License 2.0</b></td></tr>
+            <tr><td><b>SLF4J API</b></td>
+                <td>2.0.16 · 2.0.17</td><td>둘 다</td>
+                <td>QOS.ch Sarl<br><b>MIT License</b><br>
+                    <a href="https://www.slf4j.org/license.html">slf4j.org/license.html</a></td></tr>
+            <tr><td><b>ReLinker</b></td>
+                <td>1.4.4</td><td>둘 다</td>
+                <td>KeepSafe Software, Inc.<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/KeepSafe/ReLinker">github.com/KeepSafe/ReLinker</a></td></tr>
+            <tr><td><b>Timber</b></td>
+                <td>5.0.1</td><td>부모님</td>
+                <td>Jake Wharton<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/JakeWharton/timber">github.com/JakeWharton/timber</a></td></tr>
+            <tr><td><b>ZXing Core</b></td>
+                <td>3.5.3</td><td>부모님</td>
+                <td>ZXing authors<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/zxing/zxing">github.com/zxing/zxing</a></td></tr>
+            <tr><td><b>Firebase Android SDK</b><br>Messaging, Common, Components, Installations, Encoders, Datatransport, Annotations</td>
+                <td>BOM 34.14.0<br>(Messaging 25.0.2)</td><td>보호자</td>
+                <td>Google LLC<br><b>Apache License 2.0</b><br>
+                    <a href="https://github.com/firebase/firebase-android-sdk">github.com/firebase/firebase-android-sdk</a></td></tr>
+            <tr><td><b>Google Android Data Transport</b></td>
+                <td>3.1.9</td><td>보호자</td>
+                <td>Google LLC<br><b>Apache License 2.0</b></td></tr>
         </table>
         </div>
 
-        <h3>1-1. 사본 식별값 (SHA-256)</h3>
-        <p>저희가 배포하는 사본이 어떤 파일인지 확인하실 수 있도록 해시값을 함께 둡니다.</p>
+        <h2>2. 제3자 SDK (오픈소스가 아닙니다)</h2>
+        <p>아래 부품은 오픈소스가 아니라 <b>각 제공사의 이용약관</b>을 따릅니다.
+        오픈소스 목록과 성격이 다르므로 나누어 적습니다.</p>
+
         <div class="tablewrap">
         <table class="legal-table">
-            <tr><th>파일</th><th>크기(바이트)</th><th>SHA-256</th></tr>
-            <tr><td>silero_vad.onnx</td><td>2,327,524</td>
-                <td class="hash">1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3</td></tr>
-            <tr><td>SenseVoice model.int8.onnx</td><td>239,233,841</td>
-                <td class="hash">c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51</td></tr>
-            <tr><td>3D-Speaker ERes2Net</td><td>39,593,761</td>
-                <td class="hash">1a331345f04805badbb495c775a6ddffcdd1a732567d5ec8b3d5749e3c7a5e4b</td></tr>
-            <tr><td>Zipformer encoder</td><td>126,968,852</td>
-                <td class="hash">8d0b1aa24fbedd4e3948564ab7facd151b8ce9b0c48fc987c541de2de3af5697</td></tr>
+            <tr><th>부품</th><th>판</th><th>쓰는 앱</th><th>제공사 · 약관</th></tr>
+            <tr><td><b>네이버 지도 SDK</b><br>map-sdk, geometry 1.3.0 (산책 지도)</td>
+                <td>3.23.3</td><td>둘 다</td>
+                <td>NAVER Cloud Corp.<br><a href="https://www.ncloud.com/policy/terms/service">네이버 클라우드 플랫폼 이용약관</a><br>
+                    지도 데이터의 저작권은 네이버와 각 데이터 제공처에 있습니다.</td></tr>
+            <tr><td><b>Google Play 서비스</b><br>Location, Auth, Base, Basement, Tasks, FIDO 등 (보호자 앱은 Cloud Messaging, Stats 포함)</td>
+                <td>Location 21.3.0<br>Auth 21.1.1</td><td>둘 다</td>
+                <td>Google LLC<br><a href="https://developer.android.com/studio/terms">Android Software Development Kit License</a><br>
+                    오픈소스 고지는 기기의 Google Play 서비스가 따로 제공합니다.</td></tr>
+            <tr><td><b>Google ID</b> (구글 계정 로그인)</td>
+                <td>1.1.1</td><td>부모님</td>
+                <td>Google LLC<br><a href="https://developer.android.com/studio/terms">Android Software Development Kit License</a></td></tr>
+            <tr><td><b>Play 설치 리퍼러</b> (Install Referrer)</td>
+                <td>2.2</td><td>둘 다</td>
+                <td>Google LLC<br><a href="https://developer.android.com/studio/terms">Android Software Development Kit License</a></td></tr>
+            <tr><td><b>Play 결제 라이브러리</b> (Billing)</td>
+                <td>8.0.0</td><td>보호자</td>
+                <td>Google LLC<br><a href="https://developer.android.com/studio/terms">Android Software Development Kit License</a></td></tr>
+            <tr><td><b>Play Core</b> (앱 안 업데이트: app-update, core-common)</td>
+                <td>2.1.0</td><td>둘 다</td>
+                <td>Google LLC<br><a href="https://developer.android.com/guide/playcore/license">Play Core Software Development Kit Terms of Service</a></td></tr>
+            <tr><td><b>Play Integrity API</b></td>
+                <td>1.4.0</td><td>부모님</td>
+                <td>Google LLC<br><a href="https://developer.android.com/google/play/integrity/overview">Play Integrity API Terms of Service</a></td></tr>
+            <tr><td><b>Firebase 일부 모듈</b><br>firebase-iid-interop 17.1.0, firebase-measurement-connector 19.0.0</td>
+                <td>BOM 34.14.0</td><td>보호자</td>
+                <td>Google LLC<br><a href="https://developer.android.com/studio/terms">Android Software Development Kit License</a></td></tr>
         </table>
         </div>
 
-        <h2>2. 소프트웨어 라이브러리</h2>
-        <p>아래는 이 앱의 배포본(release)에 실제로 포함되는 오픈소스입니다.
-        빌드가 담는 의존성 <b>213개 모듈</b>을 저작권자·라이선스 기준으로 묶은 것이며,
-        기계가 읽을 수 있는 전체 목록이 필요하시면 아래 문의처로 요청해 주십시오.
-        (2026-08-12 기준 · <code>releaseRuntimeClasspath</code> 실측)</p>
-        <ul>
-            <li><b>sherpa-onnx</b> — Copyright &copy; k2-fsa &middot; Apache License 2.0 &middot;
-                <a href="https://github.com/k2-fsa/sherpa-onnx">github.com/k2-fsa/sherpa-onnx</a></li>
-            <li><b>ONNX Runtime</b> — Copyright &copy; Microsoft Corporation &middot; MIT License &middot;
-                <a href="https://github.com/microsoft/onnxruntime">github.com/microsoft/onnxruntime</a></li>
-            <li><b>Android Jetpack</b> (Compose &middot; Room &middot; Lifecycle &middot; Navigation &middot;
-                DataStore &middot; Hilt Navigation 등 <code>androidx.*</code>) —
-                Copyright &copy; The Android Open Source Project &middot; Apache License 2.0</li>
-            <li><b>Kotlin &middot; kotlinx</b> (Coroutines &middot; Serialization &middot; DateTime) —
-                Copyright &copy; JetBrains s.r.o. and Kotlin Programming Language contributors &middot;
-                Apache License 2.0 &middot;
-                <a href="https://github.com/JetBrains/kotlin">github.com/JetBrains/kotlin</a></li>
-            <li><b>Ktor</b> (HTTP 클라이언트) — Copyright &copy; JetBrains s.r.o. &middot;
-                Apache License 2.0 &middot;
-                <a href="https://github.com/ktorio/ktor">github.com/ktorio/ktor</a></li>
-            <li><b>Dagger / Hilt</b> — Copyright &copy; Google LLC &middot; Apache License 2.0 &middot;
-                <a href="https://github.com/google/dagger">github.com/google/dagger</a></li>
-            <li><b>OkHttp &middot; Okio</b> — Copyright &copy; Square, Inc. &middot; Apache License 2.0 &middot;
-                <a href="https://github.com/square/okhttp">github.com/square/okhttp</a></li>
-            <li><b>Guava</b> — Copyright &copy; Google LLC &middot; Apache License 2.0 &middot;
-                <a href="https://github.com/google/guava">github.com/google/guava</a></li>
-            <li><b>Timber</b> — Copyright &copy; Jake Wharton &middot; Apache License 2.0 &middot;
-                <a href="https://github.com/JakeWharton/timber">github.com/JakeWharton/timber</a></li>
-            <li><b>ReLinker</b> — Copyright &copy; KeepSafe Software, Inc. &middot; Apache License 2.0 &middot;
-                <a href="https://github.com/KeepSafe/ReLinker">github.com/KeepSafe/ReLinker</a></li>
-            <li><b>SLF4J</b> — Copyright &copy; QOS.ch Sarl &middot; MIT License &middot;
-                <a href="https://www.slf4j.org/license.html">slf4j.org/license.html</a></li>
-            <li><b>JSpecify</b> — Copyright &copy; The JSpecify Authors &middot; Apache License 2.0</li>
-            <li><b>JSR 305 annotations</b> (com.google.code.findbugs) &middot; Apache License 2.0</li>
-            <li><b>javax.inject</b> — Copyright &copy; The JSR-330 Expert Group &middot; Apache License 2.0</li>
-        </ul>
-
-        <h2>3. 제3자 SDK (오픈소스가 아닙니다)</h2>
-        <p>아래 두 가지는 오픈소스가 아니라 <b>각 제공사의 이용약관</b>을 따릅니다.
-        위 오픈소스 목록과 성격이 다르므로 나누어 적습니다.</p>
-        <ul>
-            <li><b>Google Play services</b> (위치 확인에 사용) — Google LLC &middot;
-                <a href="https://developers.google.com/terms">Google APIs 서비스 약관</a> &middot;
-                오픈소스 라이선스 고지는 앱 실행 환경의 Google Play 서비스가 별도로 제공합니다.</li>
-            <li><b>카카오맵 SDK</b> (주소 확인에 사용) — Kakao Corp. &middot;
-                <a href="https://developers.kakao.com/terms">카카오 개발자 서비스 이용약관</a> &middot;
-                지도 데이터의 저작권은 카카오 및 각 데이터 제공처에 있습니다.</li>
-        </ul>
-
-        <h2>4. 라이선스 전문</h2>
-        <p>아래는 위 라이브러리들이 따르는 라이선스의 <b>전문</b>입니다.
-        각 저작권자는 위 2절에 적어 두었습니다.
-        (원문은 이 앱이 실제로 담고 있는 배포 아티팩트에서 그대로 가져왔습니다.)</p>
+        <h2>3. 라이선스 전문</h2>
+        <p>아래는 1절의 오픈소스가 따르는 라이선스의 <b>전문</b>입니다.
+        각 저작권자는 1절에 적어 두었습니다.</p>
 
         <details>
-            <summary><b>Apache License, Version 2.0 — 전문 보기</b></summary>
+            <summary><b>Apache License, Version 2.0 · 전문 보기</b></summary>
             <pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;background:#f7f7f7;padding:16px;border-radius:6px;overflow-x:auto">                                 Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -349,9 +448,9 @@
         </details>
 
         <details>
-            <summary><b>MIT License — 전문 보기</b></summary>
+            <summary><b>MIT License · 전문 보기</b></summary>
             <p>저작권 표시는 각 프로젝트의 것을 따릅니다
-            (ONNX Runtime — Copyright &copy; Microsoft Corporation · SLF4J — Copyright &copy; QOS.ch Sarl).</p>
+            (Supabase Kotlin: Copyright &copy; Jan Tennert · Brotli: Copyright &copy; the Brotli Authors · SLF4J: Copyright &copy; QOS.ch Sarl).</p>
             <pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;background:#f7f7f7;padding:16px;border-radius:6px;overflow-x:auto">Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the &quot;Software&quot;), to deal
 in the Software without restriction, including without limitation the rights
@@ -371,7 +470,43 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.</pre>
         </details>
 
-        <h2>5. 문의</h2>
+        <details>
+            <summary><b>BSD 3-Clause License (Protocol Buffers) · 전문 보기</b></summary>
+            <pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;background:#f7f7f7;padding:16px;border-radius:6px;overflow-x:auto">Copyright 2008 Google Inc.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+    * Neither the name of Google Inc. nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+&quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Code generated by the Protocol Buffer compiler is owned by the owner
+of the input file used when generating it.  This code is not
+standalone and requires a support library to be linked with it.  This
+support library is itself covered by the above license.</pre>
+        </details>
+
+        <h2>4. 문의</h2>
         <p>이 고지에 빠진 것이 있거나 정정이 필요하면 알려 주세요.
         확인하는 대로 이 페이지를 고치겠습니다.</p>
         <p>주식회사 텔로스 · <a href="mailto:contact@telos.it.kr">contact@telos.it.kr</a></p>
