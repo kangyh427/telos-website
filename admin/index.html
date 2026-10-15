@@ -2493,12 +2493,13 @@
   //  재료 = DATA.ai_usage(get-effect-dashboard v73 · sql 194 ai_usage_overview) — summarize-walk 가 부를 때마다 적은 토큰 수.
   //  ★금액은 여기서 계산한다★ — 요금이 바뀌면 AI_PRICES 한 곳만 고친다(서버·DB 에는 요금이 없다).
   //  ★요금표 기준일·환율은 화면에 늘 적는다★ — 낡은 값을 지금 값으로 읽지 않게.
-  var AI_PRICE_DATE = "2026-10-02";
+  var AI_PRICE_DATE = "2026-10-15";
   var AI_KRW_PER_USD = 1400; // ★가정★ — 화면에 적는다
   // [모델, 회사, 입력 $/1M, 출력 $/1M, 메모, 지금 쓰는가]
   var AI_PRICES = [
     ["gemini-3.1-flash-lite", "Google", 0.25, 1.50, "지금 · 한 줄 요약·브리핑·보고서 「한눈에」", true],
-    ["gemini-2.5-flash", "Google", 0.30, 2.50, "지금 · AI 해설(생각 토큰도 출력 요금)", true],
+    ["claude-haiku-5-5", "Anthropic", 0.10, 0.50, "지금 · 걷기 소견(2026-10-15 부터 · 10만 토큰 이하 요청 요금 · 생각 토큰은 출력에 포함)", true],
+    ["gemini-2.5-flash", "Google", 0.30, 2.50, "이전 · 걷기 소견(2026-10-15 까지 · 생각 토큰도 출력 요금)", false],
     ["gemini-2.5-flash-lite", "Google", 0.10, 0.40, "같은 회사 · 더 싼 앞 세대", false],
     ["gpt-5-nano", "OpenAI", 0.05, 0.40, "가장 싼 축 · 추론형(생각 토큰이 출력으로 붙고 첫 글자가 늦다)", false],
     ["gpt-5.4-nano", "OpenAI", 0.20, 1.25, "나노 새 판", false],
@@ -2511,7 +2512,7 @@
   var AI_SCENARIO = [
     ["한 줄 요약(자녀 앱)", 8, 250, 50, 0, "gemini-3.1-flash-lite"],
     ["보고서 「한눈에」", 8, 3000, 250, 0, "gemini-3.1-flash-lite"],
-    ["AI 해설", 4, 3500, 600, 1000, "gemini-2.5-flash"],
+    ["걷기 소견(보고서를 열 때 · AI 다섯 번)", 4, 12000, 2500, 0, "claude-haiku-5-5"],
     ["건강 시계 AI 확인(예정 · 매일)", 30, 1500, 120, 0, "gemini-3.1-flash-lite"]
   ];
   var AI_MODE_NAME = { line: "한 줄 요약", brief: "콘솔 브리핑", report: "보고서 「한눈에」", insight: "AI 해설" };
