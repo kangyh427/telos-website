@@ -354,6 +354,60 @@
    "keyword": "운동과 기대수명",
    "category": "걷기 상식",
    "pubmed": "physical activity life expectancy"
+  },
+  {
+   "id": "checkup-physical-function",
+   "keyword": "부모님 건강검진 노인신체기능검사 결과",
+   "category": "걷기 상식",
+   "pubmed": "timed up and go test older adults functional decline OR falls"
+  },
+  {
+   "id": "driving-cessation",
+   "keyword": "부모님 운전면허 반납 후",
+   "category": "생활 습관",
+   "pubmed": "driving cessation older adults health outcomes"
+  },
+  {
+   "id": "after-hospital",
+   "keyword": "부모님 퇴원 후 걷기",
+   "category": "몸 건강",
+   "pubmed": "hospitalization older adults walking mobility after discharge"
+  },
+  {
+   "id": "widowhood",
+   "keyword": "혼자 되신 부모님 건강",
+   "category": "마음 건강",
+   "pubmed": "widowhood older adults physical activity OR loneliness health"
+  },
+  {
+   "id": "long-term-care-grade",
+   "keyword": "장기요양등급 신청 전 부모님",
+   "category": "몸 건강",
+   "pubmed": "physical activity intervention mobility disability older adults"
+  },
+  {
+   "id": "after-a-fall",
+   "keyword": "넘어지신 뒤 부모님 걷기",
+   "category": "몸 건강",
+   "pubmed": "fear of falling activity restriction older adults"
+  },
+  {
+   "id": "staying-home",
+   "keyword": "집에만 계신 부모님",
+   "category": "생활 습관",
+   "pubmed": "life-space mobility older adults"
+  },
+  {
+   "id": "spouse-caregiver",
+   "keyword": "배우자를 돌보는 부모님",
+   "category": "마음 건강",
+   "pubmed": "older spousal caregivers health physical activity"
+  },
+  {
+   "id": "long-distance-family",
+   "keyword": "멀리 사는 자녀 부모님 안부",
+   "category": "생활 습관",
+   "pubmed": "long-distance caregiving OR geographically distant family older parents"
   }
  ]
 }
