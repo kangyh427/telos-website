@@ -4,11 +4,16 @@
  파일명: index.html
  저장소 경로: kangyh427/telos-website/index.html  (로컬 C:\TELOS\telos-website\index.html)
  설명: 나이노트(옛 이름 텔로스 케어) 전용 랜딩 페이지 — 부모님 걷기 건강
- 버전: 2.5.0
+ 버전: 2.6.0
  작성일: 2026.07.10
  도메인: https://www.telos.it.kr
  작성자: 강윤혁
  변경이력:
+   - 2026.10.22 (v2.6.0): 피그마 시안(홈페이지 디자인 개선) 디자인 언어 반영 · 어두운 남색 헤더와 히어로
+                          / 히어로 2단(왼쪽 글 + 오른쪽 사진 카드와 떠 있는 카드 둘) · 체크 세 줄
+                          / 문구는 기존 그대로(시안의 점수·% 수치는 넣지 않음 · 소비자 화면 규칙)
+                          / body.home 으로 범위를 묶어 블로그 등 같은 CSS 를 쓰는 쪽은 그대로
+                          / 아래 구간도 같은 언어로(둥근 흰 카드 · 민트 번호 · 신뢰 숫자 남색 블록 · FAQ 동그라미 단추)
    - 2026.10.05 (v2.5.0): IR v86 기준 개편 — 히어로 「부모님 걷기 건강」 · 문제(740만·89.7%·평생 세 번)
                           / 걷기 건강 게이지 섹션 신설(images/walk-health.jpg = 자녀 앱 실제 화면)
                           / 걸으며 멈추면 묻는 안전 기능 서술 삭제(2026-09-23 앱에서 걷어냄)
@@ -97,20 +102,20 @@
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 
     <!-- 메인 스타일시트 -->
-    <link rel="stylesheet" href="css/style.css?v=20261011">
+    <link rel="stylesheet" href="css/style.css?v=20261022b">
 
     <!-- Favicon (추후 로고 제작 후 교체) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-weight='bold'>T</text></svg>">
 </head>
-<body>
+<body class="home">
 
     <!-- ============================================================ -->
-    <!-- HEADER: 상단 네비게이션 바                                   -->
+    <!-- HEADER: 상단 네비게이션 바 (첫 화면은 어두운 남색 · 흰 로고)  -->
     <!-- ============================================================ -->
     <header class="header" id="header">
         <div class="header-inner">
             <a href="#hero" class="logo" aria-label="나이노트 홈">
-                <img src="images/logo.png" alt="주식회사 텔로스 TELOS" class="logo-img" width="213" height="46">
+                <img src="images/logo_white.png" alt="주식회사 텔로스 TELOS" class="logo-img" width="213" height="46">
             </a>
 
             <nav class="nav" id="nav" aria-label="주요 메뉴">
@@ -124,7 +129,10 @@
             </nav>
 
             <button type="button" class="btn btn-primary btn-sm header-cta js-contact-open"
-                    data-contact-topic="general" aria-label="문의하기">문의하기</button>
+                    data-contact-topic="general" aria-label="문의하기">
+                문의하기
+                <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
 
             <button class="nav-toggle" id="navToggle" aria-label="메뉴 열기" aria-expanded="false">
                 <span></span>
@@ -138,35 +146,63 @@
     <!-- ① HERO: 한 줄 메시지 + 대표 CTA                              -->
     <!-- ============================================================ -->
     <section class="hero" id="hero">
-        <div class="hero-bg" style="background-image: url('images/hero.jpg');"></div>
-        <div class="hero-overlay"></div>
+        <div class="hero-glow" aria-hidden="true"></div>
 
-        <div class="hero-content">
-            <p class="hero-tagline">나이노트 · 아무도 몰랐던 부모님 걷기의 변화</p>
-            <h1 class="hero-title">
-                나이 들며 달라지는 걸음,<br>
-                이제 자녀가<br>
-                알아봅니다
-            </h1>
-            <p class="hero-subtitle">
-                <span class="kbr">나이노트는 부모님의 걷기를 매일 재어 그분의 평소와 견주고,</span>
-                <span class="kbr">달라지면 자녀에게 알려 드립니다.</span>
-                <span class="kbr">부모님은 폰만 지니고 다니시면 됩니다</span>
-            </p>
-            <div class="hero-actions">
-                <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=com.naoncare" target="_blank" rel="noopener noreferrer">
-                    어르신 앱 받기
-                    <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-                <a class="btn btn-ghost" href="https://play.google.com/store/apps/details?id=com.naoncare.guardian" target="_blank" rel="noopener noreferrer">
-                    자녀 앱 받기
-                </a>
+        <div class="hero-inner">
+            <div class="hero-content">
+                <p class="hero-tagline">NAINOTE · PARENTS' WALKING HEALTH</p>
+                <h1 class="hero-title">
+                    나이 들며 달라지는 걸음,<br>
+                    <span class="hero-title-accent">이제 자녀가 알아봅니다</span>
+                </h1>
+                <p class="hero-subtitle">
+                    <span class="kbr">나이노트는 부모님의 걷기를 매일 재어 그분의 평소와 견주고,</span>
+                    <span class="kbr">달라지면 자녀에게 알려 드립니다.</span>
+                    <span class="kbr">부모님은 폰만 지니고 다니시면 됩니다.</span>
+                </p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=com.naoncare" target="_blank" rel="noopener noreferrer">
+                        어르신 앱 받기
+                        <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                    <a class="btn btn-ghost" href="https://play.google.com/store/apps/details?id=com.naoncare.guardian" target="_blank" rel="noopener noreferrer">
+                        자녀 앱 받기
+                    </a>
+                </div>
+                <ul class="hero-checks" aria-label="나이노트의 세 가지 약속">
+                    <li>전용 기기 없이</li>
+                    <li>누르실 것 없이</li>
+                    <li>그분의 평소와 견주어</li>
+                </ul>
+            </div>
+
+            <!-- 오른쪽: 사진 카드 + 떠 있는 카드 둘(자녀 앱이 보여 드리는 것을 글로만 · 수치 없음) -->
+            <div class="hero-visual">
+                <figure class="hero-photo">
+                    <img src="images/closing.jpg" alt="바닷가 벤치에 나란히 앉아 쉬시는 어르신 두 분의 뒷모습" width="1920" height="1280" fetchpriority="high">
+                </figure>
+                <div class="hero-chip hero-chip-top" aria-hidden="true">
+                    <span class="hero-chip-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                    </span>
+                    <span class="hero-chip-text">
+                        <small>오늘 걸음</small>
+                        <b>저절로 쌓여요</b>
+                    </span>
+                </div>
+                <div class="hero-chip hero-chip-bottom" aria-hidden="true">
+                    <span class="hero-chip-text">
+                        <small>부모님 걷기 건강</small>
+                        <b>유지</b>
+                    </span>
+                    <span class="hero-chip-ring"></span>
+                </div>
             </div>
         </div>
 
         <div class="hero-scroll-hint" aria-hidden="true">
-            <span>SCROLL</span>
             <div class="scroll-line"></div>
+            <span>SCROLL TO DISCOVER</span>
         </div>
     </section>
 

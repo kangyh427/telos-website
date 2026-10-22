@@ -3,8 +3,9 @@
  파일명: css/style.css
  저장소 경로: kangyh427/telos-website/css/style.css
  설명: 나이노트(옛 이름 텔로스 케어) 전용 랜딩 스타일시트
- 버전: 2.4.0
+ 버전: 2.6.0
  작성일: 2026.07.10
+ v2.6.0 변경: 피그마 시안 반영(파일 끝 블록 · body.home 범위 · 어두운 남색 헤더와 2단 히어로)
  v2.4.0 변경: 헤더 상시 흰 배경 고정(투명→흰 전환 방식 제거, 상태버그 차단)
               / 내비·토글을 어두운 색으로 고정, 로고 반전필터 제거 + 로고 확대(30→46px, 모바일 26→38px)
               / 푸터 글자 색 전부 순백색(#fff)화 — 어두운 배경 가독성 개선
@@ -599,4 +600,205 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
     .health-shot { max-width: 300px; margin: 0 auto; }
     .health-states { grid-template-columns: repeat(2, 1fr); }
     .health-items { grid-template-columns: repeat(2, 1fr); }
+}
+
+/*
+================================================================================
+ [추가 2026.10.22 · v2.6.0] 피그마 시안 「홈페이지 디자인 개선」 반영 (body.home 범위)
+ 디자인 언어: 청록 기운의 깊은 남색 바탕 + 밝은 민트 강조 · 왼쪽 정렬 히어로 + 사진 카드
+ 블로그·약관처럼 이 파일을 같이 쓰는 쪽은 그대로 두려고 전부 .home 아래에 둔다
+ 헤더는 맨 위와 스크롤 뒤 모두 어두운 바탕이라 흰 로고가 언제나 보인다(v2.4.0 상태 버그 재발 없음)
+================================================================================
+*/
+:root {
+    --color-mint: #46cfb3;
+    --color-mint-dark: #23a98d;
+    --color-mint-soft: #e3f7f2;
+    --color-navy-deep: #08202f;
+    --color-ink: #10212e;
+    --gradient-navy: linear-gradient(160deg, #0a2735 0%, #082232 48%, #0a2e44 100%);
+}
+
+/* 헤더 */
+.home .header { background: transparent; box-shadow: none; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.home .header.scrolled { background: rgba(8, 32, 47, 0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); }
+.home .header-inner { padding: 20px var(--container-padding); }
+.home .logo-img { height: 28px; }
+.home .nav-list { gap: 36px; }
+.home .nav-list a, .home .header.scrolled .nav-list a { color: rgba(255, 255, 255, 0.82); }
+.home .nav-list a:hover { color: var(--color-mint); }
+.home .nav-toggle span, .home .header.scrolled .nav-toggle span { background-color: #fff; }
+
+/* 버튼: 민트 바탕에 남색 글자 · 히어로와 마무리 구간은 둥근 네모 */
+.home .btn-primary { background: var(--color-mint); color: var(--color-navy-deep); box-shadow: 0 8px 24px rgba(70, 207, 179, 0.28); }
+.home .btn-primary:hover { background: #62dcc3; box-shadow: 0 12px 30px rgba(70, 207, 179, 0.38); }
+.home .btn-ghost { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; }
+.home .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.45); }
+.home .hero .btn, .home .cta .btn { border-radius: 12px; padding: 18px 26px; }
+
+/* 히어로 */
+.home .hero { display: block; min-height: auto; background: var(--gradient-navy); color: #fff; padding: 160px 0 120px; }
+.home .hero-glow { position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    background:
+        radial-gradient(620px 440px at 78% 42%, rgba(70, 207, 179, 0.10), transparent 70%),
+        radial-gradient(520px 420px at 8% 92%, rgba(40, 130, 170, 0.12), transparent 70%); }
+.home .hero-glow::after { content: ""; position: absolute; width: 980px; height: 980px; right: -300px; bottom: -600px; border-radius: 50%; border: 130px solid rgba(255, 255, 255, 0.025); }
+.home .hero-inner { position: relative; z-index: 2; max-width: var(--container-max); margin: 0 auto; padding: 0 var(--container-padding);
+    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 56px; align-items: center; }
+.home .hero-content { text-align: left; padding: 0; max-width: none; color: #fff; }
+.home .hero-tagline { color: var(--color-mint); font-size: 13px; font-weight: 700; letter-spacing: 0.22em; margin-bottom: 22px; }
+.home .hero-title { font-size: clamp(34px, 4.4vw, 58px); line-height: 1.24; letter-spacing: -0.03em; margin-bottom: 26px; }
+.home .hero-title-accent { color: var(--color-mint); }
+.home .hero-subtitle { font-size: clamp(16px, 1.5vw, 18.5px); color: rgba(255, 255, 255, 0.72); line-height: 1.8; margin-bottom: 36px; max-width: 560px; }
+.home .hero-content .hero-actions { justify-content: flex-start; }
+.home .hero-checks { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 28px; }
+.home .hero-checks li { position: relative; padding-left: 22px; font-size: 14.5px; color: rgba(255, 255, 255, 0.62); }
+.home .hero-checks li::before { content: ""; position: absolute; left: 1px; top: 50%; width: 11px; height: 6px; border-left: 2px solid var(--color-mint); border-bottom: 2px solid var(--color-mint); transform: translateY(-75%) rotate(-45deg); }
+
+.home .hero-visual { position: relative; padding: 24px 24px 32px 0; }
+.home .hero-photo { margin: 0; border-radius: 72px 24px 72px 24px; overflow: hidden; aspect-ratio: 1 / 1; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35); }
+.home .hero-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 45% 60%; }
+.home .hero-chip { position: absolute; display: flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.97); color: var(--color-navy-deep); border-radius: 16px; padding: 14px 18px; box-shadow: 0 18px 40px rgba(4, 20, 32, 0.35); }
+.home .hero-chip-top { top: 56px; left: -44px; }
+.home .hero-chip-bottom { right: -8px; bottom: 72px; padding: 16px 18px 16px 22px; gap: 24px; }
+.home .hero-chip-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--color-mint-soft); color: var(--color-mint-dark); display: flex; align-items: center; justify-content: center; }
+.home .hero-chip-icon svg { width: 18px; height: 18px; }
+.home .hero-chip-text { display: flex; flex-direction: column; line-height: 1.35; }
+.home .hero-chip-text small { font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+.home .hero-chip-text b { font-size: 16px; font-weight: 800; color: var(--color-navy-deep); }
+.home .hero-chip-bottom b { font-size: 20px; }
+.home .hero-chip-ring { position: relative; width: 46px; height: 46px; border-radius: 50%; background: conic-gradient(var(--color-mint) 0 68%, #e6ecef 68% 100%); }
+.home .hero-chip-ring::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: #fff; }
+
+.home .hero-scroll-hint { left: max(var(--container-padding), calc((100% - var(--container-max)) / 2 + var(--container-padding)));
+    transform: none; bottom: 40px; flex-direction: row; gap: 14px; color: rgba(255, 255, 255, 0.4); }
+.home .hero-scroll-hint .scroll-line { width: 40px; height: 1px; background: rgba(70, 207, 179, 0.7); animation: none; }
+.home .hero-scroll-hint span { font-size: 11px; letter-spacing: 0.24em; }
+
+/* 밝은 구간 머리글: 민트 눈썹 글자 + 진한 잉크색 제목 */
+.home .section-title { color: var(--color-ink); letter-spacing: -0.03em; }
+.home .section-title-light { color: #fff; }
+.home .problem-card-title, .home .flow-title, .home .feature-title, .home .audience-title,
+.home .trust-card-title, .home .process-title, .home .faq-q, .home .health-subtitle,
+.home .company-lead, .home .meta-value, .home .trust-stat-num { color: var(--color-ink); }
+.home .audience-card-dark .audience-title { color: #fff; }
+
+/* 히어로 바로 아래 구간: 흰 바탕에 옅은 민트 고리(시안의 WHY TELOS 구간) */
+.home .problem { background: #fff; }
+.home .problem::before { content: ""; position: absolute; width: 1000px; height: 1000px; top: -560px; right: -260px; border-radius: 50%; border: 110px solid rgba(70, 207, 179, 0.07); pointer-events: none; }
+.home .problem::after { content: ""; position: absolute; inset: auto 0 0 0; height: 40%; background: linear-gradient(180deg, rgba(245, 248, 249, 0), var(--color-bg-light)); pointer-events: none; }
+.home .problem .container { z-index: 1; }
+
+/* 어두운 구간을 히어로와 같은 남색으로 맞춘다 */
+.home .compare { background: var(--color-navy-deep); }
+.home .compare-tint { background: linear-gradient(180deg, rgba(8, 32, 47, 0.9), rgba(8, 32, 47, 0.96)); }
+.home .compare-ours b { color: var(--color-mint); }
+.home .audience-card-dark { background: var(--gradient-navy); border-color: transparent; }
+.home .audience-card-dark .audience-badge { color: var(--color-navy-deep); background: var(--color-mint); }
+.home .cta-overlay { background: linear-gradient(180deg, rgba(8, 32, 47, 0.86) 0%, rgba(8, 32, 47, 0.95) 100%); }
+.home .footer { background-color: #061a26; }
+
+/* 아래 구간 전체: 시안의 첫 화면 언어를 이어 쓴다(문구는 그대로) */
+.home .section-label { color: var(--color-mint-dark); letter-spacing: 0.22em; }
+.home .section-label-light { color: var(--color-mint); }
+.home .section-title { font-size: clamp(30px, 3.6vw, 46px); }
+.home .section-lead { color: #5c6b78; }
+.home .section-lead b { color: var(--color-mint-dark); }
+
+.home .problem-card, .home .feature-card, .home .trust-card, .home .audience-card, .home .trust-stat {
+    border-radius: 20px; border: 1px solid #e6edf0;
+    box-shadow: 0 1px 2px rgba(16, 33, 46, 0.04), 0 12px 32px rgba(16, 33, 46, 0.06); }
+.home .problem-card, .home .feature-card, .home .trust-card { transition: var(--transition); }
+.home .problem-card:hover, .home .feature-card:hover, .home .trust-card:hover {
+    transform: translateY(-4px); border-color: rgba(70, 207, 179, 0.55);
+    box-shadow: 0 1px 2px rgba(16, 33, 46, 0.04), 0 20px 44px rgba(16, 33, 46, 0.1); }
+.home .problem-card-stat { color: var(--color-mint-dark); }
+.home .problem-note { color: var(--color-ink); }
+.home .problem-note::before { content: ""; display: block; width: 40px; height: 2px; margin: 0 auto 18px; background: var(--color-mint); }
+
+/* 작동 흐름: 흰 카드 + 민트 번호 */
+.home .solution { background: var(--color-bg-light); }
+.home .flow-step { background: #fff; border: 1px solid #e6edf0; border-radius: 20px; box-shadow: 0 12px 32px rgba(16, 33, 46, 0.05); }
+.home .flow-num { background: var(--color-mint); color: var(--color-navy-deep); border-radius: 14px; }
+.home .flow-step:not(:last-child)::after { color: var(--color-mint-dark); }
+
+.home .feature-icon { background: var(--color-mint-soft); color: var(--color-mint-dark); border-radius: 14px; }
+.home .features { background: #fff; }
+
+/* 걷기 건강: 판정 색은 자녀 앱과 같은 뜻이라 그대로 · 틀만 맞춘다 */
+.home .health { background: #fff; }
+.home .process { background: var(--color-bg-light); }
+.home .health-shot img { border-radius: 28px; border-color: #e6edf0; box-shadow: 0 30px 60px rgba(16, 33, 46, 0.14); }
+.home .health-state { border-radius: 16px; }
+.home .health-items li { background: #fff; border: 1px solid #e6edf0; border-radius: 14px; }
+.home .health-note { background: var(--color-bg-light); border-color: #e6edf0; border-radius: 20px; border-left: 3px solid var(--color-mint); }
+
+/* 사진 띠: 남색 틴트를 히어로와 같은 색으로 */
+.home .band-overlay { background: linear-gradient(180deg, rgba(8, 32, 47, 0.78) 0%, rgba(10, 46, 68, 0.74) 100%); }
+.home .band-overlay-warm { background: linear-gradient(180deg, rgba(8, 32, 47, 0.55) 0%, rgba(8, 32, 47, 0.7) 100%); }
+.home .band-title::after { content: ""; display: block; width: 40px; height: 2px; margin: 18px auto 0; background: var(--color-mint); }
+
+.home .compare-card { border-radius: 20px; background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.1); }
+.home .compare-type { color: var(--color-mint); }
+
+.home .audience-badge { color: var(--color-mint-dark); background: var(--color-mint-soft); }
+.home .audience-points li::before { color: var(--color-mint-dark); }
+.home .audience-card-dark .audience-points li::before { color: var(--color-mint); }
+
+/* 도입 절차: 번호 원 + 이어지는 선 */
+.home .process-list { position: relative; }
+.home .process-step { border-top: none; padding-top: 0; }
+.home .process-num { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; margin: 0 auto 18px;
+    border-radius: 50%; background: #fff; border: 2px solid var(--color-mint); color: var(--color-mint-dark); font-size: 12px; letter-spacing: 0.04em;
+    box-shadow: 0 0 0 8px rgba(70, 207, 179, 0.1); position: relative; z-index: 1; }
+
+/* 신뢰: 숫자 넷은 남색 블록으로 */
+.home .trust { background: var(--color-bg-light); }
+.home .trust-stats { max-width: none; gap: 0; background: var(--gradient-navy); border-radius: 24px; overflow: hidden; margin-bottom: 32px; box-shadow: 0 24px 50px rgba(8, 32, 47, 0.18); }
+.home .trust-stat { background: transparent; border: none; border-radius: 0; box-shadow: none; padding: 34px 18px; }
+.home .trust-stat + .trust-stat { border-left: 1px solid rgba(255, 255, 255, 0.08); }
+.home .trust-stat-num { color: #fff; font-size: 2.5rem; }
+.home .trust-stat-unit { color: var(--color-mint); }
+.home .trust-stat-label { color: rgba(255, 255, 255, 0.66); }
+.home .trust-card-meta { color: var(--color-mint-dark); }
+
+/* 자주 묻는 질문 */
+.home .faq-item { border-radius: 16px; border-color: #e6edf0; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.home .faq-item[open] { border-color: rgba(70, 207, 179, 0.6); box-shadow: 0 12px 30px rgba(16, 33, 46, 0.06); }
+.home .faq-q::after { width: 28px; height: 28px; line-height: 26px; text-align: center; border-radius: 50%; background: var(--color-mint-soft); color: var(--color-mint-dark); font-size: 20px; }
+
+.home .company { background: #fff; }
+.home .meta-label { color: var(--color-mint-dark); }
+
+@media (max-width: 1024px) {
+    .home .trust-stats { grid-template-columns: repeat(2, 1fr); }
+    .home .trust-stat:nth-child(3) { border-left: none; }
+    .home .trust-stat:nth-child(n+3) { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+}
+
+@media (max-width: 1024px) {
+    .home .hero { padding: 130px 0 90px; }
+    .home .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+    .home .hero-visual { max-width: 560px; width: 100%; margin: 0 auto; padding: 16px 12px 24px; }
+    .home .hero-chip-top { left: -4px; top: 40px; }
+    .home .hero-chip-bottom { right: 0; bottom: 56px; }
+    .home .hero-scroll-hint { display: none; }
+}
+
+@media (max-width: 768px) {
+    .home .nav { background-color: var(--color-navy-deep); }
+    .home .logo-img { height: 26px; }
+    .home .hero { padding: 108px 0 72px; }
+    .home .hero-tagline { font-size: 12px; letter-spacing: 0.12em; }
+    .home .hero-title { font-size: clamp(30px, 8.4vw, 40px); }
+    .home .hero .btn { padding: 16px 20px; }
+    .home .hero-photo { border-radius: 48px 18px 48px 18px; }
+    .home .hero-chip { padding: 10px 14px; gap: 10px; border-radius: 14px; }
+    .home .hero-chip-bottom { gap: 16px; }
+    .home .hero-chip-icon { width: 28px; height: 28px; }
+    .home .hero-chip-ring { width: 36px; height: 36px; }
+    .home .hero-chip-ring::after { inset: 5px; }
+    .home .hero-chip-text b { font-size: 14px; }
+    .home .hero-chip-bottom b { font-size: 17px; }
+    .home .problem::before { width: 640px; height: 640px; top: -380px; right: -320px; border-width: 70px; }
 }
