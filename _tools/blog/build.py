@@ -81,6 +81,9 @@ def reading_minutes(md: str) -> int:
 # 방문 측정(2026-10-25 대표 결정 6 · 광고 없음): 구글 태그 관리자 컨테이너
 GTM_HEAD = "<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\nnew Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\nj=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n})(window,document,'script','dataLayer','GTM-5MKCW6RM');</script>\n<!-- End Google Tag Manager -->"
 
+# 애널리틱스 측정 ID(2026-10-25 · 태그 관리자 안에는 GA 태그를 넣지 않는다 · 두 번 세지 않게)
+GA4_HEAD = '<!-- Google tag (gtag.js) · 방문 통계만 · 광고 신호 끔(개인정보처리방침 제10조) -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXELWTCRMJ"></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag(\'js\', new Date());\n  gtag(\'config\', \'G-RXELWTCRMJ\', {\'allow_google_signals\': false, \'allow_ad_personalization_signals\': false});\n</script>'
+
 def head(title: str, desc: str, canonical: str, *, og_type="website", image=None, keywords=None,
          jsonld: list | None = None, prev_url=None, next_url=None, noindex=False) -> str:
     img = image or f"{SITE}/images/hero.jpg"
@@ -89,6 +92,7 @@ def head(title: str, desc: str, canonical: str, *, og_type="website", image=None
         '<html lang="ko">',
         "<head>",
         GTM_HEAD,
+        GA4_HEAD,
         '<meta charset="UTF-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
         f"<title>{e(title)}</title>",
