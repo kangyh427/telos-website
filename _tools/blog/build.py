@@ -78,6 +78,9 @@ def reading_minutes(md: str) -> int:
 
 # ── 공통 틀 ──────────────────────────────────────────────────────────────
 
+# 방문 측정(2026-10-25 대표 결정 6 · 광고 없음): 구글 태그 관리자 컨테이너
+GTM_HEAD = "<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\nnew Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\nj=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n})(window,document,'script','dataLayer','GTM-5MKCW6RM');</script>\n<!-- End Google Tag Manager -->"
+
 def head(title: str, desc: str, canonical: str, *, og_type="website", image=None, keywords=None,
          jsonld: list | None = None, prev_url=None, next_url=None, noindex=False) -> str:
     img = image or f"{SITE}/images/hero.jpg"
@@ -85,6 +88,7 @@ def head(title: str, desc: str, canonical: str, *, og_type="website", image=None
         "<!DOCTYPE html>",
         '<html lang="ko">',
         "<head>",
+        GTM_HEAD,
         '<meta charset="UTF-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
         f"<title>{e(title)}</title>",
@@ -126,6 +130,10 @@ def head(title: str, desc: str, canonical: str, *, og_type="website", image=None
 
 
 HEADER = """<body class="blog-body">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MKCW6RM"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <header class="header scrolled" id="header">
     <div class="header-inner">
         <a href="/" class="logo" aria-label="나이노트 홈">
