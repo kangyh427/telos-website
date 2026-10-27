@@ -12,7 +12,8 @@
     /sitemap.xml                 사이트 전체 지도(구글·네이버에 내는 것)
 
   ★검색에 걸리게★ = 글마다 제목·요약·대표 주소(canonical)·공유 그림(og)·구조화 데이터(BlogPosting·
-  BreadcrumbList)를 넣고, 목록·분류·관련 글·이전/다음 글로 모든 글을 서로 잇는다(고아 글이 없게).
+  BreadcrumbList · 「## 자주 묻는 질문」 절이 있으면 FAQPage)를 넣고, 목록·분류·관련 글·이전/다음 글로
+  모든 글을 서로 잇는다(고아 글이 없게). /llms.txt = AI 검색이 읽는 사이트 안내(빌드마다 새로).
 """
 from __future__ import annotations
 
@@ -278,6 +279,35 @@ def render_body(md: str) -> str:
     return h
 
 
+def plain(md: str) -> str:
+    """마크다운 한 덩어리를 구조화 데이터 · llms.txt 용 맨 글로(굵게 · 링크 · 인용 번호를 뺀다)."""
+    t = re.sub(r"\s*\[(\d+)\]", "", md)
+    t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)
+    t = re.sub(r"[*_`#>]", "", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def extract_faq(md: str) -> list[tuple[str, str]]:
+    """본문의 「## 자주 묻는 질문」 절에서 (질문, 답) 짝을 꺼낸다(2026-10-27 · 검색 결과 · AI 검색용 FAQPage).
+
+    꼴: 「**Q. …?**」 줄 다음에 답 문단. 절이 없거나 짝이 없으면 빈 목록(지난 글은 그대로)."""
+    m = re.search(r"(?ms)^##\s*자주\s*묻는\s*질문\s*$(.*?)(?=^##\s|\Z)", md)
+    if not m:
+        return []
+    pairs, q, ans = [], None, []
+    for line in m.group(1).splitlines():
+        hit = re.match(r"^\s*(?:[-*]\s*)?\**\s*Q\s*[.:]\s*(.+?)\**\s*$", line)
+        if hit:
+            if q and ans:
+                pairs.append((q, plain(" ".join(ans))))
+            q, ans = plain(hit.group(1)), []
+        elif q and line.strip():
+            ans.append(re.sub(r"^\s*\**\s*A\s*[.:]\s*\**", "", line))
+    if q and ans:
+        pairs.append((q, plain(" ".join(ans))))
+    return [(q, a) for q, a in pairs if q and a]
+
+
 def build_post(p: dict, posts: list[dict], idx: int) -> None:
     url = f"/blog/{p['slug']}/"
     img_abs = f"{SITE}/blog/{p['image']}"
@@ -319,6 +349,10 @@ def build_post(p: dict, posts: list[dict], idx: int) -> None:
              "item": f"{SITE}/blog/category/{CATEGORIES[p['category']]}/"},
             {"@type": "ListItem", "position": 4, "name": p["title"], "item": SITE + url}]},
     ]
+    faq = extract_faq(p["body_markdown"])
+    if faq:
+        ld.append({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq]})
     nav = []
     if newer:
         nav.append(f'<a class="next" href="/blog/{newer["slug"]}/"><span>다음 글</span>{e(newer["title"])}</a>')
@@ -393,6 +427,42 @@ def build_sitemap(posts: list[dict], list_urls: list[str]) -> None:
     write("/sitemap.xml", xml)
 
 
+SITE_DESC = "주식회사 텔로스의 나이노트는 노인 걷기를 매일 재어, 달라진 걸음을 자녀에게 알려 드립니다."
+
+
+def build_llms(posts: list[dict]) -> None:
+    """/llms.txt: 챗GPT · 제미나이 · 퍼플렉시티 같은 AI 가 사이트를 읽을 때 보는 안내(2026-10-27 · llmstxt.org 꼴).
+
+    빌드마다 글 목록까지 새로 쓴다(손으로 고치지 말 것)."""
+    lines = [
+        "# 주식회사 텔로스 · 나이노트 · 걷기 건강 이야기",
+        "",
+        f"> {SITE_DESC} 블로그 「{BLOG_NAME}」는 어르신 건강과 걷기에 관한 연구를 자녀와 어르신이 읽기 쉽게 풀어 쓴 글입니다.",
+        "",
+        "- 블로그 글의 숫자와 연구 결과는 글 끝 「참고 자료」에 번호로 밝힌 실제 논문(주로 PubMed 초록)에서만 가져옵니다.",
+        "- 글은 건강 정보이며 진단 · 치료 · 처방을 대신하지 않습니다. 연구 결과는 연구가 말한 만큼만 씁니다.",
+        "- 글마다 「자주 묻는 질문」과 「오늘 해 볼 작은 걸음」이 있으면 그 부분이 글의 요점입니다.",
+        "",
+        "## 회사와 앱",
+        f"- [나이노트 소개]({SITE}/): {SITE_DESC}",
+        f"- [공지사항]({SITE}/notice.html)",
+        f"- [개인정보처리방침]({SITE}/privacy.html)",
+        f"- [이용약관]({SITE}/terms.html)",
+        "",
+        "## 블로그 분류",
+        f"- [{BLOG_NAME} 전체]({SITE}/blog/): {BLOG_DESC}",
+    ]
+    for name, slug in CATEGORIES.items():
+        n = sum(1 for p in posts if p["category"] == name)
+        if n:
+            lines.append(f"- [{name}]({SITE}/blog/category/{slug}/): 글 {n}편")
+    lines += ["", "## 글 (최근 순)"]
+    for p in posts:
+        lines.append(f"- [{p['title']}]({SITE}/blog/{p['slug']}/): {plain(p['description'])} ({p['_dt'].date().isoformat()})")
+    lines += ["", "## 더 보기", f"- [RSS]({SITE}/blog/feed.xml)", f"- [사이트맵]({SITE}/sitemap.xml)", ""]
+    write("/llms.txt", "\n".join(lines))
+
+
 # ── 전체 ────────────────────────────────────────────────────────────────
 
 def clean_generated() -> None:
@@ -421,7 +491,8 @@ def build_site() -> None:
         build_post(p, posts, i)
     build_feed(posts)
     build_sitemap(posts, list_urls)
-    print(f"블로그 빌드: 글 {len(posts)}편 · 목록·분류 {len(list_urls)}쪽 · sitemap.xml · feed.xml")
+    build_llms(posts)
+    print(f"블로그 빌드: 글 {len(posts)}편 · 목록·분류 {len(list_urls)}쪽 · sitemap.xml · feed.xml · llms.txt")
 
 
 if __name__ == "__main__":
