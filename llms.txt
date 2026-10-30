@@ -14,14 +14,17 @@
 
 ## 블로그 분류
 - [걷기 건강 이야기 전체](https://www.telos.it.kr/blog/): 어르신 건강과 걷기에 관한 연구와 책을 쉽게 풀어 쓴 이야기. 걷기, 뇌 건강, 마음 건강, 생활 습관까지 매일 새 글을 올립니다.
-- [걷기 상식](https://www.telos.it.kr/blog/category/walking-basics/): 글 11편
-- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 5편
+- [걷기 상식](https://www.telos.it.kr/blog/category/walking-basics/): 글 12편
+- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 6편
 - [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 9편
-- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 19편
+- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 20편
 - [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 17편
 - [책 이야기](https://www.telos.it.kr/blog/category/books/): 글 1편
 
 ## 글 (최근 순)
+- [노인 낙상 골절, 운동과 위험 점검으로 줄일 수 있을까요?](https://www.telos.it.kr/blog/fall-fracture-risk-in-older-parents/): 노인 낙상 골절이 걱정될 때 무엇부터 할까요? 연구 192편을 모은 분석에서 운동과 기본 낙상 위험 점검이 낙상 골절이 적은 것과 관련이 있었어요. (2026-10-31)
+- [경도인지장애 운동, 부모님께는 어떤 운동이 맞을까요?](https://www.telos.it.kr/blog/exercise-for-mild-cognitive-impairment/): 경도인지장애 운동은 무엇을 해야 할까요? 연구를 모아 보니 걷기 같은 유산소 운동이 들어간 운동, 걸으며 머리를 쓰는 운동에서 인지 기능이 나아졌어요. (2026-10-31)
+- [하루 1,000보 더 걷기, 부모님께 어떤 차이가 있을까요?](https://www.telos.it.kr/blog/one-thousand-more-steps-for-parents/): 하루 1,000보 더 걷기는 어르신에게 의미가 있을까요? 노인 1만 9천여 명 자료에서 하루 1,000보 늘 때마다 사망 위험이 13% 낮게 나타났어요. (2026-10-31)
 - [걷기 목표 정하기, 부모님 걸음 수 조금씩 늘리는 법](https://www.telos.it.kr/blog/walking-goal-setting-for-parents/): 걷기 목표 정하기는 큰 숫자보다 매일 재고 조금씩 올릴 때 효과가 보였어요. 250명 연구에서 걸음 목표를 정한 무리는 12주 뒤 하루 1,542걸음 늘었어요. (2026-10-30)
 - [노인 단백질과 근육, 부모님 근력 운동과 함께 챙겨요](https://www.telos.it.kr/blog/protein-and-muscle-for-older-parents/): 노인 단백질 섭취는 근력 운동과 함께일 때 근육에 더 도움이 됐어요. 연구 10편 1,154명을 모은 분석에서 단백질 보충 쪽 근육량과 걷는 속도가 나아졌어요. (2026-10-30)
 - [부부 함께 운동하면 닮아 갈까요? 부모님 두 분 걷기](https://www.telos.it.kr/blog/couple-walking-for-older-parents/): 부부 함께 운동하는 습관은 서로 닮아요. 72쌍을 7일 동안 잰 연구에서 한 사람이 앉아 있는 시간은 배우자와 함께 움직였어요. 부모님 두 분이 같이 걷도록 돕는 법을 정리했어요. (2026-10-30)
