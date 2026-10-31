@@ -15,13 +15,16 @@
 ## 블로그 분류
 - [걷기 건강 이야기 전체](https://www.telos.it.kr/blog/): 어르신 건강과 걷기에 관한 연구와 책을 쉽게 풀어 쓴 이야기. 걷기, 뇌 건강, 마음 건강, 생활 습관까지 매일 새 글을 올립니다.
 - [걷기 상식](https://www.telos.it.kr/blog/category/walking-basics/): 글 12편
-- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 6편
-- [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 9편
+- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 7편
+- [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 10편
 - [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 20편
-- [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 17편
+- [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 18편
 - [책 이야기](https://www.telos.it.kr/blog/category/books/): 글 1편
 
 ## 글 (최근 순)
+- [노인 운동 동기, 부모님이 운동을 망설이시는 까닭은?](https://www.telos.it.kr/blog/why-older-parents-hesitate-to-exercise/): 노인 운동 동기가 궁금하다면 읽어 보세요. 70세 이상 4,978명의 이야기를 모은 연구에서 넘어질 걱정과 통증은 운동을 막았고, 함께할 사람과 즐거움은 운동을 이끌었어요. (2026-11-01)
+- [5분 운동 간식, 부모님께 짧게 자주 해도 도움이 될까요?](https://www.telos.it.kr/blog/five-minute-exercise-snacks-for-parents/): 5분 운동도 의미가 있을까요? 무작위 연구 11편, 414명을 모은 분석에서 5분 이하 운동을 하루 2번 이상 하면 심폐 체력이 좋아졌고 해낸 비율은 91.1%였어요. (2026-11-01)
+- [노인 기억력 운동 시간, 부모님은 몇 분씩 걸으면 될까요?](https://www.telos.it.kr/blog/memory-exercise-time-for-parents/): 노인 기억력 운동 시간이 궁금하다면 참고하세요. 45세 이상 2881명을 모은 연구에서 한 번에 20~45분, 주 5~7일 유산소 운동 때 작업 기억 효과가 가장 컸어요. (2026-11-01)
 - [노인 낙상 골절, 운동과 위험 점검으로 줄일 수 있을까요?](https://www.telos.it.kr/blog/fall-fracture-risk-in-older-parents/): 노인 낙상 골절이 걱정될 때 무엇부터 할까요? 연구 192편을 모은 분석에서 운동과 기본 낙상 위험 점검이 낙상 골절이 적은 것과 관련이 있었어요. (2026-10-31)
 - [경도인지장애 운동, 부모님께는 어떤 운동이 맞을까요?](https://www.telos.it.kr/blog/exercise-for-mild-cognitive-impairment/): 경도인지장애 운동은 무엇을 해야 할까요? 연구를 모아 보니 걷기 같은 유산소 운동이 들어간 운동, 걸으며 머리를 쓰는 운동에서 인지 기능이 나아졌어요. (2026-10-31)
 - [하루 1,000보 더 걷기, 부모님께 어떤 차이가 있을까요?](https://www.telos.it.kr/blog/one-thousand-more-steps-for-parents/): 하루 1,000보 더 걷기는 어르신에게 의미가 있을까요? 노인 1만 9천여 명 자료에서 하루 1,000보 늘 때마다 사망 위험이 13% 낮게 나타났어요. (2026-10-31)
