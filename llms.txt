@@ -15,13 +15,16 @@
 ## 블로그 분류
 - [걷기 건강 이야기 전체](https://www.telos.it.kr/blog/): 어르신 건강과 걷기에 관한 연구와 책을 쉽게 풀어 쓴 이야기. 걷기, 뇌 건강, 마음 건강, 생활 습관까지 매일 새 글을 올립니다.
 - [걷기 상식](https://www.telos.it.kr/blog/category/walking-basics/): 글 12편
-- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 7편
-- [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 10편
-- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 23편
+- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 8편
+- [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 11편
+- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 24편
 - [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 18편
 - [책 이야기](https://www.telos.it.kr/blog/category/books/): 글 1편
 
 ## 글 (최근 순)
+- [노인 걸음 속도와 우울, 걸음이 느려지면 마음도 살펴야 할까요?](https://www.telos.it.kr/blog/slow-walking-speed-and-depression-in-parents/): 노인 걸음 속도가 느려지면 우울 위험도 달라질까요? 10편의 연구를 모은 분석에서 걸음이 느린 어른은 우울이 새로 생길 위험이 높게 나타났어요(오즈비 1.30). (2026-11-03)
+- [노인 단백질 섭취, 많이 드시면 근육과 걸음이 지켜질까요?](https://www.telos.it.kr/blog/protein-intake-muscle-for-older-parents/): 노인 단백질 섭취와 근육, 연구에서는 어땠을까요? 11,332명 연구에서 단백질을 넉넉히 드신 분의 힘과 걸음이 좋았지만, 오래 지켜보면 운동이 함께여야 했어요. (2026-11-03)
+- [뇌졸중 후 운동, 부모님 기억력과 생각하는 힘에 도움이 될까요?](https://www.telos.it.kr/blog/exercise-after-stroke-for-parents-memory/): 뇌졸중 후 운동, 생각하는 힘에도 도움이 될까요? 107명 연구에서 운동한 쪽은 해마 크기 차이는 없었지만 12개월 뒤 생각을 옮겨 가는 검사 결과가 더 나았어요. (2026-11-03)
 - [80대 부모님 의자 운동, 고무 밴드가 더 나았던 까닭](https://www.telos.it.kr/blog/chair-exercise-with-bands-for-parents-over-80/): 80대 부모님 의자 운동을 찾는다면 보세요. 평균 87.91세 어르신 36명 연구에서 석 달 동안 의자에 앉아 고무 밴드 운동을 한 무리만 근력과 균형이 좋아졌어요. (2026-11-02)
 - [식후 혈당 걷기, 당뇨 부모님은 30분마다 3분이면 될까요](https://www.telos.it.kr/blog/short-walks-after-meals-blood-sugar-for-parents/): 식후 혈당 걷기가 궁금하다면 보세요. 당뇨가 있는 24명 연구에서 30분마다 3분씩 가볍게 걸었을 때 식후 혈당 곡선 넓이가 24.2에서 14.8로 낮게 나타났어요. (2026-11-02)
 - [노인 태극권 운동 시간, 일주일에 몇 번 몇 분이 좋을까요](https://www.telos.it.kr/blog/tai-chi-how-often-for-older-parents/): 노인 태극권 운동 시간이 궁금하다면 보세요. 28편 연구 2000명을 모은 분석에서 일주일에 두 번 넘게, 한 번에 45분 넘게 할 때 균형 결과가 더 좋았어요. (2026-11-02)
