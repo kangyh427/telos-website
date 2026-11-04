@@ -40,7 +40,7 @@ html,body{height:100%;margin:0;background:var(--night);color:var(--paper);font-f
 .body{scrollbar-width:thin;scrollbar-color:rgba(43,33,24,.45) transparent}
 .body::-webkit-scrollbar{width:6px;-webkit-appearance:none}
 .body::-webkit-scrollbar-thumb{background:rgba(43,33,24,.45);border-radius:3px}
-.topbar{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));display:flex;gap:8px}
+.topbar{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));display:flex;gap:8px;align-items:center}
 .sheet:not([hidden])~.topbar{right:max(420px,calc(env(safe-area-inset-right,0px) + 420px))}
 .music{display:flex;gap:8px;align-items:center}
 #thought{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none}
@@ -50,7 +50,7 @@ html,body{height:100%;margin:0;background:var(--night);color:var(--paper);font-f
 #thought path,#thought circle{fill:#fffdf8;stroke:#2b2118;stroke-width:3}
 #thought span{position:absolute;left:20%;right:13%;top:16%;bottom:30%;display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--display);font-size:15px;font-weight:700;line-height:1.35;color:#2b2118;word-break:keep-all}
 .vol{display:flex;align-items:center;width:112px;height:38px;padding:0 12px;box-sizing:border-box;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(20,26,43,.55);backdrop-filter:blur(6px)}
-.topbar button,.lower button{font:inherit;font-size:14px;font-weight:600;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(20,26,43,.55);color:var(--paper);cursor:pointer;backdrop-filter:blur(6px)}
+.topbar button,.lower button{font:inherit;font-size:14px;font-weight:600;white-space:nowrap;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(20,26,43,.55);color:var(--paper);cursor:pointer;backdrop-filter:blur(6px)}
 .lower{position:fixed;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;flex-wrap:wrap}
 .lower button{pointer-events:auto}
 .lower button.app{background:var(--gam2);color:var(--ink);border-color:transparent}
@@ -110,15 +110,21 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
 .qr div{flex:none;width:96px;height:96px;background:#fff;padding:4px;border-radius:4px}
 .qr svg{width:100%;height:100%;display:block}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:4px;font-size:14px}
+@media (min-width:761px) and (max-width:960px){
+  .sheet:not([hidden])~.topbar{left:max(20px,env(safe-area-inset-left,0px));right:auto;top:calc(204px + env(safe-area-inset-top,0px))}
+}
 @media (max-width:760px){
   .sheet{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));top:auto;bottom:10px;width:auto;max-height:52%}
-  .hud{top:calc(70px + env(safe-area-inset-top,0px))}
-  .brand{font-size:20px}
+  /* 휴대폰: 단추를 맨 윗줄 한 줄로 두고 제목 · 숫자는 그 아래(글자를 가리지 않게) */
+  .brand{font-size:20px;top:calc(54px + env(safe-area-inset-top,0px))}
+  .hud{top:calc(104px + env(safe-area-inset-top,0px))}
+  .topbar{left:max(16px,env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));justify-content:flex-end;pointer-events:none}
+  .topbar>*{pointer-events:auto}
   .topbar button{padding:8px 11px;font-size:13px}
-  .music{flex-direction:column;align-items:flex-end;gap:6px}
+  .music{flex:1 1 auto;min-width:0;justify-content:flex-end;gap:8px}
   #thought .cloud{width:164px}
   #thought span{font-size:13px}
-  .vol{height:34px}
+  .vol{height:34px;flex:0 1 112px;min-width:0}
   .sheet:not([hidden])~.topbar{right:max(16px,env(safe-area-inset-right,0px))}
   h1{font-size:22px}
 }
@@ -349,11 +355,14 @@ function init(){
     const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));gg.setIndex(idx);
     const m=new THREE.Mesh(gg,new THREE.MeshBasicMaterial({color:col,fog:false,side:THREE.DoubleSide}));m.userData.base=new THREE.Color(col);ridges.push(m);m.renderOrder=-1;scene.add(m);
   });
-  // 언덕의 소나무
+  // 언덕의 소나무: 카메라가 움직이는 쪽(끌어 돌리기 · 확대 범위까지)에는 두지 않고 먼 언덕에만 둠 · rnd 쓰는 횟수는 그대로(감나무 모양이 바뀌지 않게)
   const trunkG=new THREE.CylinderGeometry(.1,.16,1.3,6),pineG=new THREE.ConeGeometry(1,1.6,7);
-  for(let i=0;i<46;i++){const a=rnd()*6.28,r=30+rnd()*70,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(Math.atan2(z,x)+.9)<.32)continue;
+  const camSide=(x,z)=>{const f=Math.atan2(x+2.5,z+1);return f>-1.55&&f<.75},roadSide=a=>Math.abs(Math.atan2(Math.sin(a),Math.cos(a))+.9)<.32;
+  for(let i=0;i<46;i++){let a=rnd()*6.28;const r=50+rnd()*63;if(roadSide(a))continue;
     const t=new THREE.Group(),s=.9+rnd()*1.3,tm=new THREE.Mesh(trunkG,std(0x3b2a20));tm.position.y=.6;t.add(tm);
-    for(let k=0;k<3;k++){const c=new THREE.Mesh(pineG,std(0x2f4a3a,{flatShading:true}));c.position.y=1.5+k*.72;c.scale.setScalar(1.05-k*.26);c.castShadow=r<40;t.add(c)}
+    if(camSide(Math.cos(a)*r,Math.sin(a)*r)){a+=Math.PI;if(roadSide(a))a+=.7}
+    const x=Math.cos(a)*r,z=Math.sin(a)*r;
+    for(let k=0;k<3;k++){const c=new THREE.Mesh(pineG,std(0x2f4a3a,{flatShading:true}));c.position.y=1.5+k*.72;c.scale.setScalar(1.05-k*.26);t.add(c)}
     t.position.set(x,groundY(x,z)-.1,z);t.scale.setScalar(s);scene.add(t)}
 
   // 감나무
