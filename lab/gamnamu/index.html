@@ -281,8 +281,18 @@ function person(o){
   const body=new THREE.Mesh(new THREE.CylinderGeometry(.17,o.skirt?.3:.22,o.skirt?.66:.6,12),m(o.coat));body.position.y=.3;body.castShadow=true;up.add(body);
   const hd=new THREE.Group();hd.position.y=.8;up.add(hd);
   const head=new THREE.Mesh(new THREE.SphereGeometry(.19,16,14),m(0xf1c9a5));head.castShadow=true;hd.add(head);
-  const hair=new THREE.Mesh(new THREE.SphereGeometry(.205,16,12,0,6.3,0,1.45),m(o.hair));hair.position.set(0,.02,-.03);hair.castShadow=true;hd.add(hair);
-  if(o.perm)for(let i=0;i<9;i++){const a=i/9*6.28,b=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),m(o.hair));b.position.set(Math.cos(a)*.18,Math.sin(i*2.1)*.05,Math.sin(a)*.17-.05);hd.add(b)}
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.205,16,12,0,6.3,0,1.45),m(o.hair));hair.position.set(0,.02,-.01);hair.rotation.x=-.45;hair.castShadow=true;hd.add(hair);
+  // 파마 뭉치는 옆과 뒤에만(앞에 두면 얼굴에 혹처럼 붙음)
+  if(o.perm)for(let i=0;i<9;i++){const a=Math.PI*(.95+i/8*1.1),b=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),m(o.hair));b.position.set(Math.cos(a)*.18,.04+Math.sin(i*2.1)*.05,Math.sin(a)*.17-.05);hd.add(b)}
+  // 얼굴: 머리 앞쪽(+z) 겉면에 눈 · 눈썹 · 코 · 볼 · 입을 붙임
+  const dark=m(0x2e2320),brow=m(o.hair===0x2a2320?0x2a2320:0x6e6a64);
+  for(const s of[-1,1]){
+    const e=new THREE.Mesh(new THREE.SphereGeometry(.018,10,8),dark);e.scale.set(1,1.15,.45);e.position.set(s*.066,.018,.177);hd.add(e);
+    const b=new THREE.Mesh(new THREE.BoxGeometry(.052,.011,.01),brow);b.position.set(s*.068,.066,.166);b.rotation.z=-s*.08;hd.add(b);
+    const c=new THREE.Mesh(new THREE.CircleGeometry(.03,14),m(0xe58f86,{transparent:true,opacity:.42}));c.position.set(s*.108,-.042,.152);c.lookAt(s*.216,-.084,.304);hd.add(c);
+  }
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(.021,10,8),m(0xe6b591));nose.scale.set(1,.85,.8);nose.position.set(0,-.024,.186);hd.add(nose);
+  const lip=new THREE.Mesh(new THREE.TorusGeometry(.05,.006,6,14,1.6),m(0x9a5148));lip.position.set(0,-.046,.194);lip.rotation.set(.5,0,3.912);hd.add(lip);
   if(o.cap){const c=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.1,14),m(o.cap));c.position.y=.15;const b=new THREE.Mesh(new THREE.BoxGeometry(.24,.03,.16),m(o.cap));b.position.set(0,.11,.2);hd.add(c,b)}
   const arm=x=>{const p=new THREE.Group();p.position.set(x,.52,0);const a=new THREE.Mesh(new THREE.CapsuleGeometry(.055,.32,4,8),m(o.coat));a.position.y=-.2;a.castShadow=true;const h=new THREE.Mesh(new THREE.SphereGeometry(.06,8,6),m(0xf1c9a5));h.position.y=-.42;p.add(a,h);up.add(p);return p};
   const cane=new THREE.Mesh(new THREE.CylinderGeometry(.018,.022,.92,6),m(0x4a3324));cane.position.set(o.skirt?-.34:.34,.46,.22);cane.rotation.x=-.12;cane.visible=false;g.add(cane);
