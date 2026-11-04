@@ -6,8 +6,14 @@
 <meta name="robots" content="noindex">
 <title>백 살 감나무</title>
 <meta name="description" content="부모님이 100세까지 곁에 계신다면 앞으로 몇 번을 더 뵐 수 있을까요. 감나무로 헤아려 보세요.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.telos.it.kr/lab/gamnamu/">
 <meta property="og:title" content="백 살 감나무">
-<meta property="og:description" content="앞으로 몇 번을 더 뵐 수 있을까요">
+<meta property="og:description" content="부모님과 앞으로 몇 번을 더 뵐 수 있을까요">
+<meta property="og:image" content="https://www.telos.it.kr/lab/gamnamu/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <!-- Google tag (gtag.js) · 방문 통계만 · 광고 신호 끔(개인정보처리방침 제10조) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-RXELWTCRMJ"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-RXELWTCRMJ',{'allow_google_signals':false,'allow_ad_personalization_signals':false});</script>
@@ -110,6 +116,13 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
 .qr div{flex:none;width:96px;height:96px;background:#fff;padding:4px;border-radius:4px}
 .qr svg{width:100%;height:100%;display:block}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:4px;font-size:14px}
+.shot{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;box-sizing:border-box;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(20,26,43,.9)}
+.shot[hidden]{display:none}
+.shot img{display:block;max-width:100%;max-height:calc(100% - 96px);border-radius:4px}
+.shot p{margin:0;color:var(--paper);font-size:13px;opacity:.85}
+.shot div{display:flex;gap:8px}
+.shot a,.shot button{font:inherit;font-size:14px;font-weight:600;padding:10px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:transparent;color:var(--paper);text-decoration:none;cursor:pointer}
+.shot a{background:var(--gam2);color:var(--ink);border-color:transparent}
 @media (min-width:761px) and (max-width:960px){
   .sheet:not([hidden])~.topbar{left:max(20px,env(safe-area-inset-left,0px));right:auto;top:calc(204px + env(safe-area-inset-top,0px))}
 }
@@ -145,6 +158,7 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
 <div class="topbar" id="topbar"><div class="music"><button id="musicBtn" type="button" aria-pressed="false">음악 켜기</button><div class="vol" id="volBox" hidden><input id="volR" type="range" min="0" max="100" value="55" aria-label="음악 소리 크기"></div></div><button id="editBtn" type="button" hidden>정보 변경</button></div>
 <div class="lower" id="lower" hidden><button id="timeBtn" type="button">시간 돌려 보기</button><button id="appBtn" class="app" type="button">나이노트 앱 설치</button></div>
 <div class="toast" id="toast" hidden></div>
+<div class="shot" id="shot" hidden><img id="shotI" alt="내 감나무 결과 그림"><p>휴대폰에서는 그림을 길게 눌러 저장할 수 있어요</p><div><a id="shotA" download="백살감나무.jpg">저장</a><button id="shotS" type="button" hidden>공유</button><button id="shotX" type="button">닫기</button></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
@@ -156,6 +170,7 @@ const SPEEDS=[{n:'1년 = 20초',s:20},{n:'1년 = 5초',s:5},{n:'1년 = 1초',s:1
 const DIST=[{n:'같은 동네',d:0,t:'걸어서 갈 거리'},{n:'차로 1시간',d:1,t:'왕복 2시간'},{n:'KTX 거리',d:2,t:'왕복 5시간쯤'},{n:'비행기 거리',d:3,t:'왕복 하루'}];
 const HRS=[{n:'식사 한 끼',h:3},{n:'반나절',h:6},{n:'하루 종일',h:12},{n:'1박 2일',h:30}];
 const APP='https://play.google.com/store/apps/details?id=com.naoncare.guardian&referrer=utm_source%3Dgamnamu%26utm_medium%3Dweb%26utm_campaign%3Dlab_gamnamu'; // 플레이 콘솔에서 감나무에서 온 방문을 가르는 꼬리표
+const WEB_ON=false,WEB='https://app.telos.it.kr/?utm_source=gamnamu&utm_medium=web&utm_campaign=lab_gamnamu',IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),TO_WEB=WEB_ON&&IOS,GO=TO_WEB?WEB:APP; // 아이폰은 앱이 없어 보호자 웹 판으로 보냄 · app.telos.it.kr 공개 뒤 WEB_ON 을 true 로
 const YEAR=365.25*864e5;
 const who=()=>S.mom&&S.dad?'부모님':S.mom?'엄마':'아빠';
 const refAge=()=>S.mom&&S.dad?Math.min(S.ageM,S.ageD):S.mom?S.ageM:S.ageD;
@@ -235,19 +250,45 @@ function stepKeep(){
   const c=calc(),max=Math.max(S.per,S.sib,1);
   $('body').innerHTML=`<h1>못 뵙는 ${c.away}일은 어떻게 살필까요?</h1>
   <div class="nai"><h2>부모님을 더 오래, 건강하게 뵙고 싶다면 걷기 변화부터 살펴보세요</h2><p>걸음이 조금씩 줄고 느려지는 변화는 전화로는 알기 어렵습니다. 나이노트는 부모님 휴대폰이 걷기를 저절로 기록하고 분석해, 평소와 달라지면 멀리 있는 자녀에게 먼저 알려 드립니다.</p>
-  <div class="qr"><div id="qr" aria-label="나이노트 설치 QR 코드"></div><p style="font-size:13px">휴대폰 카메라로 비추면 나이노트 설치 화면이 열립니다.</p></div>
-  <a href="${APP}" target="_blank" rel="noopener">나이노트 받기 · 현재 무료</a><small>안드로이드 전용 · 걷기 기록을 보여 주는 서비스로 의학적 판정을 하지 않습니다</small></div>
+  <div class="qr"><div id="qr" aria-label="나이노트 설치 QR 코드"></div><p style="font-size:13px">휴대폰 카메라로 비추면 ${TO_WEB?'나이노트 웹이':'나이노트 설치 화면이'} 열립니다.</p></div>
+  <a href="${GO}" target="_blank" rel="noopener">${TO_WEB?'나이노트 열기':'나이노트 받기'} · 현재 무료</a><small>${TO_WEB?'아이폰은 웹으로 열립니다 · 부모님 휴대폰은 안드로이드 앱이 필요합니다':'안드로이드 전용'} · 걷기 기록을 보여 주는 서비스로 의학적 판정을 하지 않습니다</small></div>
   <div class="sib"><label class="t" for="sibR">우리 집 안부 순위<output id="sibO">${S.sib}번</output></label><input id="sibR" type="range" min="0" max="52" value="${S.sib}" aria-label="동생이 1년에 뵙는 횟수"><div class="row"><span>나</span><div><i id="sa" style="width:${S.per/max*100}%"></i></div><b>${S.per}</b></div><div class="row"><span>동생</span><div><i id="sb" style="width:${S.sib/max*100}%"></i></div><b id="sn">${S.sib}</b></div><p class="note">가족이 함께 모으는 기능은 준비 중입니다. 지금은 직접 넣어 견주어 보세요.</p></div>
-  <div><p class="note" style="margin-bottom:6px">인스타 · 스레드에 올리는 글</p><p id="shareT" style="color:var(--ink);font-size:14px"></p></div>`;
-  try{const q=qrcode(0,'M');q.addData(APP);q.make();$('qr').innerHTML=q.createSvgTag({cellSize:3,margin:2,scalable:true})}catch{$('qr').textContent='QR'}
+  <div><p class="note" style="margin-bottom:6px">인스타 · 스레드에 올리는 글</p><p id="shareT" style="color:var(--ink);font-size:14px"></p><div class="saverow" style="margin-top:8px"><button type="button" id="shotB">내 감나무 그림 저장</button></div></div>`;
+  try{const q=qrcode(0,'M');q.addData(GO);q.make();$('qr').innerHTML=q.createSvgTag({cellSize:3,margin:2,scalable:true})}catch{$('qr').textContent='QR'}
   const t=`${who()}${who()==='부모님'?'과':'랑'} 앞으로 ${fmt(c.meets)}번 남았대요. 함께 있을 시간 ${fmt(c.days)}일. 오늘 전화 한 통 드렸습니다. 우리 집 감나무는 감이 몇 개일까요?`;
-  $('shareT').textContent=t;
+  $('shareT').textContent=t;$('shotB').onclick=shareImage;
   $('sibR').oninput=e=>{S.sib=+e.target.value;$('sibO').textContent=S.sib+'번';const m=Math.max(S.per,S.sib,1);$('sb').style.width=S.sib/m*100+'%';$('sa').style.width=S.per/m*100+'%';$('sn').textContent=S.sib};
   const f=$('foot');f.innerHTML='';
   const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step=3;render()};
   const d=document.createElement('button');d.className='btn';d.textContent='완료';d.onclick=closePanel;
   const n=document.createElement('button');n.className='btn ghost';n.textContent='공유 글 복사';n.onclick=async()=>{track('share_copy');try{await navigator.clipboard.writeText(t);toast('복사했습니다')}catch{toast('글을 길게 눌러 복사해 주세요')}};
   f.append(b,n,d);
+}
+// 결과 그림: 부모님을 감나무 앞에 잠시 세워 세로 그림으로 찍고, 내 숫자를 얹어 저장 · 공유 창을 띄움
+let shotFn=null;
+function shotText(x,W,H,c){
+  const mid=(t,y,size,col,font)=>{x.font=font;x.fillStyle=col;x.shadowColor='rgba(20,16,12,.55)';x.shadowBlur=size*.28;x.textAlign='center';x.fillText(t,W/2,y)},D='"Gowun Batang","Noto Serif KR",serif',B='"IBM Plex Sans KR","Noto Sans KR",sans-serif',n=`${fmt(c.meets)}번`;
+  mid(`${who()}${who()==='부모님'?'과':'랑'} 앞으로`,146,50,'#fff4e2',`700 50px ${D}`);
+  let s=224;x.font=`700 ${s}px ${D}`;while(x.measureText(n).width>900)x.font=`700 ${s-=8}px ${D}`;
+  mid(n,178+s*.8,s,'#ffb347',`700 ${s}px ${D}`);
+  mid(`함께 있을 시간 ${fmt(c.days)}일`,452,42,'#fff4e2',`700 42px ${D}`);
+  mid('우리 집 감나무는 감이 몇 개일까요?',1238,42,'#fff4e2',`700 42px ${D}`);
+  mid(`${refAge()}세 · 1년 ${S.per}번 · 100세까지 곁에 계신다고 가정 · 백 살 감나무`,1296,27,'#f3e7d3',`500 27px ${B}`);
+}
+async function shareImage(){
+  track('share_image');
+  const W=1080,H=1350,c=calc(),keep={...day},x0=Math.cos(1.94)*RING,z0=Math.sin(1.94)*RING;
+  try{await Promise.all([document.fonts.load('700 200px "Gowun Batang"'),document.fonts.load('500 30px "IBM Plex Sans KR"')])}catch{}
+  const v=document.createElement('canvas');v.width=W;v.height=H;
+  Object.assign(day,{x:x0,z:z0,h:Math.atan2(-8.8-x0,20.8-z0),kind:'think',mode:'hold',t:2,said:true});
+  await new Promise(res=>{let n=0;shotFn=()=>{day.t=2;if(++n<3)return;shotFn=null;
+    R.setPixelRatio(1);R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();cam.position.set(-8.8,2.6,20.8);cam.lookAt(-1.2,4.55,0);R.render(scene,cam);
+    v.getContext('2d').drawImage(R.domElement,0,0,W,H);
+    R.setPixelRatio(Math.min(devicePixelRatio,2));size();res()}});
+  Object.assign(day,keep);
+  shotText(v.getContext('2d'),W,H,c);
+  $('shotI').src=v.toDataURL('image/jpeg',.9);$('shotA').href=$('shotI').src;$('shot').hidden=false;
+  v.toBlob(b=>{const f=new File([b],'백살감나무.jpg',{type:'image/jpeg'}),s=$('shotS');s.hidden=!(navigator.canShare&&navigator.canShare({files:[f]}));s.onclick=()=>navigator.share({files:[f]}).catch(()=>{})},'image/jpeg',.9);
 }
 function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800)}
 function updateHud(){
@@ -628,7 +669,7 @@ function tick(ts){
   const want=((wide?32.1:36)+target.d*(wide?1.2:1.6))*zoom;camR+=(want-camR)*Math.min(1,dt*2);
   const open=!$('sheet').hidden,right=V(Math.cos(yaw),0,-Math.sin(yaw)),off=wide&&open?camR*.19:0,cx=Math.sin(yaw)*camR+right.x*off-2.5,cz=Math.cos(yaw)*camR+right.z*off-1,lx=right.x*off-2.5,lz=right.z*off-1;
   camY+=((wide?5.6:(open?7.4:5.8))-camY)*Math.min(1,dt*2.5);lookY+=((wide?3.5:(open?-.4:2.9))-lookY)*Math.min(1,dt*2.5);cam.position.set(cx,camY,cz);cam.lookAt(lx,lookY,lz);
-  thoughtPlace();R.render(scene,cam);requestAnimationFrame(tick);
+  thoughtPlace();R.render(scene,cam);if(shotFn)shotFn();requestAnimationFrame(tick);
 }
 
 /* 시간 시뮬레이션: 고른 배속으로 시간이 흐르며 자녀가 다녀갈 때마다 감이 떨어짐 */
@@ -675,8 +716,10 @@ try{if(!window.THREE)throw 0;init();setScene();tree.scale.setScalar(.3)}catch(e)
 render();
 if(was>=0)closePanel();
 if(was>=0)toast(`저장한 감나무를 열었습니다 · 기준일부터 ${was}일 지났습니다`);
+if(TO_WEB)$('appBtn').textContent='나이노트 웹으로 보기';
+$('shotX').onclick=()=>{$('shot').hidden=true};
 $('appBtn').onclick=()=>{track('app_panel');openPanel(4)};
-document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href*="play.google"]');if(a)track('app_install')});
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href*="play.google"],a[href*="app.telos"]');if(a)track('app_install')});
 $('timeBtn').onclick=()=>openPanel(3);
 $('musicBtn').onclick=()=>{const v=!bgm.on;try{localStorage.setItem('gamnamuMusic',v?'on':'off')}catch{}if(bgm.stop)bgm.stop();setMusic(v)};
 bgmAuto();
