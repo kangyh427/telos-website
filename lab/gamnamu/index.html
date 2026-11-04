@@ -636,14 +636,14 @@ async function play(){
   if(end){$('hudU').textContent=`${who()} 100세 · 함께한 시간 ${fmt(calc().days)}일`;$('hudL').textContent='모두 함께했습니다'}
 }
 
-/* 배경음악: 단추를 누를 때만 받음 · 세 곡을 이어 듣고 처음으로 돌아감 */
+/* 배경음악: 기본은 켜짐 · 브라우저가 첫 손길 전 소리를 막으면 첫 손길에 시작 · 끈 사람은 기억 · 세 곡을 이어 듣고 처음으로 돌아감 */
 const bgm={el:null,i:0,on:false,raf:0,vol:.55,n:3};
 function bgmFade(to,ms,done){const a=bgm.el,from=a.volume,t0=performance.now();cancelAnimationFrame(bgm.raf);
   const tick=t=>{const k=Math.min((t-t0)/ms,1);a.volume=from+(to-from)*k;if(k<1)bgm.raf=requestAnimationFrame(tick);else if(done)done()};
   bgm.raf=requestAnimationFrame(tick)}
 function bgmBtn(){const b=$('musicBtn');b.textContent=bgm.on?'음악 끄기':'음악 켜기';b.setAttribute('aria-pressed',bgm.on);$('volBox').hidden=!bgm.on||bgm.fixed}
 function bgmSrc(){bgm.el.src=`music/${bgm.i+1}.mp3`}
-async function setMusic(on){
+async function setMusic(on,quiet){
   if(!on){bgm.on=false;bgmBtn();bgmFade(0,900,()=>bgm.el.pause());return}
   if(!bgm.el){
     const a=bgm.el=new Audio();a.preload='none';a.volume=.5;bgm.fixed=a.volume!==.5;a.volume=0; // 아이폰은 소리 크기를 코드로 못 바꿔 막대를 숨기고 기기 단추에 맡김
@@ -651,8 +651,14 @@ async function setMusic(on){
     a.onerror=()=>{bgm.on=false;bgmBtn();toast('음악을 불러오지 못했습니다')};
     bgm.i=Math.floor(Math.random()*bgm.n);bgmSrc(); // 첫 곡은 무작위 · 그 뒤로는 차례대로
   }
-  bgm.on=true;bgmBtn();track('music_on');
-  try{await bgm.el.play();bgmFade(bgm.vol,2500)}catch{bgm.on=false;bgmBtn();toast('음악을 틀 수 없습니다')}
+  bgm.on=true;bgmBtn();
+  try{await bgm.el.play();bgmFade(bgm.vol,2500);track('music_on');return true}catch{if(quiet)return false;bgm.on=false;bgmBtn();toast('음악을 틀 수 없습니다');return false}
+}
+function bgmAuto(){
+  try{if(localStorage.getItem('gamnamuMusic')==='off')return}catch{}
+  const evs=['click','touchend','keydown'],un=()=>evs.forEach(n=>removeEventListener(n,go,true)),go=e=>{if(e.target.closest&&e.target.closest('#musicBtn'))return;un();setMusic(true)};
+  bgm.stop=un;evs.forEach(n=>addEventListener(n,go,true));
+  setMusic(true,true).then(ok=>{if(ok)un()});
 }
 function load(){try{const v=JSON.parse(localStorage.getItem('gamnamu')||'null');if(v){Object.assign(S,v);S.done=true;return Math.floor(elapsed()*365.25)}}catch{}return -1}
 const was=load();
@@ -663,7 +669,8 @@ if(was>=0)toast(`저장한 감나무를 열었습니다 · 기준일부터 ${was
 $('appBtn').onclick=()=>{track('app_panel');openPanel(4)};
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href*="play.google"]');if(a)track('app_install')});
 $('timeBtn').onclick=()=>openPanel(3);
-$('musicBtn').onclick=()=>setMusic(!bgm.on);
+$('musicBtn').onclick=()=>{const v=!bgm.on;try{localStorage.setItem('gamnamuMusic',v?'on':'off')}catch{}if(bgm.stop)bgm.stop();setMusic(v)};
+bgmAuto();
 try{const v=localStorage.getItem('gamnamuVol');if(v!==null){bgm.vol=v/100;$('volR').value=v}}catch{}
 $('volR').oninput=e=>{bgm.vol=e.target.value/100;cancelAnimationFrame(bgm.raf);if(bgm.el)bgm.el.volume=bgm.vol;try{localStorage.setItem('gamnamuVol',e.target.value)}catch{}};
 document.addEventListener('visibilitychange',()=>{if(bgm.el&&bgm.on)document.hidden?bgm.el.pause():bgm.el.play().catch(()=>{})});
