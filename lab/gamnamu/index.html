@@ -465,7 +465,7 @@ function init(){
   const release=e=>{ptrs.delete(e.pointerId);pinch=0;if(ptrs.size===0)drag=null};cv.addEventListener('pointerup',release);cv.addEventListener('pointercancel',release);
   requestAnimationFrame(tick);
 }
-let roadCurve=null,dragYaw=0,camR=20,clockT=0,last=0,zoom=1,camY=6,lookY=2;
+let roadCurve=null,dragYaw=0,camR=33,clockT=0,last=0,zoom=1,camY=6,lookY=2;
 const GATE=V(2.9,0,-3.1);
 function buildRoad(){
   // 길: 멀리 자녀가 사는 곳에서 마당 입구까지 이어지는 흙길(거리를 고르면 길이가 바뀜)
@@ -615,8 +615,8 @@ function tick(ts){
   const P=flakes.geometry.attributes.position,n=P.count;for(let i=0;i<n;i++){let y=P.getY(i)-dt*(.5+cur.snow*.4)*(reduced?0:1),x=P.getX(i)+Math.sin(clockT+i)*dt*.2;if(y<0)y=13;P.setXYZ(i,x,y,P.getZ(i))}P.needsUpdate=true;
   flakes.material.color.copy(cur.flake);flakes.material.opacity=cur.fly;flakes.material.size=.1+cur.snow*.07;
   // 카메라: 마당 앞쪽에서 좌우로 살짝만 움직임(건물이 가리지 않게)
-  const wide=innerWidth>760,yaw=.3+dragYaw+(reduced?0:Math.sin(clockT*.14)*.16);
-  const want=((wide?21:29)+target.d*(wide?1.2:1.6))*zoom;camR+=(want-camR)*Math.min(1,dt*2);
+  const wide=innerWidth>760,yaw=-.38+dragYaw+(reduced?0:Math.sin(clockT*.14)*.05);
+  const want=((wide?32.1:36)+target.d*(wide?1.2:1.6))*zoom;camR+=(want-camR)*Math.min(1,dt*2);
   const open=!$('sheet').hidden,right=V(Math.cos(yaw),0,-Math.sin(yaw)),off=wide&&open?camR*.19:0,cx=Math.sin(yaw)*camR+right.x*off-2.5,cz=Math.cos(yaw)*camR+right.z*off-1,lx=right.x*off-2.5,lz=right.z*off-1;
   camY+=((wide?5.6:(open?7.4:5.8))-camY)*Math.min(1,dt*2.5);lookY+=((wide?3.5:(open?-.4:2.9))-lookY)*Math.min(1,dt*2.5);cam.position.set(cx,camY,cz);cam.lookAt(lx,lookY,lz);
   thoughtPlace();R.render(scene,cam);requestAnimationFrame(tick);
