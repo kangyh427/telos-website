@@ -40,6 +40,7 @@ html,body{height:100%;margin:0;background:var(--night);color:var(--paper);font-f
 .body{scrollbar-width:thin;scrollbar-color:rgba(43,33,24,.45) transparent}
 .body::-webkit-scrollbar{width:6px;-webkit-appearance:none}
 .body::-webkit-scrollbar-thumb{background:rgba(43,33,24,.45);border-radius:3px}
+.sheet:not([hidden])~.topbar{right:max(420px,calc(env(safe-area-inset-right,0px) + 420px))}
 .topbar{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));display:flex;gap:8px}
 .topbar button,.lower button{font:inherit;font-size:14px;font-weight:600;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(20,26,43,.55);color:var(--paper);cursor:pointer;backdrop-filter:blur(6px)}
 .lower{position:fixed;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;flex-wrap:wrap}
@@ -105,6 +106,8 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
   .sheet{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));top:auto;bottom:10px;width:auto;max-height:52%}
   .hud{top:calc(70px + env(safe-area-inset-top,0px))}
   .brand{font-size:20px}
+  .sheet:not([hidden])~.topbar{right:max(16px,env(safe-area-inset-right,0px))}
+  .topbar button{padding:8px 11px;font-size:13px}
   h1{font-size:22px}
 }
 </style>
@@ -120,7 +123,7 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
   <div class="more" id="more" hidden>아래로 더 있습니다 ↓</div>
   <div class="foot" id="foot"></div>
 </section>
-<div class="topbar" id="topbar" hidden><button id="editBtn" type="button">정보 변경</button></div>
+<div class="topbar" id="topbar"><button id="soundBtn" type="button" aria-pressed="false">소리 켜기</button><button id="editBtn" type="button" hidden>정보 변경</button></div>
 <div class="lower" id="lower" hidden><button id="timeBtn" type="button">시간 돌려 보기</button><button id="appBtn" class="app" type="button">나이노트 앱 설치</button></div>
 <div class="toast" id="toast" hidden></div>
 
@@ -148,8 +151,8 @@ const gamUnit=m=>Math.max(1,Math.ceil(m/MAXG));
 
 /* ───────── 화면 단계 ───────── */
 const STEPS=[stepWho,stepAge,stepVisit,stepResult,stepKeep];
-function openPanel(step){S.step=step;$('sheet').hidden=false;$('topbar').hidden=true;$('lower').hidden=true;render()}
-function closePanel(){$('sheet').hidden=true;$('topbar').hidden=false;$('lower').hidden=false;S.done=true;updateHud()}
+function openPanel(step){S.step=step;$('sheet').hidden=false;$('editBtn').hidden=true;$('lower').hidden=true;render()}
+function closePanel(){$('sheet').hidden=true;$('editBtn').hidden=false;$('lower').hidden=false;S.done=true;updateHud()}
 function moreHint(){const b=$('body'),m=$('more');if(!b||!m)return;m.style.setProperty('--footH','');$('sheet').style.setProperty('--footH',$('foot').offsetHeight+'px');m.hidden=b.scrollHeight-b.clientHeight-b.scrollTop<14}
 function render(){const b=$('body'),st=b.scrollTop,same=render.k===S.step;render.k=S.step;$('prog').innerHTML=STEPS.map((_,i)=>`<i class="${i<=S.step?'on':''}"></i>`).join('');STEPS[S.step]();updateHud();b.scrollTop=same?st:0;moreHint();$('closeBtn').hidden=!S.done}
 function nav(next,label){const f=$('foot');f.innerHTML='';if(S.step>0){const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step--;render()};f.append(b)}const n=document.createElement('button');n.className='btn';n.textContent=label;n.id='nextBtn';n.onclick=next;f.append(n)}
@@ -494,6 +497,7 @@ function tick(ts){
     else{u.armL.rotation.x=Math.sin(phase)*.35*(1-o);u.armR.rotation.x=-Math.sin(phase)*.35*(1-o)}
   });
   stepVisitAnim(dt);
+  if(snd.bugs)snd.bugs.gain.value=1-cur.snow;
   const P=flakes.geometry.attributes.position,n=P.count;for(let i=0;i<n;i++){let y=P.getY(i)-dt*(.5+cur.snow*.4)*(reduced?0:1),x=P.getX(i)+Math.sin(clockT+i)*dt*.2;if(y<0)y=13;P.setXYZ(i,x,y,P.getZ(i))}P.needsUpdate=true;
   flakes.material.color.set(cur.snow>.5?0xffffff:0xe8a765);flakes.material.size=cur.snow>.5?.13:.1;
   // 카메라: 마당 앞쪽에서 좌우로 살짝만 움직임(건물이 가리지 않게)
@@ -517,6 +521,52 @@ async function play(){
   const end=S.sim>=left-1e-6;S.playing=false;goal=SEASON.autumn;applySim();
   if(end){$('hudU').textContent=`${who()} 100세 · 함께한 시간 ${fmt(calc().days)}일`;$('hudL').textContent='모두 함께했습니다'}
 }
+
+/* 마당의 소리: 음원 파일 없이 브라우저가 직접 만든다 · 눌러야만 켜짐 */
+const snd={ctx:null,on:false,master:null,bugs:null,an:null,t:0};
+function noiseBuffer(c,sec){const n=c.sampleRate*sec,b=c.createBuffer(2,n,c.sampleRate);for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);let l=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;l=(l+.02*w)/1.02;d[i]=l*3.2}}return b}
+function soundStart(){
+  const c=new (window.AudioContext||window.webkitAudioContext)();snd.ctx=c;
+  const m=c.createGain();m.gain.value=0;snd.master=m;const an=c.createAnalyser();an.fftSize=1024;snd.an=an;m.connect(an);an.connect(c.destination);
+  const buf=noiseBuffer(c,6);
+  // 바람: 낮은 소리가 천천히 불었다 잦아듦
+  const w=c.createBufferSource();w.buffer=buf;w.loop=true;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=520;const wg=c.createGain();wg.gain.value=.34;
+  const lfo=c.createOscillator();lfo.frequency.value=.07;const lg=c.createGain();lg.gain.value=.17;lfo.connect(lg);lg.connect(wg.gain);
+  const lfo2=c.createOscillator();lfo2.frequency.value=.11;const lg2=c.createGain();lg2.gain.value=240;lfo2.connect(lg2);lg2.connect(lp.frequency);
+  w.connect(lp);lp.connect(wg);wg.connect(m);w.start();lfo.start();lfo2.start();
+  // 나뭇잎: 높은 쪽의 옅은 바스락임
+  const r=c.createBufferSource();r.buffer=buf;r.loop=true;r.playbackRate.value=1.7;const hp=c.createBiquadFilter();hp.type='bandpass';hp.frequency.value=3200;hp.Q.value=.6;const rg=c.createGain();rg.gain.value=.055;
+  const rl=c.createOscillator();rl.frequency.value=.19;const rlg=c.createGain();rlg.gain.value=.045;rl.connect(rlg);rlg.connect(rg.gain);
+  r.connect(hp);hp.connect(rg);rg.connect(m);r.start();rl.start();
+  // 풀벌레
+  const bugs=c.createGain();bugs.gain.value=1;bugs.connect(m);snd.bugs=bugs;
+  chirpLoop(-.6,4250,.92);chirpLoop(.55,4620,1.27);
+  birdLoop();
+  m.gain.linearRampToValueAtTime(.8,c.currentTime+1.6);
+}
+function chirpLoop(pan,fr,gap){
+  const c=snd.ctx,t0=c.currentTime+.05+Math.random()*.1;
+  if(snd.on){const o=c.createOscillator(),g=c.createGain(),p=c.createStereoPanner();o.type='sine';o.frequency.value=fr+Math.random()*50;p.pan.value=pan;g.gain.value=0;
+    for(let i=0;i<3;i++){const t=t0+i*.075;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.022,t+.012);g.gain.linearRampToValueAtTime(0,t+.05)}
+    o.connect(g);g.connect(p);p.connect(snd.bugs);o.start(t0);o.stop(t0+.3)}
+  setTimeout(()=>chirpLoop(pan,fr,gap),(gap+Math.random()*.5)*1000);
+}
+function birdLoop(){
+  const c=snd.ctx;
+  if(snd.on&&cur.snow<.5){const n=2+Math.floor(Math.random()*3),t0=c.currentTime+.1,pan=Math.random()*1.4-.7;
+    for(let i=0;i<n;i++){const t=t0+i*.17,o=c.createOscillator(),g=c.createGain(),p=c.createStereoPanner();p.pan.value=pan;o.type='sine';o.frequency.setValueAtTime(2600,t);o.frequency.exponentialRampToValueAtTime(3500,t+.05);o.frequency.exponentialRampToValueAtTime(2400,t+.11);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.018,t+.02);g.gain.linearRampToValueAtTime(0,t+.12);o.connect(g);g.connect(p);p.connect(snd.master);o.start(t);o.stop(t+.14)}}
+  setTimeout(birdLoop,14000+Math.random()*22000);
+}
+function toggleSound(){
+  if(!snd.on)track('sound_on');
+  const b=$('soundBtn');snd.on=!snd.on;b.setAttribute('aria-pressed',snd.on);b.textContent=snd.on?'소리 끄기':'소리 켜기';
+  try{
+    if(!snd.ctx)soundStart();
+    const c=snd.ctx;if(c.state==='suspended')c.resume();
+    const g=snd.master.gain;g.cancelScheduledValues(c.currentTime);g.setValueAtTime(g.value,c.currentTime);g.linearRampToValueAtTime(snd.on?.8:0,c.currentTime+.8);
+  }catch{b.textContent='소리 없음';b.disabled=true}
+}
 function load(){try{const v=JSON.parse(localStorage.getItem('gamnamu')||'null');if(v){Object.assign(S,v);S.done=true;return Math.floor(elapsed()*365.25)}}catch{}return -1}
 const was=load();
 try{if(!window.THREE)throw 0;init();setScene();tree.scale.setScalar(.3)}catch(e){console.error(e);$('scene').style.background='linear-gradient(#24305f,#f2a877)'}
@@ -528,6 +578,8 @@ document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest
 $('timeBtn').onclick=()=>openPanel(3);
 $('editBtn').onclick=()=>{S.playing=false;S.sim=0;goal=SEASON.autumn;applySim();openPanel(0)};
 $('closeBtn').onclick=closePanel;
+$('soundBtn').onclick=toggleSound;
+document.addEventListener('visibilitychange',()=>{if(snd.ctx&&snd.on)document.hidden?snd.ctx.suspend():snd.ctx.resume()});
 $('body').addEventListener('scroll',moreHint);addEventListener('resize',moreHint);
 setInterval(()=>{if(!S.playing&&!S.sim)updateHud()},30000);
 </script>
