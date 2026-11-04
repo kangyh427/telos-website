@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>백 살 감나무</title>
+<meta name="description" content="부모님이 100세까지 곁에 계신다면 앞으로 몇 번을 더 뵐 수 있을까요. 감나무로 헤아려 보세요.">
+<meta property="og:title" content="백 살 감나무">
+<meta property="og:description" content="앞으로 몇 번을 더 뵐 수 있을까요">
+<!-- Google tag (gtag.js) · 방문 통계만 · 광고 신호 끔(개인정보처리방침 제10조) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXELWTCRMJ"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-RXELWTCRMJ',{'allow_google_signals':false,'allow_ad_personalization_signals':false});</script>
+<style>[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* 레이아웃: 화면 전체가 해 질 녘 시골 마당(3D) · 오른쪽(휴대폰은 아래) 한지색 판이 한 단계씩 묻는다. 한 가지 세계로 고정한 어두운 화면 */
+:root{
+  color-scheme:dark;
+  --night:#141a2b; --paper:#f3e7d3; --ink:#2b2118; --ink2:#6d5a47;
+  --gam:#ee6a1f; --gam2:#ffb347; --line:rgba(43,33,24,.14);
+  --display:"Gowun Batang","Noto Serif KR",serif;
+  --body:"IBM Plex Sans KR","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+html,body{height:100%;margin:0;background:var(--night);color:var(--paper);font-family:var(--body);overflow:hidden}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.brand{position:fixed;left:max(20px,env(safe-area-inset-left,0px));top:calc(16px + env(safe-area-inset-top,0px));font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:.02em;text-shadow:0 2px 14px rgba(0,0,0,.55);pointer-events:none}
+.brand small{display:block;font-family:var(--body);font-size:13px;font-weight:400;opacity:.86;margin-top:2px}
+.hud{position:fixed;left:max(20px,env(safe-area-inset-left,0px));top:calc(84px + env(safe-area-inset-top,0px));pointer-events:none;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+.hud b{display:block;font-family:var(--display);font-size:clamp(46px,7vw,76px);line-height:1;color:var(--gam2);font-variant-numeric:tabular-nums}
+.hud span{font-size:15px;opacity:.92}
+.hud em{display:block;font-style:normal;font-size:13px;opacity:.8;margin-top:6px}
+.sheet{position:fixed;right:max(20px,env(safe-area-inset-right,0px));top:20px;bottom:20px;width:min(384px,calc(100vw - 40px));background:var(--paper);color:var(--ink);border-radius:6px;box-shadow:0 24px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden}
+.prog{display:flex;gap:6px;padding:16px 22px 0}
+.prog i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.prog i.on{background:var(--gam)}
+.body{flex:1;min-height:0;overflow-y:auto;padding:16px 22px 12px;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--display);font-size:26px;line-height:1.3;margin:0;text-wrap:balance}
+p{margin:0;line-height:1.65;font-size:15px;color:var(--ink2)}
+label.t{font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+label.t output{font-family:var(--display);font-size:26px;font-weight:700;color:var(--gam);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:9px 13px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.big{font-size:16px;padding:12px 22px}
+.chip:focus-visible,button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--gam);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two button{font:inherit;font-size:14px;font-weight:600;padding:11px 8px;border-radius:4px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.two button.up{background:rgba(238,106,31,.14);border-color:rgba(238,106,31,.45)}
+.two button:disabled{opacity:.45;cursor:default}
+.stats{display:grid;grid-template-columns:1fr;border-top:1px solid var(--line)}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.stat span{font-size:14px;color:var(--ink2)}
+.stat b{font-family:var(--display);font-size:26px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat.hot b{color:var(--gam)}
+.nudge{font-size:14px;line-height:1.55;background:rgba(238,106,31,.12);padding:10px 12px;border-radius:4px;color:var(--ink)}
+.nudge b{color:#b8470c}
+.grid{display:grid;grid-template-columns:repeat(20,1fr);gap:2px}
+.grid i{aspect-ratio:1;border-radius:50%;background:rgba(43,33,24,.18)}
+.grid i.left{background:var(--gam)}
+.nai{background:var(--ink);color:var(--paper);padding:14px;border-radius:4px;display:flex;flex-direction:column;gap:8px}
+.nai h2{font-family:var(--display);font-size:19px;margin:0;line-height:1.4}
+.nai p{color:rgba(243,231,211,.86);font-size:14px}
+.nai a{color:var(--ink);background:var(--gam2);font-weight:600;font-size:14px;text-decoration:none;padding:10px 12px;border-radius:4px;text-align:center}
+.nai small{font-size:12px;opacity:.76;line-height:1.5}
+.sib{display:flex;flex-direction:column;gap:6px}
+.row{display:grid;grid-template-columns:56px 1fr 44px;gap:8px;align-items:center;font-size:14px}
+.row div{height:12px;background:var(--line);border-radius:2px;overflow:hidden}
+.row div i{display:block;height:100%;background:var(--gam)}
+.row b{text-align:right;font-variant-numeric:tabular-nums}
+.foot{padding:12px 22px calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;border-top:1px solid var(--line)}
+.btn{flex:1;font:inherit;font-weight:600;font-size:15px;padding:13px 12px;border-radius:4px;border:0;background:var(--gam);color:#fff;cursor:pointer}
+.btn.ghost{flex:0 0 auto;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.note{font-size:12px;line-height:1.5;color:var(--ink2)}
+.perbox{display:flex;align-items:baseline;justify-content:center;gap:8px;padding:6px 0 2px;font-size:15px;color:var(--ink2)}
+.perbox b{font-family:var(--display);font-size:38px;color:var(--gam);font-variant-numeric:tabular-nums;line-height:1}
+.sim{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:12px}
+.playrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.playrow .go{font:inherit;font-size:14px;font-weight:600;padding:9px 14px;border-radius:4px;border:0;background:var(--ink);color:var(--paper);cursor:pointer}
+.saverow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.saverow button{font:inherit;font-size:14px;padding:9px 12px;border-radius:4px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.saverow label{font-size:13px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.saverow input{font:inherit;font-size:13px;padding:6px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--ink);color-scheme:light}
+.qr{display:flex;gap:12px;align-items:center}
+.qr div{flex:none;width:96px;height:96px;background:#fff;padding:4px;border-radius:4px}
+.qr svg{width:100%;height:100%;display:block}
+.appbtn{position:fixed;left:max(20px,env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));font:inherit;font-size:14px;font-weight:600;padding:11px 16px;border-radius:999px;border:0;background:var(--gam2);color:var(--ink);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:4px;font-size:14px}
+@media (max-width:760px){
+  .sheet{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));top:auto;bottom:10px;width:auto;max-height:52%}
+  .hud{top:calc(70px + env(safe-area-inset-top,0px))}
+  .brand{font-size:20px}
+  .appbtn{left:auto;right:max(14px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));bottom:auto;padding:9px 13px;font-size:13px}
+  h1{font-size:22px}
+}
+</style>
+
+<canvas id="scene" aria-label="부모님 연세만큼 자란 감나무와 시골집 3D 장면"></canvas>
+<div class="brand">백 살 감나무<small>부모님과 앞으로 몇 번을 더 뵐 수 있을까요</small></div>
+<div class="hud" aria-live="polite"><b id="hudN">112</b><span id="hudL">번 더 뵐 수 있어요</span><em id="hudU"></em></div>
+
+<section class="sheet" aria-label="입력과 결과">
+  <div class="prog" id="prog"></div>
+  <div class="body" id="body"></div>
+  <div class="foot" id="foot"></div>
+</section>
+<button class="appbtn" id="appBtn" type="button">나이노트 앱 설치</button>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+'use strict';
+const track=(n)=>{try{window.gtag&&gtag('event','lab_interest',{slug:'gamnamu',action:n})}catch{}};
+const S={mom:true,dad:false,ageM:72,ageD:72,dist:1,per:4,hrs:6,sib:2,step:0,playing:false,sim:0,speed:1,startAt:Date.now()};
+const SPEEDS=[{n:'1년 = 20초',s:20},{n:'1년 = 5초',s:5},{n:'1년 = 1초',s:1}];
+const DIST=[{n:'같은 동네',d:0,t:'걸어서 갈 거리'},{n:'차로 1시간',d:1,t:'왕복 2시간'},{n:'KTX 거리',d:2,t:'왕복 5시간쯤'},{n:'비행기 거리',d:3,t:'왕복 하루'}];
+const HRS=[{n:'식사 한 끼',h:3},{n:'반나절',h:6},{n:'하루 종일',h:12},{n:'1박 2일',h:30}];
+const APP='https://play.google.com/store/apps/details?id=com.naoncare.guardian';
+const YEAR=365.25*864e5;
+const who=()=>S.mom&&S.dad?'부모님':S.mom?'엄마':'아빠';
+const refAge=()=>S.mom&&S.dad?Math.min(S.ageM,S.ageD):S.mom?S.ageM:S.ageD;
+const elapsed=()=>Math.max(0,(Date.now()-S.startAt)/YEAR);
+const nowAge=()=>refAge()+elapsed();
+const calc=()=>{const left=Math.max(0,100-nowAge()),meets=Math.round(left*S.per),view=Math.max(0,left-S.sim),seen=Math.min(365,S.per*Math.ceil(S.hrs/24));return{left,meets,view,viewMeets:Math.round(view*S.per),days:Math.round(meets*S.hrs/24),away:365-seen}};
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.round(n).toLocaleString('ko-KR');
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MAXG=200;
+const gamUnit=m=>Math.max(1,Math.ceil(m/MAXG));
+
+/* ───────── 화면 단계 ───────── */
+const STEPS=[stepWho,stepAge,stepVisit,stepResult,stepKeep];
+function render(){const b=$('body'),st=b.scrollTop,same=render.k===S.step;render.k=S.step;$('prog').innerHTML=STEPS.map((_,i)=>`<i class="${i<=S.step?'on':''}"></i>`).join('');STEPS[S.step]();updateHud();b.scrollTop=same?st:0}
+function nav(next,label){const f=$('foot');f.innerHTML='';if(S.step>0){const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step--;render()};f.append(b)}const n=document.createElement('button');n.className='btn';n.textContent=label;n.id='nextBtn';n.onclick=next;f.append(n)}
+function chips(el,items,cur,on){el.className='chips';items.forEach((t,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t;b.setAttribute('aria-pressed',i===cur);b.onclick=()=>{[...el.children].forEach(c=>c.setAttribute('aria-pressed',c===b));on(i)};el.append(b)})}
+function stepWho(){
+  $('body').innerHTML=`<h1>누구의 감나무를 심을까요?</h1><p>두 분 다 계시면 둘 다 눌러 주세요. 감 하나가 앞으로 뵐 한 번입니다.</p><div class="chips"><button id="pM" type="button" class="chip big" aria-pressed="${S.mom}">엄마</button><button id="pD" type="button" class="chip big" aria-pressed="${S.dad}">아빠</button></div><p class="note">부모님이 100세까지 곁에 계신다고 하고 헤아립니다. 입력하신 내용은 이 화면에서만 쓰고 저장하지 않습니다.</p>`;
+  const set=()=>{$('pM').setAttribute('aria-pressed',S.mom);$('pD').setAttribute('aria-pressed',S.dad);setScene();updateHud()};
+  $('pM').onclick=()=>{if(S.mom&&!S.dad)return;S.mom=!S.mom;set()};
+  $('pD').onclick=()=>{if(S.dad&&!S.mom)return;S.dad=!S.dad;set()};
+  nav(()=>{S.step=1;render()},'심기');
+}
+function stepAge(){
+  const one=(k,n,key)=>`<label class="t" for="${k}">${n} 연세<output id="${k}O">${S[key]}세</output></label><input id="${k}" type="range" min="50" max="99" value="${S[key]}">`;
+  $('body').innerHTML=`<h1>올해 연세가 어떻게 되세요?</h1><p>움직여 보세요. 나무가 그 연세만큼 자랍니다.</p>${S.mom?one('aM','엄마','ageM'):''}${S.dad?one('aD','아빠','ageD'):''}<div class="stats"><div class="stat"><span>100세까지</span><b id="leftO"></b></div></div>${S.mom&&S.dad?'<p class="note">두 분이면 더 젊으신 분 기준으로 셉니다.</p>':''}`;
+  const u=()=>{$('leftO').textContent=Math.round(calc().left)+'해';updateHud();setScene()};
+  if(S.mom)$('aM').oninput=e=>{S.ageM=+e.target.value;$('aMO').textContent=S.ageM+'세';u()};
+  if(S.dad)$('aD').oninput=e=>{S.ageD=+e.target.value;$('aDO').textContent=S.ageD+'세';u()};
+  u();nav(()=>{S.step=2;render()},'다음');
+}
+function stepVisit(){
+  $('body').innerHTML=`<h1>${who()==='엄마'?'엄마는':who()==='아빠'?'아빠는':'부모님은'} 얼마나 멀리 계세요?</h1><div id="c2"></div><label class="t" for="per">1년에 뵙는 횟수<output id="perO">${S.per}번</output></label><input id="per" type="range" min="1" max="52" value="${S.per}"><p id="perH" class="note"></p><label class="t" style="margin-top:2px">한 번 뵐 때</label><div id="c3"></div>`;
+  chips($('c2'),DIST.map(d=>d.n),S.dist,i=>{S.dist=i;S.per=[24,8,4,2][i];$('per').value=S.per;u()});
+  chips($('c3'),HRS.map(h=>h.n),HRS.findIndex(h=>h.h===S.hrs),i=>{S.hrs=HRS[i].h;u()});
+  const u=()=>{$('perO').textContent=S.per+'번';$('perH').textContent=`움직이면 감이 바로 늘고 줄어듭니다 · ${DIST[S.dist].t}`;updateHud();setScene()};
+  $('per').oninput=e=>{S.per=+e.target.value;u()};u();
+  nav(()=>{S.step=3;render()},'결과 보기');
+}
+function stepResult(){
+  if(!stepResult.seen){stepResult.seen=1;track('result')}
+  const c=calc(),more=2*Math.round(c.left),moreD=Math.round(more*S.hrs/24),d=new Date(S.startAt),iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('body').innerHTML=`<h1>${who()}, 앞으로 ${fmt(c.meets)}번</h1>
+  <div class="perbox"><span>지금 1년에</span><b>${S.per}번</b><span>뵙습니다</span></div>
+  <div class="two"><button type="button" id="less">1년에 2번 덜 뵙기</button><button type="button" id="plus" class="up">1년에 2번 더 뵙기</button></div>
+  <div class="stats"><div class="stat hot"><span>함께 있을 시간</span><b>${fmt(c.days)}일</b></div><div class="stat"><span>1년 중 못 뵙는 날</span><b>${c.away}일</b></div><div class="stat"><span>남은 설 · 추석</span><b>${Math.round(c.left)*2}번</b></div></div>
+  <div class="nudge">1년에 <b>딱 2번만 더</b> 뵈면 <b>${fmt(more)}번</b>이 늘고, 함께할 시간이 <b>${fmt(moreD)}일</b> 더 생깁니다.</div>
+  <div class="sim"><label class="t" for="sim">시간을 앞으로 돌려 보기<output id="simO"></output></label><input id="sim" type="range" min="0" max="${Math.round(c.left)}" step="1" value="${Math.round(S.sim)}"><p id="simT" class="note"></p>
+  <div class="playrow"><button class="go" id="goBtn" type="button">${S.playing?'멈추기':'재생'}</button><div id="spd"></div><button class="go" id="backNow" type="button" style="background:transparent;color:var(--ink);border:1px solid var(--line)">지금으로</button></div>
+  <p class="note">허리와 걸음의 변화는 시간이 흐르는 모습을 그림으로 나타낸 것이며, 실제 건강을 예측하지 않습니다.</p></div>
+  <div><p class="note" style="margin-bottom:6px">100칸 = 100년 · 주황 = 앞으로 함께할 해</p><div class="grid" id="grid"></div></div>
+  <div class="saverow"><label for="base">기준일 <input type="date" id="base" value="${iso}" max="${new Date().toISOString().slice(0,10)}"></label><button type="button" id="saveB">이 감나무 저장</button><button type="button" id="resetB">처음부터</button></div>
+  <p class="note">저장하면 다시 열었을 때 기준일부터 흐른 실제 시간만큼 남은 횟수가 줄어든 모습으로 보입니다. 지금은 이 기기에만 저장되며, 회원 저장은 준비 중입니다. 저장하지 않아도 언제든 처음 화면부터 쓸 수 있습니다.</p>
+  <p class="note">100세까지 곁에 계신다고 가정한 셈입니다. 수명을 예측하지 않습니다.</p>`;
+  drawGrid();
+  $('less').disabled=S.per<=1;$('plus').disabled=S.per>=52;
+  $('plus').onclick=()=>{S.per=Math.min(52,S.per+2);render();setScene();visitOnce()};
+  $('less').onclick=()=>{S.per=Math.max(1,S.per-2);render();setScene()};
+  chips($('spd'),SPEEDS.map(x=>x.n),S.speed,i=>{S.speed=i});
+  $('sim').oninput=e=>{S.playing=false;S.sim=+e.target.value;applySim()};
+  $('goBtn').onclick=()=>S.playing?(S.playing=false):play();
+  $('backNow').onclick=()=>{S.playing=false;S.sim=0;goal=SEASON.autumn;applySim();$('sim').value=0};
+  $('base').onchange=e=>{const t=Date.parse(e.target.value);if(!isNaN(t)){S.startAt=Math.min(t,Date.now());S.sim=0;render();setScene()}};
+  $('saveB').onclick=()=>{try{localStorage.setItem('gamnamu',JSON.stringify({mom:S.mom,dad:S.dad,ageM:S.ageM,ageD:S.ageD,dist:S.dist,per:S.per,hrs:S.hrs,startAt:S.startAt}));toast('저장했습니다. 다시 열면 이어서 보입니다')}catch{toast('이 화면에서는 저장할 수 없습니다')}};
+  $('resetB').onclick=()=>{try{localStorage.removeItem('gamnamu')}catch{}Object.assign(S,{mom:true,dad:false,ageM:72,ageD:72,dist:1,per:4,hrs:6,step:0,sim:0,playing:false,startAt:Date.now()});goal=SEASON.autumn;render();setScene()};
+  const f=$('foot');f.innerHTML='';
+  const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step=2;render()};
+  const n=document.createElement('button');n.className='btn';n.textContent='다음';n.id='nextBtn';n.onclick=()=>{S.step=4;render()};
+  f.append(b,n);applySim();
+}
+function drawGrid(){const g=$('grid');if(!g)return;const a=Math.floor(nowAge()+S.sim);g.innerHTML=Array.from({length:100},(_,i)=>`<i class="${i>=a?'left':''}"></i>`).join('')}
+function stepKeep(){
+  const c=calc(),max=Math.max(S.per,S.sib,1);
+  $('body').innerHTML=`<h1>못 뵙는 ${c.away}일은 어떻게 살필까요?</h1>
+  <div class="nai"><h2>부모님을 더 오래, 건강하게 뵙고 싶다면 걷기 변화부터 살펴보세요</h2><p>걸음이 조금씩 줄고 느려지는 변화는 전화로는 알기 어렵습니다. 나이노트는 부모님 휴대폰이 걷기를 저절로 기록하고 분석해, 평소와 달라지면 멀리 있는 자녀에게 먼저 알려 드립니다.</p>
+  <div class="qr"><div id="qr" aria-label="나이노트 설치 QR 코드"></div><p style="font-size:13px">휴대폰 카메라로 비추면 나이노트 설치 화면이 열립니다.</p></div>
+  <a href="${APP}" target="_blank" rel="noopener">나이노트 받기 · 현재 무료</a><small>안드로이드 전용 · 걷기 기록을 보여 주는 서비스로 의학적 판정을 하지 않습니다</small></div>
+  <div class="sib"><label class="t" for="sibR">우리 집 안부 순위<output id="sibO">${S.sib}번</output></label><input id="sibR" type="range" min="0" max="52" value="${S.sib}" aria-label="동생이 1년에 뵙는 횟수"><div class="row"><span>나</span><div><i id="sa" style="width:${S.per/max*100}%"></i></div><b>${S.per}</b></div><div class="row"><span>동생</span><div><i id="sb" style="width:${S.sib/max*100}%"></i></div><b id="sn">${S.sib}</b></div><p class="note">가족이 함께 모으는 기능은 준비 중입니다. 지금은 직접 넣어 견주어 보세요.</p></div>
+  <div><p class="note" style="margin-bottom:6px">인스타 · 스레드에 올리는 글</p><p id="shareT" style="color:var(--ink);font-size:14px"></p></div>`;
+  try{const q=qrcode(0,'M');q.addData(APP);q.make();$('qr').innerHTML=q.createSvgTag({cellSize:3,margin:2,scalable:true})}catch{$('qr').textContent='QR'}
+  const t=`${who()}${who()==='부모님'?'과':'랑'} 앞으로 ${fmt(c.meets)}번 남았대요. 함께 있을 시간 ${fmt(c.days)}일. 오늘 전화 한 통 드렸습니다. 우리 집 감나무는 감이 몇 개일까요?`;
+  $('shareT').textContent=t;
+  $('sibR').oninput=e=>{S.sib=+e.target.value;$('sibO').textContent=S.sib+'번';const m=Math.max(S.per,S.sib,1);$('sb').style.width=S.sib/m*100+'%';$('sa').style.width=S.per/m*100+'%';$('sn').textContent=S.sib};
+  const f=$('foot');f.innerHTML='';
+  const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step=3;render()};
+  const n=document.createElement('button');n.className='btn';n.textContent='공유 글 복사';n.onclick=async()=>{track('share_copy');try{await navigator.clipboard.writeText(t);toast('복사했습니다')}catch{toast('글을 길게 눌러 복사해 주세요')}};
+  f.append(b,n);
+}
+function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800)}
+function updateHud(){
+  const c=calc(),u=gamUnit(c.meets),view=S.sim>0;
+  $('hudN').textContent=fmt(c.viewMeets);
+  $('hudL').textContent=view?'번 남았습니다':'번 더 뵐 수 있어요';
+  if(view){const y=new Date(S.startAt+(elapsed()+S.sim)*YEAR).getFullYear();$('hudU').textContent=`${y}년 · ${names(S.sim)}`}
+  else{const gap=365/S.per,next=Math.max(1,Math.ceil(gap-((elapsed()*365)%gap)));$('hudU').textContent=`1년 ${S.per}번 · 다음 방문까지 약 ${next}일 · 감 1개 = ${u}번`}
+}
+function names(sim){const a=[],y=v=>Math.min(100,Math.floor(v+elapsed()+sim));if(S.mom)a.push(`엄마 ${y(S.ageM)}세`);if(S.dad)a.push(`아빠 ${y(S.ageD)}세`);return a.join(' · ')}
+function applySim(){
+  const c=calc(),u=gamUnit(c.meets),g=Math.min(MAXG,Math.ceil(c.viewMeets/u));
+  target.grow=.56+.44*Math.min(1,(nowAge()+S.sim-50)/50);setGam(g);updateHud();drawGrid();
+  const o=$('simO'),t=$('simT'),r=$('sim');
+  if(o){const y=Math.round(S.sim);o.textContent=y?`${y}년 뒤`:'지금';if(r)r.value=y;
+    t.textContent=y?`${new Date(S.startAt+(elapsed()+S.sim)*YEAR).getFullYear()}년 · ${names(S.sim)} · 남은 ${fmt(c.viewMeets)}번`:`실제 시간으로 진행 중 · 기준일부터 흐른 만큼 저절로 줄어듭니다`}
+  const go=$('goBtn');if(go)go.textContent=S.playing?'멈추기':'재생';
+}
+/* ───────── 3D 마당 ───────── */
+let R,scene,cam,sky,sun,hemi,ground,tree,leaf,gam,gamMeta=[],tips=[],mom,dad,kid,car,city,roadMesh,flakes,ridges=[],windowLight;
+const target={grow:.8,d:1};
+const rnd=(()=>{let s=20261104;return()=>(s=(s*1664525+1013904223)>>>0)/4294967296})();
+const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
+const std=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
+const SEASON={
+  spring:{top:0x34588f,bot:0xf4c9a4,leaf:0xa9cc6e,ground:0x60803f,dens:.8,snow:0},
+  summer:{top:0x2a5f9e,bot:0xcfe2bb,leaf:0x4f9148,ground:0x4a6f38,dens:1,snow:0},
+  autumn:{top:0x24305f,bot:0xf2a877,leaf:0xd99a3a,ground:0x6a5f35,dens:.5,snow:0},
+  winter:{top:0x1e2846,bot:0x98a4c4,leaf:0x7b6a55,ground:0xb7c0cf,dens:.03,snow:1}
+};
+const c0=SEASON.autumn;
+const cur={top:new THREE.Color(c0.top),bot:new THREE.Color(c0.bot),leaf:new THREE.Color(c0.leaf),ground:new THREE.Color(c0.ground),dens:c0.dens,snow:0};
+let goal=SEASON.autumn;
+const groundY=(x,z)=>{const r=Math.hypot(x,z),h=Math.sin(x*.07)*Math.cos(z*.06)*1.5+Math.sin(x*.021+1)*Math.cos(z*.017)*3.4;return h*THREE.MathUtils.smoothstep(r,12,46)+THREE.MathUtils.smoothstep(r,70,150)*9};
+
+function canvasTex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
+
+function buildRoofGeo(L,D,H,lift){
+  const g=new THREE.PlaneGeometry(2*L,2*D,56,24);g.rotateX(-Math.PI/2);const P=g.attributes.position;
+  for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i),u=Math.abs(x)/L,v=Math.abs(z)/D,d=Math.min(1,Math.max(v,(u-.66)/.34));
+    let y=H*Math.pow(1-d,1.45);                    // 안으로 휘어 내려오는 지붕면
+    y+=lift*Math.pow(u,3.2)*(.25+.75*v*v);        // 네 귀가 들리는 처마
+    y+=lift*.28*Math.pow(v,4);                     // 앞뒤 처마도 살짝 들림
+    P.setY(i,y)}
+  g.computeVertexNormals();return g;
+}
+function person(o){
+  const g=new THREE.Group(),m=std,up=new THREE.Group();up.position.y=.5;g.add(up);
+  const legL=new THREE.Group(),legR=new THREE.Group(),legM=m(o.pants),shoe=m(0x2a2422);
+  for(const l of[legL,legR]){const a=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.34,4,8),legM);a.position.y=-.2;a.castShadow=true;const s=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),shoe);s.position.set(0,-.44,.05);s.scale.set(1,.6,1.6);l.add(a,s);l.position.y=.48}
+  legL.position.x=-.1;legR.position.x=.1;g.add(legL,legR);
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.17,o.skirt?.3:.22,o.skirt?.66:.6,12),m(o.coat));body.position.y=.3;body.castShadow=true;up.add(body);
+  const hd=new THREE.Group();hd.position.y=.8;up.add(hd);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.19,16,14),m(0xf1c9a5));head.castShadow=true;hd.add(head);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.205,16,12,0,6.3,0,1.45),m(o.hair));hair.position.set(0,.02,-.03);hair.castShadow=true;hd.add(hair);
+  if(o.perm)for(let i=0;i<9;i++){const a=i/9*6.28,b=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),m(o.hair));b.position.set(Math.cos(a)*.18,Math.sin(i*2.1)*.05,Math.sin(a)*.17-.05);hd.add(b)}
+  if(o.cap){const c=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.1,14),m(o.cap));c.position.y=.15;const b=new THREE.Mesh(new THREE.BoxGeometry(.24,.03,.16),m(o.cap));b.position.set(0,.11,.2);hd.add(c,b)}
+  const arm=x=>{const p=new THREE.Group();p.position.set(x,.52,0);const a=new THREE.Mesh(new THREE.CapsuleGeometry(.055,.32,4,8),m(o.coat));a.position.y=-.2;a.castShadow=true;const h=new THREE.Mesh(new THREE.SphereGeometry(.06,8,6),m(0xf1c9a5));h.position.y=-.42;p.add(a,h);up.add(p);return p};
+  const cane=new THREE.Mesh(new THREE.CylinderGeometry(.018,.022,.92,6),m(0x4a3324));cane.position.set(o.skirt?-.34:.34,.46,.22);cane.rotation.x=-.12;cane.visible=false;g.add(cane);
+  g.userData={legL,legR,armL:arm(-.21),armR:arm(.21),up,hd,cane};
+  return g;
+}
+function swing(p,t,amp){const s=Math.sin(t)*amp;p.userData.legL.rotation.x=s;p.userData.legR.rotation.x=-s}
+
+function init(){
+  const cv=$('scene'),small=innerWidth<=760;
+  R=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});
+  R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
+  R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.08;
+  scene=new THREE.Scene();scene.fog=new THREE.Fog(0xb88a70,40,190);
+  cam=new THREE.PerspectiveCamera(36,1,.1,600);
+
+  sky=new THREE.Mesh(new THREE.SphereGeometry(420,32,20),new THREE.ShaderMaterial({side:THREE.BackSide,fog:false,uniforms:{a:{value:cur.top},b:{value:cur.bot},s:{value:V(-.75,.12,-.65).normalize()}},
+    vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'varying vec3 p;uniform vec3 a;uniform vec3 b;uniform vec3 s;void main(){vec3 d=normalize(p);float h=clamp(d.y*1.8+.04,0.,1.);vec3 c=mix(b,a,pow(h,.6));float g=max(dot(d,s),0.);c+=vec3(1.,.62,.34)*(pow(g,90.)*1.1+pow(g,8.)*.22);gl_FragColor=vec4(c,1.);\n#include <colorspace_fragment>\n}'}));
+  scene.add(sky);
+  hemi=new THREE.HemisphereLight(0xffe6cc,0x2a3350,1.25);scene.add(hemi);
+  sun=new THREE.DirectionalLight(0xffc08a,2.5);sun.position.set(-20,15,14);sun.castShadow=true;
+  sun.shadow.mapSize.set(small?1024:2048,small?1024:2048);Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:1,far:80});sun.shadow.bias=-.0006;scene.add(sun);
+
+  // 땅
+  const g=new THREE.PlaneGeometry(420,420,140,140);g.rotateX(-Math.PI/2);const P=g.attributes.position;
+  for(let i=0;i<P.count;i++)P.setY(i,groundY(P.getX(i),P.getZ(i)));
+  g.computeVertexNormals();ground=new THREE.Mesh(g,std(cur.ground,{flatShading:true,roughness:1}));ground.receiveShadow=true;scene.add(ground);
+
+  // 겹겹 산줄기(한국 산수화처럼 멀수록 옅게)
+  [[210,34,0x57607f,.008,.9],[260,52,0x6d7695,.0065,1.4],[320,74,0x8a90aa,.005,2.2],[390,96,0xa8a8bb,.0038,3.3]].forEach(([r,h,col,f,ph])=>{
+    const seg=220,pos=[],idx=[];
+    for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2,x=Math.cos(a)*r,z=Math.sin(a)*r,s=a*r;
+      const n=Math.sin(s*f+ph)*.5+Math.sin(s*f*2.3+ph*2)*.28+Math.sin(s*f*5.1+ph*3)*.14+Math.sin(s*f*11.3+ph)*.07;
+      pos.push(x,-8,z,x,h*(.55+n*.62),z);if(i<seg){const k=i*2;idx.push(k,k+1,k+2,k+1,k+3,k+2)}}
+    const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));gg.setIndex(idx);
+    const m=new THREE.Mesh(gg,new THREE.MeshBasicMaterial({color:col,fog:false,side:THREE.DoubleSide}));m.userData.base=new THREE.Color(col);ridges.push(m);m.renderOrder=-1;scene.add(m);
+  });
+  // 언덕의 소나무
+  const trunkG=new THREE.CylinderGeometry(.1,.16,1.3,6),pineG=new THREE.ConeGeometry(1,1.6,7);
+  for(let i=0;i<46;i++){const a=rnd()*6.28,r=30+rnd()*70,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(Math.atan2(z,x)+.9)<.32)continue;
+    const t=new THREE.Group(),s=.9+rnd()*1.3,tm=new THREE.Mesh(trunkG,std(0x3b2a20));tm.position.y=.6;t.add(tm);
+    for(let k=0;k<3;k++){const c=new THREE.Mesh(pineG,std(0x2f4a3a,{flatShading:true}));c.position.y=1.5+k*.72;c.scale.setScalar(1.05-k*.26);c.castShadow=r<40;t.add(c)}
+    t.position.set(x,groundY(x,z)-.1,z);t.scale.setScalar(s);scene.add(t)}
+
+  // 감나무
+  tree=new THREE.Group();scene.add(tree);
+  const bark=std(0x3d2b20,{flatShading:true,roughness:.95}),up=V(0,1,0);
+  (function br(a,dir,len,rad,dp){
+    const b=a.clone().addScaledVector(dir,len),m=new THREE.Mesh(new THREE.CylinderGeometry(rad*.7,rad,len,7),bark);
+    m.position.copy(a).lerp(b,.5);m.quaternion.setFromUnitVectors(up,dir);m.castShadow=true;tree.add(m);
+    const j=new THREE.Mesh(new THREE.SphereGeometry(rad*.72,7,6),bark);j.position.copy(b);tree.add(j);
+    if(dp===0){tips.push(b);return}
+    const n=dp>3?2:(rnd()>.45?3:2);
+    for(let i=0;i<n;i++){const q=new THREE.Quaternion().setFromAxisAngle(V(rnd()-.5,rnd()*.25,rnd()-.5).normalize(),.45+rnd()*.5);
+      const d=dir.clone().applyQuaternion(q);d.y=Math.max(d.y,.08);d.normalize();br(b,d,len*(.68+rnd()*.14),rad*.68,dp-1)}
+    if(dp<3)tips.push(b);
+  })(V(0,0,0),V(.05,1,.03).normalize(),2.6,.46,5);
+
+  // 잎은 작게 많이 · 잎마다 색이 조금씩 다름
+  const lg=new THREE.OctahedronGeometry(.17,0);lg.scale(1,.42,.72);
+  leaf=new THREE.InstancedMesh(lg,new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:.8}),tips.length*34);leaf.castShadow=true;tree.add(leaf);
+  leaf.userData.base=[];const C=new THREE.Color(),M0=new THREE.Matrix4(),Eu=new THREE.Euler();
+  for(let i=0;i<leaf.count;i++){const t=tips[i%tips.length],p=t.clone().add(V(rnd()-.5,(rnd()-.42)*.9,rnd()-.5).multiplyScalar(1.5));
+    leaf.userData.base.push({p,q:new THREE.Quaternion().setFromEuler(Eu.set(rnd()*6,rnd()*6,rnd()*6)),s:.7+rnd()*.9,k:rnd()});
+    C.setHSL(.02+rnd()*.1,.62+rnd()*.3,.34+rnd()*.3);leaf.setColorAt(i,C);M0.makeTranslation(p.x,p.y,p.z);leaf.setMatrixAt(i,M0)}
+  leaf.instanceColor.needsUpdate=true;
+
+  gam=new THREE.InstancedMesh(new THREE.SphereGeometry(.17,14,12),new THREE.MeshStandardMaterial({color:0xf26c16,emissive:0xa33a00,emissiveIntensity:.5,roughness:.4}),MAXG);
+  gam.castShadow=true;gam.instanceMatrix.setUsage(THREE.DynamicDrawUsage);gam.frustumCulled=false;tree.add(gam);
+  for(let i=0;i<MAXG;i++){const t=tips[Math.floor(rnd()*tips.length)],p=t.clone().add(V(rnd()-.5,-rnd()*.6-.05,rnd()-.5).multiplyScalar(1.05));gamMeta.push({p,s:0,to:0,fall:0,v:0,y:0,ph:rnd()*6.28})}
+
+  // 나무 둘레 산책길
+  const ring=new THREE.Mesh(new THREE.RingGeometry(3.1,4.1,64),std(0x8d7350,{roughness:1}));ring.rotation.x=-Math.PI/2;ring.position.y=.03;ring.receiveShadow=true;scene.add(ring);
+
+  // 기와집
+  const house=new THREE.Group();house.position.set(-9,0,-6.5);house.rotation.y=.62;scene.add(house);
+  const stone=canvasTex(256,64,(x,w,h)=>{x.fillStyle='#8f8878';x.fillRect(0,0,w,h);for(let i=0;i<46;i++){x.fillStyle=`hsl(36,10%,${40+rnd()*26}%)`;x.fillRect(rnd()*w,rnd()*h,20+rnd()*34,12+rnd()*12)}});
+  const base=new THREE.Mesh(new THREE.BoxGeometry(9.4,.5,5.2),new THREE.MeshStandardMaterial({map:stone,roughness:1}));base.position.y=.25;base.receiveShadow=true;base.castShadow=true;house.add(base);
+  const wall=new THREE.Mesh(new THREE.BoxGeometry(7.8,2.2,3.5),std(0xe2d4b8));wall.position.y=1.6;wall.castShadow=true;house.add(wall);
+  const wood=std(0x4b2f20);
+  for(const x of[-3.9,-1.95,0,1.95,3.9])for(const z of[1.9,-1.9]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,2.5,10),wood);p.position.set(x,1.72,z);p.castShadow=true;house.add(p)}
+  for(const z of[1.9,-1.9]){const b=new THREE.Mesh(new THREE.BoxGeometry(8.1,.22,.2),wood);b.position.set(0,2.85,z);house.add(b)}
+  const maru=new THREE.Mesh(new THREE.BoxGeometry(7.9,.14,.95),std(0x8a5a36));maru.position.set(0,.72,2.16);maru.castShadow=true;house.add(maru);
+  const door=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#ffd798';x.fillRect(0,0,w,h);x.strokeStyle='#6d4426';x.lineWidth=6;x.strokeRect(0,0,w,h);x.lineWidth=3;for(let i=1;i<6;i++){x.beginPath();x.moveTo(i*w/6,0);x.lineTo(i*w/6,h);x.stroke()}for(let i=1;i<8;i++){x.beginPath();x.moveTo(0,i*h/8);x.lineTo(w,i*h/8);x.stroke()}});
+  for(const x of[-2.92,-.98,.98,2.92]){const d=new THREE.Mesh(new THREE.PlaneGeometry(1.62,1.72),new THREE.MeshBasicMaterial({map:door}));d.position.set(x,1.62,1.76);house.add(d)}
+  const tile=canvasTex(128,32,(x,w,h)=>{x.fillStyle='#3c424f';x.fillRect(0,0,w,h);for(let i=0;i<8;i++){x.fillStyle=i%2?'#2d323d':'#4a505e';x.fillRect(i*16,0,12,h)}});tile.repeat.set(7,1);
+  const roof=new THREE.Mesh(buildRoofGeo(5.5,3.25,2.05,.72),new THREE.MeshStandardMaterial({map:tile,side:THREE.DoubleSide,roughness:.72}));roof.position.y=2.9;roof.castShadow=true;house.add(roof);
+  const under=new THREE.Mesh(buildRoofGeo(5.42,3.18,2.0,.72),std(0x5b3a26,{side:THREE.DoubleSide}));under.position.y=2.8;house.add(under);
+  const ridge=new THREE.Mesh(new THREE.BoxGeometry(7.5,.2,.3),std(0xcfcabf));ridge.position.y=4.97;ridge.castShadow=true;house.add(ridge);
+  for(const x of[-3.75,3.75]){const e=new THREE.Mesh(new THREE.BoxGeometry(.3,.42,.34),std(0xcfcabf));e.position.set(x,5.08,0);e.rotation.z=x<0?.42:-.42;house.add(e)}
+  windowLight=new THREE.PointLight(0xffc06e,20,18,2);windowLight.position.set(0,1.7,3.4);house.add(windowLight);
+  // 장독대
+  const pts=[[0,0],[.26,.02],[.42,.3],[.46,.52],[.36,.78],[.24,.86],[.26,.92],[0,.94]].map(p=>new THREE.Vector2(p[0],p[1])),jarG=new THREE.LatheGeometry(pts,14),jarM=std(0x4a2f22,{roughness:.32});
+  [[4.9,3.5,1],[5.7,3.1,.8],[5.3,4.2,.7],[6.2,3.9,.9],[6.6,3.2,.6]].forEach(([x,z,s])=>{const j=new THREE.Mesh(jarG,jarM);j.position.set(x,.48,z-1);j.scale.setScalar(s);j.castShadow=true;house.add(j)});
+  // 돌담(길이 들어오는 곳만 트임)
+  const wallM=new THREE.MeshStandardMaterial({map:stone,roughness:1}),wg=new THREE.BoxGeometry(2.3,1,.55);
+  for(let i=0;i<54;i++){const a=i/54*Math.PI*2,r=19;if(a>4.95&&a<5.5)continue;const x=Math.cos(a)*r-1,z=Math.sin(a)*r-1,b=new THREE.Mesh(wg,wallM);if(Math.hypot(x,z)<7)continue;b.position.set(x,groundY(x,z)+.42,z);b.rotation.y=-a+Math.PI/2;b.castShadow=true;scene.add(b)}
+
+  // 사람
+  mom=person({coat:0xb24a5e,pants:0x4b4356,hair:0x8d8a86,skirt:true,perm:true});
+  dad=person({coat:0x3f5a72,pants:0x3a3a42,hair:0xb9b6ae,cap:0x6a5a44});
+  kid=person({coat:0xe7a03c,pants:0x2d3650,hair:0x2a2320});
+  for(const p of[mom,dad,kid])scene.add(p);kid.visible=false;
+  // 자동차
+  car=new THREE.Group();const cb=new THREE.Mesh(new THREE.BoxGeometry(.9,.36,1.9),std(0xd8dde4,{roughness:.35}));cb.position.y=.34;cb.castShadow=true;const ct=new THREE.Mesh(new THREE.BoxGeometry(.78,.32,1),std(0x25303f,{roughness:.2}));ct.position.set(0,.66,-.05);car.add(cb,ct);
+  for(const[x,z]of[[-.46,.6],[.46,.6],[-.46,-.6],[.46,-.6]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.14,12),std(0x1b1b1f));w.rotation.z=Math.PI/2;w.position.set(x,.17,z);car.add(w)}
+  car.visible=false;scene.add(car);
+
+  // 자녀가 사는 도시(멀리 뒤쪽)
+  city=new THREE.Group();scene.add(city);
+  const wt=canvasTex(64,128,(x,w,h)=>{x.fillStyle='#000';x.fillRect(0,0,w,h);for(let y=6;y<124;y+=11)for(let i=6;i<60;i+=12)if(rnd()>.45){x.fillStyle='#ffcf85';x.fillRect(i,y,7,6)}});
+  for(let i=0;i<14;i++){const h=2.6+rnd()*5.5,b=new THREE.Mesh(new THREE.BoxGeometry(1.1,h,1.1),new THREE.MeshStandardMaterial({color:0x2b3350,emissive:0xffffff,emissiveMap:wt,emissiveIntensity:.8,flatShading:true}));b.position.set((i%5-2)*1.7+rnd()*.3,h/2,Math.floor(i/5)*1.7);city.add(b)}
+
+  // 낙엽 · 눈
+  const n=220,fg=new THREE.BufferGeometry(),fp=new Float32Array(n*3);
+  for(let i=0;i<n;i++){fp[i*3]=(rnd()-.5)*30;fp[i*3+1]=rnd()*13;fp[i*3+2]=(rnd()-.5)*30}
+  fg.setAttribute('position',new THREE.BufferAttribute(fp,3));
+  flakes=new THREE.Points(fg,new THREE.PointsMaterial({color:0xe8a765,size:.1,transparent:true,opacity:.8,depthWrite:false}));scene.add(flakes);
+
+  addEventListener('resize',size);size();
+  // 끌면 좌우로 보기 · 휠과 두 손가락은 확대 축소(너무 가까이나 멀리 가지 않게 범위를 둠)
+  const clampZ=z=>THREE.MathUtils.clamp(z,.55,1.5),ptrs=new Map();let drag=null,pinch=0;
+  cv.addEventListener('wheel',e=>{e.preventDefault();zoom=clampZ(zoom*(1+Math.sign(e.deltaY)*Math.min(.12,Math.abs(e.deltaY)*.0012)))},{passive:false});
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,e);if(ptrs.size===1)drag=e.clientX;else{drag=null;const[a,b]=[...ptrs.values()];pinch=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}});
+  cv.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,e);if(ptrs.size>=2){const[a,b]=[...ptrs.values()],d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);if(pinch)zoom=clampZ(zoom*pinch/d);pinch=d}else if(drag!==null){dragYaw=THREE.MathUtils.clamp(dragYaw+(e.clientX-drag)*.004,-.7,.7);drag=e.clientX}});
+  const release=e=>{ptrs.delete(e.pointerId);pinch=0;if(ptrs.size===0)drag=null};cv.addEventListener('pointerup',release);cv.addEventListener('pointercancel',release);
+  requestAnimationFrame(tick);
+}
+let roadCurve=null,dragYaw=0,camR=20,clockT=0,last=0,zoom=1;
+const GATE=V(2.9,0,-3.1);
+function buildRoad(){
+  // 길: 멀리 자녀가 사는 곳에서 마당 입구까지 이어지는 흙길(거리를 고르면 길이가 바뀜)
+  const L=[12,50,95,150][S.dist],end=V(L*.34+12,0,-L*.95-30),pts=[GATE.clone(),V(4.6,0,-9),V(7.5,0,-19),V(9.5,0,-30),end];
+  roadCurve=new THREE.CatmullRomCurve3(pts);
+  const N=140,pos=[],idx=[],W=.72;
+  for(let i=0;i<=N;i++){const t=i/N,p=roadCurve.getPoint(t),d=roadCurve.getTangent(t),s=V(-d.z,0,d.x).normalize();
+    for(const k of[-1,1]){const x=p.x+s.x*W*k,z=p.z+s.z*W*k;pos.push(x,groundY(x,z)+.06,z)}
+    if(i<N){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3)}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  if(roadMesh){roadMesh.geometry.dispose();roadMesh.geometry=g}else{roadMesh=new THREE.Mesh(g,std(0x9a7e58,{roughness:1,side:THREE.DoubleSide}));roadMesh.receiveShadow=true;scene.add(roadMesh)}
+  city.position.set(end.x+1,groundY(end.x,end.z),end.z-5);const cs=[.5,.8,1.05,1.3][S.dist];city.scale.setScalar(cs);
+}
+function size(){const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+function setScene(){
+  target.d=S.dist;mom.visible=S.mom;dad.visible=S.dad;applySim();
+  if(buildRoad.k!==S.dist){buildRoad.k=S.dist;buildRoad()}
+}
+function setGam(n){gamMeta.forEach((g,i)=>{if(i<n){if(g.to===0||g.fall>0){g.to=1;g.fall=0;g.y=0;g.v=0}}else if(g.to===1){g.to=0;g.fall=reduced?0:1;g.v=0;g.y=0}})}
+
+/* 자녀 방문: 차로 와서 내려 → 부모님께 걸어가 만나고 → 감 하나 → 돌아감 */
+const visit={on:false,t:0,dur:4,onMeet:null,done:null,met:false};
+function startVisit(dur,onMeet){return new Promise(res=>{Object.assign(visit,{on:true,t:0,dur,onMeet,done:res,met:false});kid.visible=true})}
+async function visitOnce(){if(visit.on||S.playing)return;await startVisit(5,null)}
+function parentsPos(){return V(Math.cos(walkA)*3.6,0,Math.sin(walkA)*3.6)}
+let walkA=1.2,angM=1.2,angD=1.2,phase=0;
+function stepVisitAnim(dt){
+  if(!visit.on)return;visit.t+=dt/visit.dur;const t=visit.t,useCar=S.dist>0&&visit.dur>1.2;
+  const tp=parentsPos().add(V(.0,0,0)),gate=GATE.clone(),meetAt=tp.clone().add(gate.clone().sub(tp).normalize().multiplyScalar(.9));
+  const ep=x=>x*x*(3-2*x),seg=(a,b)=>THREE.MathUtils.clamp((t-a)/(b-a),0,1);
+  // 차
+  if(useCar){car.visible=t<.32||t>.7;const ct=t<.3?1-ep(seg(0,.3))*.985:(t>.72?ep(seg(.72,1))*.985+.015:.015),rt=ct*.5;const p=roadCurve.getPoint(rt);car.position.set(p.x,groundY(p.x,p.z)+.06,p.z);const d=roadCurve.getTangent(rt);car.rotation.y=Math.atan2(d.x,d.z)+(t<.3?Math.PI:0)}else car.visible=false;
+  // 자녀
+  let p;
+  if(t<.3){kid.visible=!useCar;p=roadCurve.getPoint(.1*(1-seg(0,.3)))}
+  else if(t<.44){kid.visible=true;p=gate.clone().lerp(meetAt,ep(seg(.3,.44)))}
+  else if(t<.6){kid.visible=true;p=meetAt}
+  else if(t<.74){kid.visible=true;p=meetAt.clone().lerp(gate,ep(seg(.6,.74)))}
+  else{kid.visible=!useCar;p=roadCurve.getPoint(.1*seg(.74,1))}
+  kid.position.set(p.x,groundY(p.x,p.z),p.z);
+  const look=t>=.44&&t<.6?tp:(t<.44?meetAt:gate);kid.rotation.y=Math.atan2(look.x-p.x,look.z-p.z);
+  const moving=(t>.3&&t<.44)||(t>.6&&t<.74)||(!useCar&&(t<.3||t>.74));swing(kid,clockT*(visit.dur<1?20:9),moving?.55:0);
+  const u=kid.userData;u.armR.rotation.x=(t>=.44&&t<.6)?-1.5:0;u.armL.rotation.x=(t>=.44&&t<.6)?-1.5:0;
+  if(!visit.met&&t>=.5){visit.met=true;if(visit.onMeet)visit.onMeet()}
+  if(t>=1){visit.on=false;kid.visible=false;car.visible=false;visit.done&&visit.done()}
+}
+function tick(ts){
+  const dt=Math.min(.05,(ts-last)/1000||.016);last=ts;clockT+=dt;
+  const gs=tree.scale.x+(target.grow-tree.scale.x)*Math.min(1,dt*3.2);tree.scale.setScalar(gs||.5);
+  const k=Math.min(1,dt*2.4);cur.top.lerp(new THREE.Color(goal.top),k);cur.bot.lerp(new THREE.Color(goal.bot),k);cur.leaf.lerp(new THREE.Color(goal.leaf),k);cur.ground.lerp(new THREE.Color(goal.ground),k);
+  cur.dens+=(goal.dens-cur.dens)*k;cur.snow+=(goal.snow-cur.snow)*k;
+  leaf.material.color.copy(cur.leaf).lerp(new THREE.Color(0xffffff),.45);ground.material.color.copy(cur.ground);scene.fog.color.copy(cur.bot).lerp(cur.top,.28);
+  ridges.forEach(m=>m.material.color.copy(m.userData.base).lerp(cur.bot,.3));
+  const M=new THREE.Matrix4(),Q=new THREE.Quaternion(),Sv=V();
+  leaf.userData.base.forEach((b,i)=>{const sc=b.k<cur.dens?b.s:0;Sv.set(sc,sc,sc);M.compose(b.p,b.q,Sv);leaf.setMatrixAt(i,M)});leaf.instanceMatrix.needsUpdate=true;
+  gamMeta.forEach((g,i)=>{
+    if(g.fall>0){g.v+=dt*9;g.y+=g.v*dt;g.fall-=dt*.9;g.s=Math.max(0,Math.min(1,g.fall*2));if(g.fall<=0){g.s=0;g.y=0}}
+    else g.s+=(g.to-g.s)*Math.min(1,dt*(g.to?7:14));
+    const sw=Math.sin(clockT*1.3+g.ph)*.018,pop=g.to&&g.s<.98?1+Math.sin(g.s*3.14)*.35:1,s=g.s*pop;
+    Sv.set(s,s*.92,s);M.compose(V(g.p.x+sw,g.p.y-g.y/Math.max(.3,tree.scale.x),g.p.z),Q,Sv);gam.setMatrixAt(i,M)});
+  gam.instanceMatrix.needsUpdate=true;
+  // 부모님 걷기(두 분이면 손잡고 나란히 · 나이가 들수록 허리가 굽고 느려짐 · 100세가 되면 멈춰 그 자리에 서 계심)
+  const paused=visit.on&&visit.t>.34&&visit.t<.62,el=elapsed()+S.sim;
+  const old=a=>THREE.MathUtils.clamp((a+el-74)/24,0,1),oM=old(S.ageM),oD=old(S.ageD);
+  const doneM=S.ageM+el>=100,doneD=S.ageD+el>=100,goM=S.mom&&!doneM,goD=S.dad&&!doneD;
+  const oW=Math.max(goM?oM:0,goD?oD:0);
+  if(!paused&&(goM||goD))walkA+=dt*THREE.MathUtils.lerp(.24,.06,oW);
+  if(goM)angM=walkA;if(goD)angD=walkA;
+  const cad=THREE.MathUtils.lerp(4.8,2.2,oW),amp=THREE.MathUtils.lerp(.44,.14,oW);phase+=dt*cad;
+  const both=goM&&goD,two=S.mom&&S.dad,inner=two?3.28:3.6,outer=two?3.92:3.6;
+  [[mom,inner,oM,angM,!goM],[dad,outer,oD,angD,!goD]].forEach(([p,r,o,ang,stop],idx)=>{
+    p.position.set(Math.cos(ang)*r,paused||stop?0:Math.abs(Math.sin(phase))*.025*(1-o*.7),Math.sin(ang)*r);
+    p.rotation.y=paused?Math.atan2(kid.position.x-p.position.x,kid.position.z-p.position.z):-ang;
+    swing(p,phase+idx*.4,paused||stop?0:amp);
+    const u=p.userData,lean=.03+o*.5;u.up.rotation.x=lean;u.hd.rotation.x=-lean*.72;u.cane.visible=o>.42;
+    u.armL.rotation.set(0,0,0);u.armR.rotation.set(0,0,0);
+    if(stop&&!paused)return;
+    if(both&&!paused){(p===mom?u.armR:u.armL).rotation.z=(p===mom?1:-1)*.62;(p===mom?u.armL:u.armR).rotation.x=Math.sin(phase)*.3*(1-o)}
+    else if(paused){u.armR.rotation.x=-1.1;u.armL.rotation.x=-.8}
+    else{u.armL.rotation.x=Math.sin(phase)*.35*(1-o);u.armR.rotation.x=-Math.sin(phase)*.35*(1-o)}
+  });
+  stepVisitAnim(dt);
+  const P=flakes.geometry.attributes.position,n=P.count;for(let i=0;i<n;i++){let y=P.getY(i)-dt*(.5+cur.snow*.4)*(reduced?0:1),x=P.getX(i)+Math.sin(clockT+i)*dt*.2;if(y<0)y=13;P.setXYZ(i,x,y,P.getZ(i))}P.needsUpdate=true;
+  flakes.material.color.set(cur.snow>.5?0xffffff:0xe8a765);flakes.material.size=cur.snow>.5?.13:.1;
+  // 카메라: 마당 앞쪽에서 좌우로 살짝만 움직임(건물이 가리지 않게)
+  const wide=innerWidth>760,yaw=.3+dragYaw+(reduced?0:Math.sin(clockT*.14)*.16);
+  const want=((wide?21:29)+target.d*(wide?1.2:1.6))*zoom;camR+=(want-camR)*Math.min(1,dt*2);
+  const right=V(Math.cos(yaw),0,-Math.sin(yaw)),off=wide?camR*.19:0,cx=Math.sin(yaw)*camR+right.x*off-2.5,cz=Math.cos(yaw)*camR+right.z*off-1,lx=right.x*off-2.5,lz=right.z*off-1;
+  cam.position.set(cx,wide?5.6:7.4,cz);cam.lookAt(lx,wide?3.5:-.4,lz);
+  R.render(scene,cam);requestAnimationFrame(tick);
+}
+
+/* 시간 시뮬레이션: 고른 배속으로 시간이 흐르며 자녀가 다녀갈 때마다 감이 떨어짐 */
+async function play(){
+  if(S.playing)return;track('play');S.playing=true;applySim();
+  const seasons=[SEASON.spring,SEASON.summer,SEASON.autumn,SEASON.winter],left=calc().left;
+  if(S.sim>=Math.floor(left))S.sim=0;
+  while(S.playing&&S.sim<left-1e-6){
+    let d=SPEEDS[S.speed].s/S.per,step=1/S.per;if(d<.5){const k=Math.ceil(.5/d);d*=k;step*=k}
+    goal=seasons[Math.floor((S.sim%1)*4)];
+    await startVisit(reduced?.3:d,()=>{S.sim=Math.min(left,S.sim+step);applySim()});
+  }
+  const end=S.sim>=left-1e-6;S.playing=false;goal=SEASON.autumn;applySim();
+  if(end){$('hudU').textContent=`${who()} 100세 · 함께한 시간 ${fmt(calc().days)}일`;$('hudL').textContent='모두 함께했습니다'}
+}
+function load(){try{const v=JSON.parse(localStorage.getItem('gamnamu')||'null');if(v){Object.assign(S,v);S.step=3;return Math.floor(elapsed()*365.25)}}catch{}return -1}
+const was=load();
+try{if(!window.THREE)throw 0;init();setScene();tree.scale.setScalar(.3)}catch(e){console.error(e);$('scene').style.background='linear-gradient(#24305f,#f2a877)'}
+render();
+if(was>=0)toast(`저장한 감나무를 열었습니다 · 기준일부터 ${was}일 지났습니다`);
+$('appBtn').onclick=()=>{track('app_panel');S.step=4;render()};
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href*="play.google"]');if(a)track('app_install')});
+setInterval(()=>{if(!S.playing&&!S.sim)updateHud()},30000);
+</script>
+
+</body>
+</html>
