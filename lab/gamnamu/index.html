@@ -149,7 +149,7 @@ const S={mom:true,dad:false,ageM:72,ageD:72,dist:1,per:4,hrs:6,sib:2,step:0,play
 const SPEEDS=[{n:'1년 = 20초',s:20},{n:'1년 = 5초',s:5},{n:'1년 = 1초',s:1}];
 const DIST=[{n:'같은 동네',d:0,t:'걸어서 갈 거리'},{n:'차로 1시간',d:1,t:'왕복 2시간'},{n:'KTX 거리',d:2,t:'왕복 5시간쯤'},{n:'비행기 거리',d:3,t:'왕복 하루'}];
 const HRS=[{n:'식사 한 끼',h:3},{n:'반나절',h:6},{n:'하루 종일',h:12},{n:'1박 2일',h:30}];
-const APP='https://play.google.com/store/apps/details?id=com.naoncare.guardian';
+const APP='https://play.google.com/store/apps/details?id=com.naoncare.guardian&referrer=utm_source%3Dgamnamu%26utm_medium%3Dweb%26utm_campaign%3Dlab_gamnamu'; // 플레이 콘솔에서 감나무에서 온 방문을 가르는 꼬리표
 const YEAR=365.25*864e5;
 const who=()=>S.mom&&S.dad?'부모님':S.mom?'엄마':'아빠';
 const refAge=()=>S.mom&&S.dad?Math.min(S.ageM,S.ageD):S.mom?S.ageM:S.ageD;
@@ -636,10 +636,10 @@ async function play(){
   if(end){$('hudU').textContent=`${who()} 100세 · 함께한 시간 ${fmt(calc().days)}일`;$('hudL').textContent='모두 함께했습니다'}
 }
 
-/* 배경음악: 기본은 켜짐 · 브라우저가 첫 손길 전 소리를 막으면 첫 손길에 시작 · 끈 사람은 기억 · 세 곡을 이어 듣고 처음으로 돌아감 */
-const bgm={el:null,i:0,on:false,raf:0,vol:.55,n:3};
+/* 배경음악: 기본은 켜짐 · 브라우저가 첫 손길 전 소리를 막으면 첫 손길에 시작 · 끈 사람은 기억 · 네 곡을 이어 듣고 처음으로 돌아감 */
+const bgm={el:null,i:0,on:false,raf:0,vol:.55,n:4};
 function bgmFade(to,ms,done){const a=bgm.el,from=a.volume,t0=performance.now();cancelAnimationFrame(bgm.raf);
-  const tick=t=>{const k=Math.min((t-t0)/ms,1);a.volume=from+(to-from)*k;if(k<1)bgm.raf=requestAnimationFrame(tick);else if(done)done()};
+  const tick=t=>{const k=THREE.MathUtils.clamp((t-t0)/ms,0,1);a.volume=from+(to-from)*k;if(k<1)bgm.raf=requestAnimationFrame(tick);else if(done)done()};
   bgm.raf=requestAnimationFrame(tick)}
 function bgmBtn(){const b=$('musicBtn');b.textContent=bgm.on?'음악 끄기':'음악 켜기';b.setAttribute('aria-pressed',bgm.on);$('volBox').hidden=!bgm.on||bgm.fixed}
 function bgmSrc(){bgm.el.src=`music/${bgm.i+1}.mp3`}
