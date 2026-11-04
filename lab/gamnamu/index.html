@@ -41,6 +41,15 @@ html,body{height:100%;margin:0;background:var(--night);color:var(--paper);font-f
 .body::-webkit-scrollbar{width:6px;-webkit-appearance:none}
 .body::-webkit-scrollbar-thumb{background:rgba(43,33,24,.45);border-radius:3px}
 .topbar{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));display:flex;gap:8px}
+.sheet:not([hidden])~.topbar{right:max(420px,calc(env(safe-area-inset-right,0px) + 420px))}
+.music{display:flex;gap:8px;align-items:center}
+#thought{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none}
+#thought .cloud{position:absolute;left:-4px;bottom:0;width:196px;aspect-ratio:220/150;opacity:0;transform:translateY(8px) scale(.92);transform-origin:0 100%;transition:opacity .5s,transform .5s}
+#thought.on .cloud{opacity:1;transform:none}
+#thought svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#thought path,#thought circle{fill:#fffdf8;stroke:#2b2118;stroke-width:3}
+#thought span{position:absolute;left:20%;right:13%;top:16%;bottom:30%;display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--display);font-size:15px;font-weight:700;line-height:1.35;color:#2b2118;word-break:keep-all}
+.vol{display:flex;align-items:center;width:112px;height:38px;padding:0 12px;box-sizing:border-box;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(20,26,43,.55);backdrop-filter:blur(6px)}
 .topbar button,.lower button{font:inherit;font-size:14px;font-weight:600;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(20,26,43,.55);color:var(--paper);cursor:pointer;backdrop-filter:blur(6px)}
 .lower{position:fixed;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;flex-wrap:wrap}
 .lower button{pointer-events:auto}
@@ -106,6 +115,11 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
   .hud{top:calc(70px + env(safe-area-inset-top,0px))}
   .brand{font-size:20px}
   .topbar button{padding:8px 11px;font-size:13px}
+  .music{flex-direction:column;align-items:flex-end;gap:6px}
+  #thought .cloud{width:164px}
+  #thought span{font-size:13px}
+  .vol{height:34px}
+  .sheet:not([hidden])~.topbar{right:max(16px,env(safe-area-inset-right,0px))}
   h1{font-size:22px}
 }
 </style>
@@ -114,6 +128,7 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
 <div class="brand">백 살 감나무<small>부모님과 앞으로 몇 번을 더 뵐 수 있을까요</small></div>
 <div class="hud" aria-live="polite"><b id="hudN">112</b><span id="hudL">번 더 뵐 수 있어요</span><em id="hudU"></em></div>
 
+<div id="thought" aria-hidden="true"><div class="cloud"><svg viewBox="0 0 220 150"><path d="M52 98C24 100 10 68 34 56 26 28 62 12 84 28 96 6 138 8 148 28 172 14 206 34 192 58 214 70 204 104 176 102 168 124 130 126 118 110 102 126 62 122 52 98Z"/><circle cx="46" cy="122" r="9"/><circle cx="27" cy="141" r="5"/></svg><span id="thoughtT"></span></div></div>
 <section class="sheet" id="sheet" aria-label="입력과 결과">
   <button class="x" id="closeBtn" type="button" aria-label="닫기">×</button>
   <div class="prog" id="prog"></div>
@@ -121,7 +136,7 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
   <div class="more" id="more" hidden>아래로 더 있습니다 ↓</div>
   <div class="foot" id="foot"></div>
 </section>
-<div class="topbar" id="topbar"><button id="editBtn" type="button" hidden>정보 변경</button></div>
+<div class="topbar" id="topbar"><div class="music"><button id="musicBtn" type="button" aria-pressed="false">음악 켜기</button><div class="vol" id="volBox" hidden><input id="volR" type="range" min="0" max="100" value="55" aria-label="음악 소리 크기"></div></div><button id="editBtn" type="button" hidden>정보 변경</button></div>
 <div class="lower" id="lower" hidden><button id="timeBtn" type="button">시간 돌려 보기</button><button id="appBtn" class="app" type="button">나이노트 앱 설치</button></div>
 <div class="toast" id="toast" hidden></div>
 
@@ -246,19 +261,22 @@ function applySim(){
   const go=$('goBtn');if(go)go.textContent=S.playing?'멈추기':'재생';
 }
 /* ───────── 3D 마당 ───────── */
-let R,scene,cam,sky,sun,hemi,ground,tree,leaf,gam,gamMeta=[],tips=[],mom,dad,kid,car,city,roadMesh,flakes,ridges=[],windowLight;
+let R,scene,cam,sky,sun,hemi,ground,tree,leaf,gam,gamMeta=[],tips=[],mom,dad,kid,car,city,roadMesh,flakes,ridges=[],windowLight,ringM,snowRoof,flowerH,flowerS,flowerC,blossom;
+const flowerD=[],blossomD=[];let bloomShown=-1,treeShown=-1,warmShown=1;
 const target={grow:.8,d:1};
 const rnd=(()=>{let s=20261104;return()=>(s=(s*1664525+1013904223)>>>0)/4294967296})();
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const std=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
 const SEASON={
-  spring:{top:0x34588f,bot:0xf4c9a4,leaf:0xa9cc6e,ground:0x60803f,dens:.8,snow:0},
-  summer:{top:0x2a5f9e,bot:0xcfe2bb,leaf:0x4f9148,ground:0x4a6f38,dens:1,snow:0},
-  autumn:{top:0x24305f,bot:0xf2a877,leaf:0xd99a3a,ground:0x6a5f35,dens:.5,snow:0},
-  winter:{top:0x1e2846,bot:0x98a4c4,leaf:0x7b6a55,ground:0xb7c0cf,dens:.03,snow:1}
+  spring:{top:0x34588f,bot:0xf4c9a4,leaf:0xa9cc6e,ground:0x60803f,dens:.5,snow:0,warm:0,bloom:1,tree:1,fly:.9,flake:0xffc4d6,say:['꽃이 참 곱게 폈네','올봄엔 다녀가려나']},
+  summer:{top:0x2a5f9e,bot:0xcfe2bb,leaf:0x4f9148,ground:0x4a6f38,dens:1,snow:0,warm:0,bloom:.45,tree:0,fly:0,flake:0xffffff,say:['그늘이 시원하네','더운데 몸은 괜찮으려나']},
+  autumn:{top:0x24305f,bot:0xf2a877,leaf:0xd99a3a,ground:0x6a5f35,dens:.5,snow:0,warm:1,bloom:0,tree:0,fly:.8,flake:0xe8a765,say:['올해 감이 참 잘 익었네','오면 먹이려고 남겨 둬야지']},
+  winter:{top:0x1e2846,bot:0x98a4c4,leaf:0x7b6a55,ground:0xf2f6ff,dens:.03,snow:1,warm:0.6,bloom:0,tree:0,fly:.95,flake:0xffffff,say:['눈이 많이 오네','길 미끄러울 텐데 조심해야지']}
 };
+const SEASONS=[SEASON.spring,SEASON.summer,SEASON.autumn,SEASON.winter],SEASON_SEC=28;
+let seasonT=0;
 const c0=SEASON.autumn;
-const cur={top:new THREE.Color(c0.top),bot:new THREE.Color(c0.bot),leaf:new THREE.Color(c0.leaf),ground:new THREE.Color(c0.ground),dens:c0.dens,snow:0};
+const cur={top:new THREE.Color(c0.top),bot:new THREE.Color(c0.bot),leaf:new THREE.Color(c0.leaf),ground:new THREE.Color(c0.ground),dens:c0.dens,snow:0,warm:1,bloom:0,tree:0,fly:c0.fly,flake:new THREE.Color(c0.flake)};
 let goal=SEASON.autumn;
 const groundY=(x,z)=>{const r=Math.hypot(x,z),h=Math.sin(x*.07)*Math.cos(z*.06)*1.5+Math.sin(x*.021+1)*Math.cos(z*.017)*3.4;return h*THREE.MathUtils.smoothstep(r,12,46)+THREE.MathUtils.smoothstep(r,70,150)*9};
 
@@ -357,8 +375,8 @@ function init(){
   leaf=new THREE.InstancedMesh(lg,new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:.8}),tips.length*34);leaf.castShadow=true;tree.add(leaf);
   leaf.userData.base=[];const C=new THREE.Color(),M0=new THREE.Matrix4(),Eu=new THREE.Euler();
   for(let i=0;i<leaf.count;i++){const t=tips[i%tips.length],p=t.clone().add(V(rnd()-.5,(rnd()-.42)*.9,rnd()-.5).multiplyScalar(1.5));
-    leaf.userData.base.push({p,q:new THREE.Quaternion().setFromEuler(Eu.set(rnd()*6,rnd()*6,rnd()*6)),s:.7+rnd()*.9,k:rnd()});
-    C.setHSL(.02+rnd()*.1,.62+rnd()*.3,.34+rnd()*.3);leaf.setColorAt(i,C);M0.makeTranslation(p.x,p.y,p.z);leaf.setMatrixAt(i,M0)}
+    leaf.userData.base.push({p,q:new THREE.Quaternion().setFromEuler(Eu.set(rnd()*6,rnd()*6,rnd()*6)),s:.7+rnd()*.9,k:rnd(),a:new THREE.Color().setHSL(.02+rnd()*.1,.62+rnd()*.3,.34+rnd()*.3),n:new THREE.Color().setScalar(.62+rnd()*.38)});
+    C.copy(leaf.userData.base[i].a);leaf.setColorAt(i,C);M0.makeTranslation(p.x,p.y,p.z);leaf.setMatrixAt(i,M0)}
   leaf.instanceColor.needsUpdate=true;
 
   gam=new THREE.InstancedMesh(new THREE.SphereGeometry(.17,14,12),new THREE.MeshStandardMaterial({color:0xf26c16,emissive:0xa33a00,emissiveIntensity:.5,roughness:.4}),MAXG);
@@ -366,7 +384,7 @@ function init(){
   for(let i=0;i<MAXG;i++){const t=tips[Math.floor(rnd()*tips.length)],p=t.clone().add(V(rnd()-.5,-rnd()*.6-.05,rnd()-.5).multiplyScalar(1.05));gamMeta.push({p,s:0,to:0,fall:0,v:0,y:0,ph:rnd()*6.28})}
 
   // 나무 둘레 산책길
-  const ring=new THREE.Mesh(new THREE.RingGeometry(3.1,4.1,64),std(0x8d7350,{roughness:1}));ring.rotation.x=-Math.PI/2;ring.position.y=.03;ring.receiveShadow=true;scene.add(ring);
+  const ring=new THREE.Mesh(new THREE.RingGeometry(3.1,4.1,64),std(0x8d7350,{roughness:1}));ring.rotation.x=-Math.PI/2;ring.position.y=.03;ring.receiveShadow=true;scene.add(ring);ringM=ring.material;
 
   // 기와집
   const house=new THREE.Group();house.position.set(-9,0,-6.5);house.rotation.y=.62;scene.add(house);
@@ -382,6 +400,7 @@ function init(){
   const tile=canvasTex(128,32,(x,w,h)=>{x.fillStyle='#3c424f';x.fillRect(0,0,w,h);for(let i=0;i<8;i++){x.fillStyle=i%2?'#2d323d':'#4a505e';x.fillRect(i*16,0,12,h)}});tile.repeat.set(7,1);
   const roof=new THREE.Mesh(buildRoofGeo(5.5,3.25,2.05,.72),new THREE.MeshStandardMaterial({map:tile,side:THREE.DoubleSide,roughness:.72}));roof.position.y=2.9;roof.castShadow=true;house.add(roof);
   const under=new THREE.Mesh(buildRoofGeo(5.42,3.18,2.0,.72),std(0x5b3a26,{side:THREE.DoubleSide}));under.position.y=2.8;house.add(under);
+  snowRoof=new THREE.Mesh(buildRoofGeo(5.5,3.25,2.05,.72),std(0xf3f6fb,{side:THREE.DoubleSide,transparent:true,opacity:0,roughness:1}));snowRoof.position.y=2.97;snowRoof.visible=false;house.add(snowRoof);
   const ridge=new THREE.Mesh(new THREE.BoxGeometry(7.5,.2,.3),std(0xcfcabf));ridge.position.y=4.97;ridge.castShadow=true;house.add(ridge);
   for(const x of[-3.75,3.75]){const e=new THREE.Mesh(new THREE.BoxGeometry(.3,.42,.34),std(0xcfcabf));e.position.set(x,5.08,0);e.rotation.z=x<0?.42:-.42;house.add(e)}
   windowLight=new THREE.PointLight(0xffc06e,20,18,2);windowLight.position.set(0,1.7,3.4);house.add(windowLight);
@@ -391,6 +410,30 @@ function init(){
   // 돌담(길이 들어오는 곳만 트임)
   const wallM=new THREE.MeshStandardMaterial({map:stone,roughness:1}),wg=new THREE.BoxGeometry(2.3,1,.55);
   for(let i=0;i<54;i++){const a=i/54*Math.PI*2,r=19;if(a>4.95&&a<5.5)continue;const x=Math.cos(a)*r-1,z=Math.sin(a)*r-1,b=new THREE.Mesh(wg,wallM);if(Math.hypot(x,z)<7||z>-3)continue;b.position.set(x,groundY(x,z)+.42,z);b.rotation.y=-a+Math.PI/2;b.castShadow=true;scene.add(b)}
+
+  // 대문(길이 마당으로 들어오는 곳)
+  const gt=new THREE.Group();gt.position.set(gateAt.x,groundY(gateAt.x,gateAt.z),gateAt.z);gt.rotation.y=Math.atan2(gateDir.x,gateDir.z);scene.add(gt);
+  const gw=std(0x5a3a26),gr=std(0x3c424f,{roughness:.72});
+  for(const k of[-1,1]){
+    const p=new THREE.Mesh(new THREE.BoxGeometry(.22,2.4,.22),gw);p.position.set(k*1.28,1.2,0);p.castShadow=true;gt.add(p);
+    const d=new THREE.Group();d.position.set(k*1.2,0,0);d.rotation.y=k*-1.25;const l=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.75,.06),gw);l.position.set(-k*.56,.98,0);l.castShadow=true;d.add(l);gt.add(d);
+    for(let i=0;i<3;i++){const b=new THREE.Mesh(wg,wallM);b.position.set(k*(2.55+i*2.28),.42,0);b.castShadow=true;gt.add(b)}
+    const r=new THREE.Mesh(new THREE.BoxGeometry(3.5,.09,.62),gr);r.position.set(0,2.62,k*.27);r.rotation.x=k*.42;r.castShadow=true;gt.add(r);
+  }
+  const gl=new THREE.Mesh(new THREE.BoxGeometry(2.9,.18,.26),gw);gl.position.y=2.36;gt.add(gl);
+  const gk=new THREE.Mesh(new THREE.BoxGeometry(3.6,.12,.14),std(0xcfcabf));gk.position.y=2.76;gt.add(gk);
+
+  // 꽃: 마당에 무리 지어 피고(봄 가득 · 여름 절반 · 가을 겨울 없음) · 감나무 꽃은 봄에만
+  const clear=(x,z)=>{const lx=(x+9)*.814-(z+6.5)*.581,lz=(x+9)*.581+(z+6.5)*.814,r=Math.hypot(x,z);if(r<4.6||r>17)return false;if(Math.abs(lx)<5.8&&Math.abs(lz)<3.6)return false;if(lx>3.6&&lx<8&&lz>.8&&lz<5)return false;const u=(x-2.9)*.454-(z+3.1)*.891,v=Math.abs((x-2.9)*.891+(z+3.1)*.454);return!(u>-1&&v<1.5)};
+  const fcol=[0xf7a8c0,0xffe07a,0xffffff,0xd98cf0],fc=new THREE.Color();
+  for(let c=0;c<26;c++){const a=rnd()*6.28,r=5+rnd()*11,cx=Math.cos(a)*r,cz=Math.sin(a)*r,tone=fcol[c%4];
+    for(let i=0;i<16;i++){const x=cx+(rnd()+rnd()-1)*1.5,z=cz+(rnd()+rnd()-1)*1.5;if(clear(x,z))flowerD.push({p:V(x,groundY(x,z),z),th:rnd()*.8,s:.75+rnd()*.5,c:tone})}}
+  const fs=new THREE.Shape();for(let i=0;i<=40;i++){const a=i/40*6.2832,r=.075+.085*Math.abs(Math.cos(a*2.5)),x=Math.cos(a)*r,y=Math.sin(a)*r;i?fs.lineTo(x,y):fs.moveTo(x,y)}
+  const hg=new THREE.ShapeGeometry(fs);hg.rotateX(-1.05);hg.translate(0,.2,0);const sg=new THREE.CylinderGeometry(.012,.014,.2,4);sg.translate(0,.1,0);const cg=new THREE.SphereGeometry(.04,6,4);cg.translate(0,.21,.01);
+  flowerH=new THREE.InstancedMesh(hg,std(0xffffff,{side:THREE.DoubleSide}),flowerD.length);flowerS=new THREE.InstancedMesh(sg,std(0x5c8a44),flowerD.length);flowerC=new THREE.InstancedMesh(cg,std(0xffc83d),flowerD.length);
+  flowerD.forEach((d,i)=>flowerH.setColorAt(i,fc.set(d.c)));flowerH.frustumCulled=flowerS.frustumCulled=flowerC.frustumCulled=false;scene.add(flowerH,flowerS,flowerC);
+  const lb=leaf.userData.base;for(let i=0;i<300;i++){const b=lb[Math.floor(rnd()*lb.length)];blossomD.push({p:b.p.clone().add(V(rnd()-.5,rnd()-.5,rnd()-.5).multiplyScalar(.35)),th:rnd()*.8,s:.8+rnd()*.7})}
+  blossom=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.1,0),std(0xffdfe9,{emissive:0x4a2a30}),300);blossom.frustumCulled=false;leaf.parent.add(blossom);
 
   // 사람
   mom=person({coat:0xb24a5e,pants:0x4b4356,hair:0x8d8a86,skirt:true,perm:true});
@@ -447,8 +490,64 @@ function setGam(n){gamMeta.forEach((g,i)=>{if(i<n){if(g.to===0||g.fall>0){g.to=1
 const visit={on:false,t:0,dur:4,onMeet:null,done:null,met:false};
 function startVisit(dur,onMeet){return new Promise(res=>{Object.assign(visit,{on:true,t:0,dur,onMeet,done:res,met:false});kid.visible=true})}
 async function visitOnce(){if(visit.on||S.playing)return;await startVisit(5,null)}
-function parentsPos(){return V(Math.cos(walkA)*3.6,0,Math.sin(walkA)*3.6)}
-let walkA=1.2,angM=1.2,angD=1.2,phase=0;
+function parentsPos(){return V(day.x,0,day.z)}
+let phase=0;
+/* 부모님 하루: 마당을 돌다가 멈춰 생각하고 · 마루에 앉고 · 장독대에 들르고 · 문 앞에서 길 저편을 바라봄 */
+const hw=(x,z)=>V(-9+x*.814+z*.581,0,-6.5-x*.581+z*.814); // 집 기준 좌표 → 마당 좌표
+const RING=3.6,gateAt=V(6,0,-9),gateDir=V(.454,0,-.891),jarAt=hw(4.5,3.4),jarMid=hw(4.9,2.5);
+const SPOT={
+  think:{hold:6,say:['밥은 먹고 다니나','끼니는 거르지 않겠지','잠은 제대로 자려나','요즘 많이 바쁜가 보다','회사 일이 많이 힘든가','아픈 데는 없겠지','감기는 안 걸렸으려나','어디 아파도 말을 안 하니','혼자 끙끙 앓지나 않는지','힘들면 힘들다고 하지','돈 걱정은 안 하고 사나','너무 무리하지 말아야 할 텐데','술은 좀 줄였으려나','운전 조심해야 할 텐데','사람들하고는 잘 지내겠지','우리 걱정은 말아야 할 텐데','잘 지내면 그걸로 됐지','우리 애 얼굴 본 지 오래됐네']},
+  sit:{at:hw(1.8,3.3),seat:hw(1.8,2.62),yaw:.62,hold:11,say:['어릴 때 여기서 뛰어놀았는데','마루에 앉으니 옛날 생각 나네','여기서 수박 참 잘 먹었는데','업어 키운 게 엊그제 같은데','언제 이렇게 컸을까','더 잘해 줄 걸 그랬어','그때 혼낸 게 마음에 걸리네','어릴 때 참 귀여웠는데','자식 걱정은 끝이 없네','다 커도 내 눈엔 애기인데','전화 올 때가 됐는데','목소리라도 듣고 싶네']},
+  jar:{at:jarAt,yaw:Math.atan2(jarMid.x-jarAt.x,jarMid.z-jarAt.z),hold:7.5,say:['된장 좀 보내 줘야겠다','올해 장맛이 좋네','김치 담가 놓으면 가지러 오려나','고추장 떨어질 때가 됐을 텐데','우리 애가 된장찌개를 좋아했지','사 먹는 밥이 입에 맞으려나','반찬 좀 챙겨 보내야겠다','택배로 보내면 귀찮아하려나']},
+  gate:{at:gateAt.clone().addScaledVector(gateDir,-1.1),yaw:Math.atan2(gateDir.x,gateDir.z),hold:10,say:['오늘은 오려나','저 길로 올 것 같은데','차 소리가 들린 것 같은데','바쁘면 안 와도 되는데','오는 길 막히지는 않으려나','먼 길 오느라 고생이겠다','이번 명절엔 오려나','온다고 하면 뭘 해 먹일까','오면 좋아하는 거 해 줘야지','왔다 가면 더 허전하더라','안 와도 잘 지내면 됐지','보고 싶다고 하면 부담되려나']}
+};
+const PLAN=[.6,'think',1.1,'sit',.8,'jar',.7,'gate',1.1,'think',.8,'jar',.9,'sit',.7,'gate'];
+const day={x:Math.cos(1.2)*RING,z:Math.sin(1.2)*RING,h:-1.2,i:1,mode:'ring',arc:.6*6.28,t:0,kind:null,k:1,sit:0,bend:0,shade:0,moving:true,tx:0,tz:0,said:false};
+const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),ease=x=>x*x*(3-2*x);
+function stepTo(x,z,spd,dt){const dx=x-day.x,dz=z-day.z,d=Math.hypot(dx,dz),diff=wrap(Math.atan2(dx,dz)-day.h);day.h+=THREE.MathUtils.clamp(diff,-2.2*dt,2.2*dt);const v=spd*Math.max(.25,Math.cos(diff));day.x+=Math.sin(day.h)*v*dt;day.z+=Math.cos(day.h)*v*dt;return d}
+function ringStep(spd,dt){const a=Math.atan2(day.z,day.x)+.45;stepTo(Math.cos(a)*RING,Math.sin(a)*RING,spd,dt);return a-.45}
+function nextPlan(){const p=PLAN[day.i++%PLAN.length];if(typeof p==='number'){day.mode='ring';day.arc=p*6.28*day.k}else{day.kind=p;day.mode=p==='think'?'turn':'wait';day.t=0;day.said=false}}
+function stepDay(dt,spd){
+  const S1=SPOT[day.kind];day.moving=true;
+  if(day.mode==='ring'){ringStep(spd,dt);day.arc-=spd/RING*dt;if(day.arc<=0)nextPlan()}
+  else if(day.mode==='wait'){const a=ringStep(spd,dt);if(Math.abs(wrap(a-Math.atan2(S1.at.z,S1.at.x)))<.3)day.mode='go'}
+  else if(day.mode==='go'){if(stepTo(S1.at.x,S1.at.z,spd,dt)<.12)day.mode='turn'}
+  else if(day.mode==='turn'){day.moving=false;const y=day.kind==='think'?Math.atan2(cam.position.x-day.x,cam.position.z-day.z):S1.yaw,d=wrap(y-day.h);day.h+=THREE.MathUtils.clamp(d,-1.7*dt,1.7*dt);if(Math.abs(d)<.04){day.mode='hold';day.t=0}}
+  else if(day.mode==='hold'){
+    day.moving=false;day.t+=dt;const T=S1.hold,up=x=>THREE.MathUtils.clamp(Math.min(day.t,T-day.t)/x,0,1);
+    if(day.kind==='sit'){day.sit=up(1.4);const e=ease(day.sit);day.x=S1.at.x+(S1.seat.x-S1.at.x)*e;day.z=S1.at.z+(S1.seat.z-S1.at.z)*e}
+    if(day.kind==='jar')day.bend=up(.9);
+    if(day.kind==='gate')day.shade=up(.8);
+    if(!day.said&&day.t>1.5){day.said=true;thoughtShow(S1.say)}
+    if(day.t>T-1.5)thoughtHide();
+    if(day.t>=T){day.sit=day.bend=day.shade=0;if(day.kind==='think')nextPlan();else{const a=Math.atan2(S1.at.z,S1.at.x)+.5;day.tx=Math.cos(a)*RING;day.tz=Math.sin(a)*RING;day.mode='back'}}
+  }
+  else if(day.mode==='back'){if(stepTo(day.tx,day.tz,spd,dt)<.25)nextPlan()}
+}
+/* 생각 풍선: 머리 위에 몇 초 떠오름 */
+const bub={on:false,who:null,n:0,seen:new Set()};
+function thoughtShow(list){
+  if(S.playing||visit.on)return;
+  const a=[],el=elapsed()+S.sim;if(S.mom&&S.ageM+el<100)a.push(mom);if(S.dad&&S.ageD+el<100)a.push(dad);if(!a.length)return;
+  const all=list.concat(goal.say);let fresh=all.filter(t=>!bub.seen.has(t));if(!fresh.length){all.forEach(t=>bub.seen.delete(t));fresh=all}
+  const t=fresh[Math.floor(Math.random()*fresh.length)];bub.seen.add(t);bub.who=a[bub.n++%a.length];$('thoughtT').textContent=t;bub.on=true;$('thought').classList.add('on');
+}
+function thoughtHide(){if(bub.on){bub.on=false;$('thought').classList.remove('on')}}
+function thoughtPlace(){
+  if(!bub.on)return;if(S.playing||visit.on){thoughtHide();return}
+  const h=V();bub.who.userData.hd.getWorldPosition(h);h.y+=.3;h.project(cam);
+  const x=Math.min(innerWidth-190,Math.max(8,(h.x+1)/2*innerWidth)),y=Math.max(150,(1-h.y)/2*innerHeight);
+  $('thought').style.transform=`translate(${x}px,${y}px)`;
+}
+/* 꽃: 계절 값에 따라 한 송이씩 피고 짐 */
+function drawBloom(){
+  if(Math.abs(cur.bloom-bloomShown)<.004&&Math.abs(cur.tree-treeShown)<.004)return;
+  bloomShown=cur.bloom;treeShown=cur.tree;
+  const M=new THREE.Matrix4(),Q=new THREE.Quaternion(),Z=V(),sc=(v,d)=>THREE.MathUtils.clamp((v-d.th)/.18,0,1)*d.s||.0001;
+  flowerD.forEach((d,i)=>{const k=sc(cur.bloom,d);M.compose(d.p,Q,Z.set(k,k,k));flowerH.setMatrixAt(i,M);flowerS.setMatrixAt(i,M);flowerC.setMatrixAt(i,M)});
+  blossomD.forEach((d,i)=>{const k=sc(cur.tree,d);M.compose(d.p,Q,Z.set(k,k,k));blossom.setMatrixAt(i,M)});
+  flowerH.instanceMatrix.needsUpdate=flowerS.instanceMatrix.needsUpdate=flowerC.instanceMatrix.needsUpdate=blossom.instanceMatrix.needsUpdate=true;
+}
 function stepVisitAnim(dt){
   if(!visit.on)return;visit.t+=dt/visit.dur;const t=visit.t,useCar=S.dist>0&&visit.dur>1.2;
   const tp=parentsPos().add(V(.0,0,0)),gate=GATE.clone(),meetAt=tp.clone().add(gate.clone().sub(tp).normalize().multiplyScalar(.9));
@@ -472,9 +571,15 @@ function stepVisitAnim(dt){
 function tick(ts){
   const dt=Math.min(.05,(ts-last)/1000||.016);last=ts;clockT+=dt;
   const gs=tree.scale.x+(target.grow-tree.scale.x)*Math.min(1,dt*3.2);tree.scale.setScalar(gs||.5);
-  const k=Math.min(1,dt*2.4);cur.top.lerp(new THREE.Color(goal.top),k);cur.bot.lerp(new THREE.Color(goal.bot),k);cur.leaf.lerp(new THREE.Color(goal.leaf),k);cur.ground.lerp(new THREE.Color(goal.ground),k);
-  cur.dens+=(goal.dens-cur.dens)*k;cur.snow+=(goal.snow-cur.snow)*k;
-  leaf.material.color.copy(cur.leaf).lerp(new THREE.Color(0xffffff),.45);ground.material.color.copy(cur.ground);scene.fog.color.copy(cur.bot).lerp(cur.top,.28);
+  // 계절: 평소에는 천천히 사계절이 돌고 · 시간 돌리기 때는 그 시뮬레이션을 따름
+  if(S.playing)seasonT=0;else if((seasonT+=dt)>SEASON_SEC){seasonT=0;goal=SEASONS[(SEASONS.indexOf(goal)+1)%4]}
+  const k=Math.min(1,dt*(S.playing?2.4:.55));cur.top.lerp(new THREE.Color(goal.top),k);cur.bot.lerp(new THREE.Color(goal.bot),k);cur.leaf.lerp(new THREE.Color(goal.leaf),k);cur.ground.lerp(new THREE.Color(goal.ground),k);
+  cur.dens+=(goal.dens-cur.dens)*k;cur.snow+=(goal.snow-cur.snow)*k;cur.warm+=(goal.warm-cur.warm)*k;cur.bloom+=(goal.bloom-cur.bloom)*k;cur.tree+=(goal.tree-cur.tree)*k;cur.fly+=(goal.fly-cur.fly)*k;cur.flake.lerp(new THREE.Color(goal.flake),k);
+  drawBloom();
+  if(Math.abs(cur.warm-warmShown)>.01){warmShown=cur.warm;const c=new THREE.Color();leaf.userData.base.forEach((b,i)=>leaf.setColorAt(i,c.copy(b.n).lerp(b.a,warmShown)));leaf.instanceColor.needsUpdate=true}
+  const white=new THREE.Color(0xeef2f8);ringM.color.set(0x8d7350).lerp(white,cur.snow*.72);if(roadMesh)roadMesh.material.color.set(0x9a7e58).lerp(white,cur.snow*.72);
+  snowRoof.visible=cur.snow>.02;snowRoof.material.opacity=cur.snow*.9;
+  leaf.material.color.copy(cur.leaf).lerp(new THREE.Color(0xffffff),.45*cur.warm);sun.color.set(0xffc08a).lerp(new THREE.Color(0xeaf0ff),cur.snow*.85);ground.material.color.copy(cur.ground);scene.fog.color.copy(cur.bot).lerp(cur.top,.28);
   ridges.forEach(m=>m.material.color.copy(m.userData.base).lerp(cur.bot,.3));
   const M=new THREE.Matrix4(),Q=new THREE.Quaternion(),Sv=V();
   leaf.userData.base.forEach((b,i)=>{const sc=b.k<cur.dens?b.s:0;Sv.set(sc,sc,sc);M.compose(b.p,b.q,Sv);leaf.setMatrixAt(i,M)});leaf.instanceMatrix.needsUpdate=true;
@@ -484,35 +589,37 @@ function tick(ts){
     const sw=Math.sin(clockT*1.3+g.ph)*.018,pop=g.to&&g.s<.98?1+Math.sin(g.s*3.14)*.35:1,s=g.s*pop;
     Sv.set(s,s*.92,s);M.compose(V(g.p.x+sw,g.p.y-g.y/Math.max(.3,tree.scale.x),g.p.z),Q,Sv);gam.setMatrixAt(i,M)});
   gam.instanceMatrix.needsUpdate=true;
-  // 부모님 걷기(두 분이면 손잡고 나란히 · 나이가 들수록 허리가 굽고 느려짐 · 100세가 되면 멈춰 그 자리에 서 계심)
+  // 부모님(두 분이면 손잡고 나란히 · 나이가 들수록 허리가 굽고 느려짐 · 100세가 되면 멈춰 그 자리에 계심)
   const paused=visit.on&&visit.t>.34&&visit.t<.62,el=elapsed()+S.sim;
   const old=a=>THREE.MathUtils.clamp((a+el-74)/24,0,1),oM=old(S.ageM),oD=old(S.ageD);
   const doneM=S.ageM+el>=100,doneD=S.ageD+el>=100,goM=S.mom&&!doneM,goD=S.dad&&!doneD;
-  const oW=Math.max(goM?oM:0,goD?oD:0);
-  if(!paused&&(goM||goD))walkA+=dt*THREE.MathUtils.lerp(.24,.06,oW);
-  if(goM)angM=walkA;if(goD)angD=walkA;
-  const cad=THREE.MathUtils.lerp(4.8,2.2,oW),amp=THREE.MathUtils.lerp(.44,.14,oW);phase+=dt*cad;
-  const both=goM&&goD,two=S.mom&&S.dad,inner=two?3.28:3.6,outer=two?3.92:3.6;
-  [[mom,inner,oM,angM,!goM],[dad,outer,oD,angD,!goD]].forEach(([p,r,o,ang,stop],idx)=>{
-    p.position.set(Math.cos(ang)*r,paused||stop?0:Math.abs(Math.sin(phase))*.025*(1-o*.7),Math.sin(ang)*r);
-    p.rotation.y=paused?Math.atan2(kid.position.x-p.position.x,kid.position.z-p.position.z):-ang;
-    swing(p,phase+idx*.4,paused||stop?0:amp);
-    const u=p.userData,lean=.03+o*.5;u.up.rotation.x=lean;u.hd.rotation.x=-lean*.72;u.cane.visible=o>.42;
+  const oW=Math.max(goM?oM:0,goD?oD:0);day.k=1-.5*oW;
+  if(!paused&&(goM||goD))stepDay(dt,THREE.MathUtils.lerp(.86,.22,oW));
+  const moving=day.moving&&!paused,cad=THREE.MathUtils.lerp(4.8,2.2,oW),amp=THREE.MathUtils.lerp(.44,.14,oW);phase+=dt*cad;
+  const both=goM&&goD,side=S.mom&&S.dad?.32:0,sa=Math.sin(day.h),ca=Math.cos(day.h),es=ease(day.sit),eb=ease(day.bend),eg=ease(day.shade);
+  [[mom,-side,oM,!goM],[dad,side,oD,!goD]].forEach(([p,off,o,stop],idx)=>{
+    const u=p.userData;if(!stop)u.s=es;const sit=u.s||0;
+    if(!stop){const x=day.x+ca*off,z=day.z-sa*off;p.position.set(x,(1-sit)*groundY(x,z)+sit*.3+(moving?Math.abs(Math.sin(phase))*.025*(1-o*.7):0),z)}
+    if(paused&&sit<.5)p.rotation.y=Math.atan2(kid.position.x-p.position.x,kid.position.z-p.position.z);else if(!stop)p.rotation.y=day.h;
+    swing(p,phase+idx*.4,moving&&!stop?amp:0);u.legL.rotation.x-=1.25*sit;u.legR.rotation.x-=1.25*sit;
+    const lean=.03+o*.5,b=stop?0:eb,g=stop?0:eg;u.up.rotation.x=lean*(1-.5*sit)+.62*b;u.hd.rotation.x=-lean*.72-.42*b-.16*g;u.cane.visible=o>.42&&sit<.1;
     u.armL.rotation.set(0,0,0);u.armR.rotation.set(0,0,0);
-    if(stop&&!paused)return;
-    if(both&&!paused){(p===mom?u.armR:u.armL).rotation.z=(p===mom?1:-1)*.62;(p===mom?u.armL:u.armR).rotation.x=Math.sin(phase)*.3*(1-o)}
-    else if(paused){u.armR.rotation.x=-1.1;u.armL.rotation.x=-.8}
-    else{u.armL.rotation.x=Math.sin(phase)*.35*(1-o);u.armR.rotation.x=-Math.sin(phase)*.35*(1-o)}
+    const free=both&&p===mom?u.armL:u.armR,hold=p===mom?u.armR:u.armL;
+    if(paused&&sit<.5){u.armR.rotation.x=-1.1;u.armL.rotation.x=-.8;return}
+    if(stop){u.armL.rotation.x=u.armR.rotation.x=-.5*sit;return}
+    if(both){hold.rotation.z=(p===mom?1:-1)*.62;free.rotation.x=moving?Math.sin(phase)*.3*(1-o):0}
+    else if(moving){u.armL.rotation.x=Math.sin(phase)*.35*(1-o);u.armR.rotation.x=-Math.sin(phase)*.35*(1-o)}
+    u.armL.rotation.x-=.5*sit+.9*b;u.armR.rotation.x-=.5*sit+.9*b;free.rotation.x-=2.5*g;
   });
   stepVisitAnim(dt);
   const P=flakes.geometry.attributes.position,n=P.count;for(let i=0;i<n;i++){let y=P.getY(i)-dt*(.5+cur.snow*.4)*(reduced?0:1),x=P.getX(i)+Math.sin(clockT+i)*dt*.2;if(y<0)y=13;P.setXYZ(i,x,y,P.getZ(i))}P.needsUpdate=true;
-  flakes.material.color.set(cur.snow>.5?0xffffff:0xe8a765);flakes.material.size=cur.snow>.5?.13:.1;
+  flakes.material.color.copy(cur.flake);flakes.material.opacity=cur.fly;flakes.material.size=.1+cur.snow*.07;
   // 카메라: 마당 앞쪽에서 좌우로 살짝만 움직임(건물이 가리지 않게)
   const wide=innerWidth>760,yaw=.3+dragYaw+(reduced?0:Math.sin(clockT*.14)*.16);
   const want=((wide?21:29)+target.d*(wide?1.2:1.6))*zoom;camR+=(want-camR)*Math.min(1,dt*2);
   const open=!$('sheet').hidden,right=V(Math.cos(yaw),0,-Math.sin(yaw)),off=wide&&open?camR*.19:0,cx=Math.sin(yaw)*camR+right.x*off-2.5,cz=Math.cos(yaw)*camR+right.z*off-1,lx=right.x*off-2.5,lz=right.z*off-1;
   camY+=((wide?5.6:(open?7.4:5.8))-camY)*Math.min(1,dt*2.5);lookY+=((wide?3.5:(open?-.4:2.9))-lookY)*Math.min(1,dt*2.5);cam.position.set(cx,camY,cz);cam.lookAt(lx,lookY,lz);
-  R.render(scene,cam);requestAnimationFrame(tick);
+  thoughtPlace();R.render(scene,cam);requestAnimationFrame(tick);
 }
 
 /* 시간 시뮬레이션: 고른 배속으로 시간이 흐르며 자녀가 다녀갈 때마다 감이 떨어짐 */
@@ -529,6 +636,24 @@ async function play(){
   if(end){$('hudU').textContent=`${who()} 100세 · 함께한 시간 ${fmt(calc().days)}일`;$('hudL').textContent='모두 함께했습니다'}
 }
 
+/* 배경음악: 단추를 누를 때만 받음 · 세 곡을 이어 듣고 처음으로 돌아감 */
+const bgm={el:null,i:0,on:false,raf:0,vol:.55,n:3};
+function bgmFade(to,ms,done){const a=bgm.el,from=a.volume,t0=performance.now();cancelAnimationFrame(bgm.raf);
+  const tick=t=>{const k=Math.min((t-t0)/ms,1);a.volume=from+(to-from)*k;if(k<1)bgm.raf=requestAnimationFrame(tick);else if(done)done()};
+  bgm.raf=requestAnimationFrame(tick)}
+function bgmBtn(){const b=$('musicBtn');b.textContent=bgm.on?'음악 끄기':'음악 켜기';b.setAttribute('aria-pressed',bgm.on);$('volBox').hidden=!bgm.on||bgm.fixed}
+function bgmSrc(){bgm.el.src=`music/${bgm.i+1}.mp3`}
+async function setMusic(on){
+  if(!on){bgm.on=false;bgmBtn();bgmFade(0,900,()=>bgm.el.pause());return}
+  if(!bgm.el){
+    const a=bgm.el=new Audio();a.preload='none';a.volume=.5;bgm.fixed=a.volume!==.5;a.volume=0; // 아이폰은 소리 크기를 코드로 못 바꿔 막대를 숨기고 기기 단추에 맡김
+    a.onended=()=>{bgm.i=(bgm.i+1)%bgm.n;bgmSrc();a.play().catch(()=>{})};
+    a.onerror=()=>{bgm.on=false;bgmBtn();toast('음악을 불러오지 못했습니다')};
+    bgm.i=Math.floor(Math.random()*bgm.n);bgmSrc(); // 첫 곡은 무작위 · 그 뒤로는 차례대로
+  }
+  bgm.on=true;bgmBtn();track('music_on');
+  try{await bgm.el.play();bgmFade(bgm.vol,2500)}catch{bgm.on=false;bgmBtn();toast('음악을 틀 수 없습니다')}
+}
 function load(){try{const v=JSON.parse(localStorage.getItem('gamnamu')||'null');if(v){Object.assign(S,v);S.done=true;return Math.floor(elapsed()*365.25)}}catch{}return -1}
 const was=load();
 try{if(!window.THREE)throw 0;init();setScene();tree.scale.setScalar(.3)}catch(e){console.error(e);$('scene').style.background='linear-gradient(#24305f,#f2a877)'}
@@ -538,6 +663,10 @@ if(was>=0)toast(`저장한 감나무를 열었습니다 · 기준일부터 ${was
 $('appBtn').onclick=()=>{track('app_panel');openPanel(4)};
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href*="play.google"]');if(a)track('app_install')});
 $('timeBtn').onclick=()=>openPanel(3);
+$('musicBtn').onclick=()=>setMusic(!bgm.on);
+try{const v=localStorage.getItem('gamnamuVol');if(v!==null){bgm.vol=v/100;$('volR').value=v}}catch{}
+$('volR').oninput=e=>{bgm.vol=e.target.value/100;cancelAnimationFrame(bgm.raf);if(bgm.el)bgm.el.volume=bgm.vol;try{localStorage.setItem('gamnamuVol',e.target.value)}catch{}};
+document.addEventListener('visibilitychange',()=>{if(bgm.el&&bgm.on)document.hidden?bgm.el.pause():bgm.el.play().catch(()=>{})});
 $('editBtn').onclick=()=>{S.playing=false;S.sim=0;goal=SEASON.autumn;applySim();openPanel(0)};
 $('closeBtn').onclick=closePanel;
 $('body').addEventListener('scroll',moreHint);addEventListener('resize',moreHint);
