@@ -34,6 +34,17 @@ html,body{height:100%;margin:0;background:var(--night);color:var(--paper);font-f
 .hud span{font-size:15px;opacity:.92}
 .hud em{display:block;font-style:normal;font-size:13px;opacity:.8;margin-top:6px}
 .sheet{position:fixed;right:max(20px,env(safe-area-inset-right,0px));top:20px;bottom:20px;width:min(384px,calc(100vw - 40px));background:var(--paper);color:var(--ink);border-radius:6px;box-shadow:0 24px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden}
+.sheet[hidden]{display:none}
+.x{position:absolute;right:10px;top:8px;width:34px;height:34px;border:0;background:transparent;color:var(--ink);font-size:22px;line-height:1;cursor:pointer;border-radius:4px}
+.more{position:absolute;left:0;right:0;bottom:var(--footH,76px);height:44px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;background:linear-gradient(rgba(243,231,211,0),var(--paper) 70%);font-size:12px;font-weight:600;color:#b8470c;pointer-events:none}
+.body{scrollbar-width:thin;scrollbar-color:rgba(43,33,24,.45) transparent}
+.body::-webkit-scrollbar{width:6px;-webkit-appearance:none}
+.body::-webkit-scrollbar-thumb{background:rgba(43,33,24,.45);border-radius:3px}
+.topbar{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));display:flex;gap:8px}
+.topbar button,.lower button{font:inherit;font-size:14px;font-weight:600;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(20,26,43,.55);color:var(--paper);cursor:pointer;backdrop-filter:blur(6px)}
+.lower{position:fixed;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;flex-wrap:wrap}
+.lower button{pointer-events:auto}
+.lower button.app{background:var(--gam2);color:var(--ink);border-color:transparent}
 .prog{display:flex;gap:6px;padding:16px 22px 0}
 .prog i{flex:1;height:4px;border-radius:2px;background:var(--line)}
 .prog i.on{background:var(--gam)}
@@ -89,13 +100,11 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
 .qr{display:flex;gap:12px;align-items:center}
 .qr div{flex:none;width:96px;height:96px;background:#fff;padding:4px;border-radius:4px}
 .qr svg{width:100%;height:100%;display:block}
-.appbtn{position:fixed;left:max(20px,env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));font:inherit;font-size:14px;font-weight:600;padding:11px 16px;border-radius:999px;border:0;background:var(--gam2);color:var(--ink);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:4px;font-size:14px}
 @media (max-width:760px){
   .sheet{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));top:auto;bottom:10px;width:auto;max-height:52%}
   .hud{top:calc(70px + env(safe-area-inset-top,0px))}
   .brand{font-size:20px}
-  .appbtn{left:auto;right:max(14px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));bottom:auto;padding:9px 13px;font-size:13px}
   h1{font-size:22px}
 }
 </style>
@@ -104,12 +113,15 @@ input[type=range]{width:100%;accent-color:var(--gam);height:30px;margin:0}
 <div class="brand">백 살 감나무<small>부모님과 앞으로 몇 번을 더 뵐 수 있을까요</small></div>
 <div class="hud" aria-live="polite"><b id="hudN">112</b><span id="hudL">번 더 뵐 수 있어요</span><em id="hudU"></em></div>
 
-<section class="sheet" aria-label="입력과 결과">
+<section class="sheet" id="sheet" aria-label="입력과 결과">
+  <button class="x" id="closeBtn" type="button" aria-label="닫기">×</button>
   <div class="prog" id="prog"></div>
   <div class="body" id="body"></div>
+  <div class="more" id="more" hidden>아래로 더 있습니다 ↓</div>
   <div class="foot" id="foot"></div>
 </section>
-<button class="appbtn" id="appBtn" type="button">나이노트 앱 설치</button>
+<div class="topbar" id="topbar" hidden><button id="editBtn" type="button">정보 변경</button></div>
+<div class="lower" id="lower" hidden><button id="timeBtn" type="button">시간 돌려 보기</button><button id="appBtn" class="app" type="button">나이노트 앱 설치</button></div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -136,7 +148,10 @@ const gamUnit=m=>Math.max(1,Math.ceil(m/MAXG));
 
 /* ───────── 화면 단계 ───────── */
 const STEPS=[stepWho,stepAge,stepVisit,stepResult,stepKeep];
-function render(){const b=$('body'),st=b.scrollTop,same=render.k===S.step;render.k=S.step;$('prog').innerHTML=STEPS.map((_,i)=>`<i class="${i<=S.step?'on':''}"></i>`).join('');STEPS[S.step]();updateHud();b.scrollTop=same?st:0}
+function openPanel(step){S.step=step;$('sheet').hidden=false;$('topbar').hidden=true;$('lower').hidden=true;render()}
+function closePanel(){$('sheet').hidden=true;$('topbar').hidden=false;$('lower').hidden=false;S.done=true;updateHud()}
+function moreHint(){const b=$('body'),m=$('more');if(!b||!m)return;m.style.setProperty('--footH','');$('sheet').style.setProperty('--footH',$('foot').offsetHeight+'px');m.hidden=b.scrollHeight-b.clientHeight-b.scrollTop<14}
+function render(){const b=$('body'),st=b.scrollTop,same=render.k===S.step;render.k=S.step;$('prog').innerHTML=STEPS.map((_,i)=>`<i class="${i<=S.step?'on':''}"></i>`).join('');STEPS[S.step]();updateHud();b.scrollTop=same?st:0;moreHint();$('closeBtn').hidden=!S.done}
 function nav(next,label){const f=$('foot');f.innerHTML='';if(S.step>0){const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step--;render()};f.append(b)}const n=document.createElement('button');n.className='btn';n.textContent=label;n.id='nextBtn';n.onclick=next;f.append(n)}
 function chips(el,items,cur,on){el.className='chips';items.forEach((t,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t;b.setAttribute('aria-pressed',i===cur);b.onclick=()=>{[...el.children].forEach(c=>c.setAttribute('aria-pressed',c===b));on(i)};el.append(b)})}
 function stepWho(){
@@ -160,7 +175,7 @@ function stepVisit(){
   chips($('c3'),HRS.map(h=>h.n),HRS.findIndex(h=>h.h===S.hrs),i=>{S.hrs=HRS[i].h;u()});
   const u=()=>{$('perO').textContent=S.per+'번';$('perH').textContent=`움직이면 감이 바로 늘고 줄어듭니다 · ${DIST[S.dist].t}`;updateHud();setScene()};
   $('per').oninput=e=>{S.per=+e.target.value;u()};u();
-  nav(()=>{S.step=3;render()},'결과 보기');
+  nav(closePanel,'완료');
 }
 function stepResult(){
   if(!stepResult.seen){stepResult.seen=1;track('result')}
@@ -187,11 +202,11 @@ function stepResult(){
   $('backNow').onclick=()=>{S.playing=false;S.sim=0;goal=SEASON.autumn;applySim();$('sim').value=0};
   $('base').onchange=e=>{const t=Date.parse(e.target.value);if(!isNaN(t)){S.startAt=Math.min(t,Date.now());S.sim=0;render();setScene()}};
   $('saveB').onclick=()=>{try{localStorage.setItem('gamnamu',JSON.stringify({mom:S.mom,dad:S.dad,ageM:S.ageM,ageD:S.ageD,dist:S.dist,per:S.per,hrs:S.hrs,startAt:S.startAt}));toast('저장했습니다. 다시 열면 이어서 보입니다')}catch{toast('이 화면에서는 저장할 수 없습니다')}};
-  $('resetB').onclick=()=>{try{localStorage.removeItem('gamnamu')}catch{}Object.assign(S,{mom:true,dad:false,ageM:72,ageD:72,dist:1,per:4,hrs:6,step:0,sim:0,playing:false,startAt:Date.now()});goal=SEASON.autumn;render();setScene()};
+  $('resetB').onclick=()=>{try{localStorage.removeItem('gamnamu')}catch{}Object.assign(S,{mom:true,dad:false,ageM:72,ageD:72,dist:1,per:4,hrs:6,step:0,sim:0,playing:false,done:false,startAt:Date.now()});goal=SEASON.autumn;openPanel(0);setScene()};
   const f=$('foot');f.innerHTML='';
-  const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step=2;render()};
-  const n=document.createElement('button');n.className='btn';n.textContent='다음';n.id='nextBtn';n.onclick=()=>{S.step=4;render()};
-  f.append(b,n);applySim();
+  const a=document.createElement('button');a.className='btn ghost';a.textContent='앱 연결 보기';a.onclick=()=>{S.step=4;render()};
+  const n=document.createElement('button');n.className='btn';n.textContent='완료';n.id='nextBtn';n.onclick=closePanel;
+  f.append(a,n);applySim();
 }
 function drawGrid(){const g=$('grid');if(!g)return;const a=Math.floor(nowAge()+S.sim);g.innerHTML=Array.from({length:100},(_,i)=>`<i class="${i>=a?'left':''}"></i>`).join('')}
 function stepKeep(){
@@ -208,8 +223,9 @@ function stepKeep(){
   $('sibR').oninput=e=>{S.sib=+e.target.value;$('sibO').textContent=S.sib+'번';const m=Math.max(S.per,S.sib,1);$('sb').style.width=S.sib/m*100+'%';$('sa').style.width=S.per/m*100+'%';$('sn').textContent=S.sib};
   const f=$('foot');f.innerHTML='';
   const b=document.createElement('button');b.className='btn ghost';b.textContent='이전';b.onclick=()=>{S.step=3;render()};
-  const n=document.createElement('button');n.className='btn';n.textContent='공유 글 복사';n.onclick=async()=>{track('share_copy');try{await navigator.clipboard.writeText(t);toast('복사했습니다')}catch{toast('글을 길게 눌러 복사해 주세요')}};
-  f.append(b,n);
+  const d=document.createElement('button');d.className='btn';d.textContent='완료';d.onclick=closePanel;
+  const n=document.createElement('button');n.className='btn ghost';n.textContent='공유 글 복사';n.onclick=async()=>{track('share_copy');try{await navigator.clipboard.writeText(t);toast('복사했습니다')}catch{toast('글을 길게 눌러 복사해 주세요')}};
+  f.append(b,n,d);
 }
 function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800)}
 function updateHud(){
@@ -363,7 +379,7 @@ function init(){
   [[4.9,3.5,1],[5.7,3.1,.8],[5.3,4.2,.7],[6.2,3.9,.9],[6.6,3.2,.6]].forEach(([x,z,s])=>{const j=new THREE.Mesh(jarG,jarM);j.position.set(x,.48,z-1);j.scale.setScalar(s);j.castShadow=true;house.add(j)});
   // 돌담(길이 들어오는 곳만 트임)
   const wallM=new THREE.MeshStandardMaterial({map:stone,roughness:1}),wg=new THREE.BoxGeometry(2.3,1,.55);
-  for(let i=0;i<54;i++){const a=i/54*Math.PI*2,r=19;if(a>4.95&&a<5.5)continue;const x=Math.cos(a)*r-1,z=Math.sin(a)*r-1,b=new THREE.Mesh(wg,wallM);if(Math.hypot(x,z)<7)continue;b.position.set(x,groundY(x,z)+.42,z);b.rotation.y=-a+Math.PI/2;b.castShadow=true;scene.add(b)}
+  for(let i=0;i<54;i++){const a=i/54*Math.PI*2,r=19;if(a>4.95&&a<5.5)continue;const x=Math.cos(a)*r-1,z=Math.sin(a)*r-1,b=new THREE.Mesh(wg,wallM);if(Math.hypot(x,z)<7||z>-3)continue;b.position.set(x,groundY(x,z)+.42,z);b.rotation.y=-a+Math.PI/2;b.castShadow=true;scene.add(b)}
 
   // 사람
   mom=person({coat:0xb24a5e,pants:0x4b4356,hair:0x8d8a86,skirt:true,perm:true});
@@ -395,11 +411,11 @@ function init(){
   const release=e=>{ptrs.delete(e.pointerId);pinch=0;if(ptrs.size===0)drag=null};cv.addEventListener('pointerup',release);cv.addEventListener('pointercancel',release);
   requestAnimationFrame(tick);
 }
-let roadCurve=null,dragYaw=0,camR=20,clockT=0,last=0,zoom=1;
+let roadCurve=null,dragYaw=0,camR=20,clockT=0,last=0,zoom=1,camY=6,lookY=2;
 const GATE=V(2.9,0,-3.1);
 function buildRoad(){
   // 길: 멀리 자녀가 사는 곳에서 마당 입구까지 이어지는 흙길(거리를 고르면 길이가 바뀜)
-  const L=[12,50,95,150][S.dist],end=V(L*.34+12,0,-L*.95-30),pts=[GATE.clone(),V(4.6,0,-9),V(7.5,0,-19),V(9.5,0,-30),end];
+  const L=[12,50,95,150][S.dist],end=V(L*.62+22,0,-L*.9-30),pts=[GATE.clone(),V(6,0,-9),V(11,0,-19),V(17,0,-30),end];
   roadCurve=new THREE.CatmullRomCurve3(pts);
   const N=140,pos=[],idx=[],W=.72;
   for(let i=0;i<=N;i++){const t=i/N,p=roadCurve.getPoint(t),d=roadCurve.getTangent(t),s=V(-d.z,0,d.x).normalize();
@@ -407,7 +423,7 @@ function buildRoad(){
     if(i<N){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3)}}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
   if(roadMesh){roadMesh.geometry.dispose();roadMesh.geometry=g}else{roadMesh=new THREE.Mesh(g,std(0x9a7e58,{roughness:1,side:THREE.DoubleSide}));roadMesh.receiveShadow=true;scene.add(roadMesh)}
-  city.position.set(end.x+1,groundY(end.x,end.z),end.z-5);const cs=[.5,.8,1.05,1.3][S.dist];city.scale.setScalar(cs);
+  city.position.set(end.x+1,groundY(end.x,end.z),end.z-5);const cs=[.4,.6,.75,.9][S.dist];city.scale.setScalar(cs);
 }
 function size(){const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
 function setScene(){
@@ -483,8 +499,8 @@ function tick(ts){
   // 카메라: 마당 앞쪽에서 좌우로 살짝만 움직임(건물이 가리지 않게)
   const wide=innerWidth>760,yaw=.3+dragYaw+(reduced?0:Math.sin(clockT*.14)*.16);
   const want=((wide?21:29)+target.d*(wide?1.2:1.6))*zoom;camR+=(want-camR)*Math.min(1,dt*2);
-  const right=V(Math.cos(yaw),0,-Math.sin(yaw)),off=wide?camR*.19:0,cx=Math.sin(yaw)*camR+right.x*off-2.5,cz=Math.cos(yaw)*camR+right.z*off-1,lx=right.x*off-2.5,lz=right.z*off-1;
-  cam.position.set(cx,wide?5.6:7.4,cz);cam.lookAt(lx,wide?3.5:-.4,lz);
+  const open=!$('sheet').hidden,right=V(Math.cos(yaw),0,-Math.sin(yaw)),off=wide&&open?camR*.19:0,cx=Math.sin(yaw)*camR+right.x*off-2.5,cz=Math.cos(yaw)*camR+right.z*off-1,lx=right.x*off-2.5,lz=right.z*off-1;
+  camY+=((wide?5.6:(open?7.4:5.8))-camY)*Math.min(1,dt*2.5);lookY+=((wide?3.5:(open?-.4:2.9))-lookY)*Math.min(1,dt*2.5);cam.position.set(cx,camY,cz);cam.lookAt(lx,lookY,lz);
   R.render(scene,cam);requestAnimationFrame(tick);
 }
 
@@ -501,13 +517,18 @@ async function play(){
   const end=S.sim>=left-1e-6;S.playing=false;goal=SEASON.autumn;applySim();
   if(end){$('hudU').textContent=`${who()} 100세 · 함께한 시간 ${fmt(calc().days)}일`;$('hudL').textContent='모두 함께했습니다'}
 }
-function load(){try{const v=JSON.parse(localStorage.getItem('gamnamu')||'null');if(v){Object.assign(S,v);S.step=3;return Math.floor(elapsed()*365.25)}}catch{}return -1}
+function load(){try{const v=JSON.parse(localStorage.getItem('gamnamu')||'null');if(v){Object.assign(S,v);S.done=true;return Math.floor(elapsed()*365.25)}}catch{}return -1}
 const was=load();
 try{if(!window.THREE)throw 0;init();setScene();tree.scale.setScalar(.3)}catch(e){console.error(e);$('scene').style.background='linear-gradient(#24305f,#f2a877)'}
 render();
+if(was>=0)closePanel();
 if(was>=0)toast(`저장한 감나무를 열었습니다 · 기준일부터 ${was}일 지났습니다`);
-$('appBtn').onclick=()=>{track('app_panel');S.step=4;render()};
+$('appBtn').onclick=()=>{track('app_panel');openPanel(4)};
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href*="play.google"]');if(a)track('app_install')});
+$('timeBtn').onclick=()=>openPanel(3);
+$('editBtn').onclick=()=>{S.playing=false;S.sim=0;goal=SEASON.autumn;applySim();openPanel(0)};
+$('closeBtn').onclick=closePanel;
+$('body').addEventListener('scroll',moreHint);addEventListener('resize',moreHint);
 setInterval(()=>{if(!S.playing&&!S.sim)updateHud()},30000);
 </script>
 
