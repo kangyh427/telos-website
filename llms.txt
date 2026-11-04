@@ -17,11 +17,14 @@
 - [걷기 상식](https://www.telos.it.kr/blog/category/walking-basics/): 글 12편
 - [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 8편
 - [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 12편
-- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 25편
-- [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 19편
+- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 27편
+- [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 20편
 - [책 이야기](https://www.telos.it.kr/blog/category/books/): 글 1편
 
 ## 글 (최근 순)
+- [운동 안 하시는 부모님, 어떻게 말씀드리면 될까요](https://www.telos.it.kr/blog/how-to-talk-parents-into-exercise/): 운동 안 하시는 부모님께 어떻게 말할지 고민이라면 까닭부터 살펴보세요. 18,597명 연구 고찰에서 두려움, 통증, 주변 도움 부족이 큰 벽이었어요. (2026-11-05)
+- [골다공증 걷기 운동, 어머니 뼈에 도움이 될까요](https://www.telos.it.kr/blog/osteoporosis-walking-for-mothers/): 골다공증 걷기 운동이 궁금한 자녀를 위한 글입니다. 폐경 여성 연구에서 8주 걷기 뒤 골밀도 점수가 올랐지만, 걷기만으로 충분하다고 단정할 수는 없어요. (2026-11-05)
+- [요양원 부모님 운동, 일주일 몇 분이면 될까요](https://www.telos.it.kr/blog/nursing-home-parents-exercise-minutes/): 요양원 부모님 운동이 소용 있을지 걱정되시나요? 어르신 11,609명 연구를 모은 분석에서 일주일 170분일 때 신체 기능이 가장 크게 좋아졌어요. (2026-11-05)
 - [노인 반려견 키우기, 우울과 불안에 도움이 될까요](https://www.telos.it.kr/blog/older-parents-dog-depression-anxiety/): 노인 반려견이 마음 건강에 도움이 되는지 살폈습니다. 25,138명을 모은 고찰에서 우울과는 뚜렷한 관련이 없었고, 규칙적인 접촉은 불안 증상이 적은 것과 관련이 있었어요. (2026-11-04)
 - [무릎 아플 때 걷기 운동, 집에서 12주 해 본 연구](https://www.telos.it.kr/blog/knee-pain-walking-exercise-at-home/): 무릎 아플 때 걷기가 겁나는 부모님을 위한 글입니다. 연구에서 집에서 영상으로 12주 태극권을 한 쪽은 걸을 때 무릎 통증 점수가 2.7점 줄었어요. (2026-11-04)
 - [부모님 공원 산책 효과, 집에서 15분 거리면 될까요](https://www.telos.it.kr/blog/park-walking-benefits-for-parents-15-minutes/): 공원 산책 효과가 궁금한 자녀를 위한 글입니다. 24,341명 연구에서 집에서 15분 안에 공원이 있는 사람들은 우울 증상 비율이 6% 낮았어요. (2026-11-04)
