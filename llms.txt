@@ -15,13 +15,16 @@
 ## 블로그 분류
 - [걷기 건강 이야기 전체](https://www.telos.it.kr/blog/): 어르신 건강과 걷기에 관한 연구와 책을 쉽게 풀어 쓴 이야기. 걷기, 뇌 건강, 마음 건강, 생활 습관까지 매일 새 글을 올립니다.
 - [걷기 상식](https://www.telos.it.kr/blog/category/walking-basics/): 글 12편
-- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 8편
+- [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 9편
 - [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 12편
-- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 27편
+- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 29편
 - [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 20편
 - [책 이야기](https://www.telos.it.kr/blog/category/books/): 글 1편
 
 ## 글 (최근 순)
+- [당뇨 걷기 운동 시간, 하루 30분이면 될까요](https://www.telos.it.kr/blog/diabetes-walking-time-30-minutes-for-parents/): 당뇨 걷기 운동 시간이 궁금한 자녀를 위한 글입니다. 연구 고찰의 하루 30분과 약 50% 숫자가 무엇을 뜻하는지, 힘드신 날 어떻게 할지 살폈어요. (2026-11-06)
+- [치매 운동 효과, 연구로 보면 어디까지 기대할 수 있을까요](https://www.telos.it.kr/blog/dementia-exercise-effect-evidence-for-parents/): 치매 운동 효과를 104편, 341,471명 분석과 무작위 연구로 살폈습니다. 활동적인 어르신의 인지가 더 좋은 쪽과 관련됐지만 그 관련은 약했어요. (2026-11-06)
+- [낙상 후 운동, 집에서 하면 다시 넘어지는 일이 줄까요](https://www.telos.it.kr/blog/exercise-after-a-fall-at-home-for-parents/): 낙상 후 운동이 궁금한 자녀를 위한 글입니다. 평균 81.6세 345명 연구에서 집 근력, 균형 운동을 더한 쪽은 1년 넘어짐이 236번, 일반 관리 쪽은 366번이었어요. (2026-11-06)
 - [운동 안 하시는 부모님, 어떻게 말씀드리면 될까요](https://www.telos.it.kr/blog/how-to-talk-parents-into-exercise/): 운동 안 하시는 부모님께 어떻게 말할지 고민이라면 까닭부터 살펴보세요. 18,597명 연구 고찰에서 두려움, 통증, 주변 도움 부족이 큰 벽이었어요. (2026-11-05)
 - [골다공증 걷기 운동, 어머니 뼈에 도움이 될까요](https://www.telos.it.kr/blog/osteoporosis-walking-for-mothers/): 골다공증 걷기 운동이 궁금한 자녀를 위한 글입니다. 폐경 여성 연구에서 8주 걷기 뒤 골밀도 점수가 올랐지만, 걷기만으로 충분하다고 단정할 수는 없어요. (2026-11-05)
 - [요양원 부모님 운동, 일주일 몇 분이면 될까요](https://www.telos.it.kr/blog/nursing-home-parents-exercise-minutes/): 요양원 부모님 운동이 소용 있을지 걱정되시나요? 어르신 11,609명 연구를 모은 분석에서 일주일 170분일 때 신체 기능이 가장 크게 좋아졌어요. (2026-11-05)
