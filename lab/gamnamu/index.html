@@ -170,7 +170,7 @@ const SPEEDS=[{n:'1년 = 20초',s:20},{n:'1년 = 5초',s:5},{n:'1년 = 1초',s:1
 const DIST=[{n:'같은 동네',d:0,t:'걸어서 갈 거리'},{n:'차로 1시간',d:1,t:'왕복 2시간'},{n:'KTX 거리',d:2,t:'왕복 5시간쯤'},{n:'비행기 거리',d:3,t:'왕복 하루'}];
 const HRS=[{n:'식사 한 끼',h:3},{n:'반나절',h:6},{n:'하루 종일',h:12},{n:'1박 2일',h:30}];
 const APP='https://play.google.com/store/apps/details?id=com.naoncare.guardian&referrer=utm_source%3Dgamnamu%26utm_medium%3Dweb%26utm_campaign%3Dlab_gamnamu'; // 플레이 콘솔에서 감나무에서 온 방문을 가르는 꼬리표
-const WEB_ON=false,WEB='https://app.telos.it.kr/?utm_source=gamnamu&utm_medium=web&utm_campaign=lab_gamnamu',IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),TO_WEB=WEB_ON&&IOS,GO=TO_WEB?WEB:APP; // 아이폰은 앱이 없어 보호자 웹 판으로 보냄 · app.telos.it.kr 공개 뒤 WEB_ON 을 true 로
+const WEB_ON=true,WEB='https://app.telos.it.kr/?utm_source=gamnamu&utm_medium=web&utm_campaign=lab_gamnamu',IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),TO_WEB=WEB_ON&&IOS,GO=TO_WEB?WEB:APP; // 아이폰은 앱이 없어 보호자 웹 판으로 보냄 · 2026-11-05 app.telos.it.kr 공개로 켬
 const YEAR=365.25*864e5;
 const who=()=>S.mom&&S.dad?'부모님':S.mom?'엄마':'아빠';
 const refAge=()=>S.mom&&S.dad?Math.min(S.ageM,S.ageD):S.mom?S.ageM:S.ageD;
