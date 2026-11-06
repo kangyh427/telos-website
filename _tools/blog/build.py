@@ -48,7 +48,7 @@ CATEGORIES = {
 }
 RESERVED = {"page", "category", "images", "_src", "feed.xml"}
 # ★사이트맵에 넣는 회사 페이지★ — 콘솔·인증·기관·연동 페이지는 넣지 않는다(검색에 보일 까닭이 없다).
-STATIC_PAGES = ["/", "/privacy.html", "/terms.html", "/location-terms.html", "/notice.html", "/opensource.html"]
+STATIC_PAGES = ["/", "/lab/gamnamu/", "/privacy.html", "/terms.html", "/location-terms.html", "/notice.html", "/opensource.html"]
 KST = dt.timezone(dt.timedelta(hours=9))
 
 e = html.escape
