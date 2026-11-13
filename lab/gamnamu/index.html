@@ -171,7 +171,7 @@ const S={mom:true,dad:false,ageM:72,ageD:72,dist:1,per:4,hrs:6,sib:2,step:0,play
 const SPEEDS=[{n:'1년 = 20초',s:20},{n:'1년 = 5초',s:5},{n:'1년 = 1초',s:1}];
 const DIST=[{n:'같은 동네',d:0,t:'걸어서 갈 거리'},{n:'차로 1시간',d:1,t:'왕복 2시간'},{n:'KTX 거리',d:2,t:'왕복 5시간쯤'},{n:'비행기 거리',d:3,t:'왕복 하루'}];
 const HRS=[{n:'식사 한 끼',h:3},{n:'반나절',h:6},{n:'하루 종일',h:12},{n:'1박 2일',h:30}];
-const AD=new URLSearchParams(location.search).get('utm_campaign')==='x014',TAG=AD?['naver','cpc','x014']:['gamnamu','web','lab_gamnamu']; // 네이버 광고로 온 설치를 글 유입과 가름
+const QS=new URLSearchParams(location.search),UTM=k=>(QS.get(k)||'').toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,64),AD=QS.get('utm_campaign')==='x014',TAG=AD?['naver','cpc','x014']:UTM('utm_source')?[UTM('utm_source'),UTM('utm_medium')||'web',UTM('utm_campaign')||'lab_gamnamu']:['gamnamu','web','lab_gamnamu']; // 네이버 광고로 온 설치를 글 유입과 가름 · (2026-11-13) 유튜브 설명 등 꼬리표를 달고 들어온 방문은 그 꼬리표를 그대로 스토어까지 넘김(종전엔 gamnamu 로 덮어써 유튜브에서 온 설치가 감나무로 섞였음) · 글자 다듬기는 서버 _clean_utm 과 같은 자
 const APP=`https://play.google.com/store/apps/details?id=com.naoncare.guardian&referrer=utm_source%3D${TAG[0]}%26utm_medium%3D${TAG[1]}%26utm_campaign%3D${TAG[2]}`; // 플레이 콘솔에서 감나무에서 온 방문을 가르는 꼬리표
 const WEB_ON=true,WEB=`https://app.telos.it.kr/?utm_source=${TAG[0]}&utm_medium=${TAG[1]}&utm_campaign=${TAG[2]}`,IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),TO_WEB=WEB_ON&&IOS,GO=TO_WEB?WEB:APP; // 아이폰은 앱이 없어 보호자 웹 판으로 보냄 · 2026-11-05 app.telos.it.kr 공개로 켬
 const YEAR=365.25*864e5;
