@@ -43,6 +43,10 @@ STYLE = """<style>
 .lab .thanks{display:none;padding:16px 18px;border-radius:12px;background:#e1f3ee;font-size:16px}
 .lab .thanks.show{display:block}
 .lab .note{font-size:13px;color:#5b6c77;margin-top:28px}
+.lab ol{padding-left:22px;margin:0}
+.lab ol li{margin:8px 0}
+.lab .faq dt{font-weight:700;margin:16px 0 4px}
+.lab .faq dd{margin:0;color:#3a4a55}
 </style>"""
 
 
@@ -64,6 +68,15 @@ def render(spec: dict) -> str:
     lis = lambda xs: "\n".join(f"<li>{e(x)}</li>" for x in xs)  # noqa: E731
     price = f'<p class="price"><b>예정 가격</b> · {e(spec["price_note"])} (아직 판매하지 않습니다)</p>' if spec.get("price_note") else ""
     extra = f'<p class="note">{e(spec["legal_note"])}</p>' if spec.get("legal_note") else ""
+    # 선택 칸(2026-11-16 · 시장 시험 판): 쓰는 순서 · 자주 묻는 것 → 「얇은 페이지」로 광고가 막히지 않게
+    steps = ""
+    if spec.get("steps"):
+        items = "\n".join(f"<li>{e(x)}</li>" for x in spec["steps"])
+        steps = f'<h2>{e(spec.get("steps_title", "이렇게 진행됩니다"))}</h2>\n  <ol>{items}</ol>'
+    faq = ""
+    if spec.get("faq"):
+        qa = "\n".join(f"<dt>{e(q)}</dt><dd>{e(a)}</dd>" for q, a in spec["faq"])
+        faq = f'<h2>{e(spec.get("faq_title", "자주 묻는 것"))}</h2>\n  <dl class="faq">{qa}</dl>'
     body = f"""
 <main class="lab">
   <p class="eyebrow">{e(spec.get("eyebrow", "주식회사 텔로스 · 준비 중인 서비스"))}</p>
@@ -73,12 +86,14 @@ def render(spec: dict) -> str:
   <ul>{lis(spec["problem"])}</ul>
   <h2>{e(spec.get("offer_title", "이렇게 도와 드리려고 합니다"))}</h2>
   <ul>{lis(spec["offer"])}</ul>
+  {steps}
+  {faq}
   {price}
   <div class="cta">
     <button type="button" id="lab-cta">{e(spec["cta"])}</button>
     <div class="thanks" id="lab-thanks" role="status">{e(spec["thanks"])}</div>
   </div>
-  <p class="note">이 페이지는 아직 준비 중인 서비스에 대해 관심이 있는 분이 얼마나 되는지 알아보는 안내입니다. 결제를 받지 않으며, 단추를 눌러도 이름 · 연락처 같은 개인정보를 모으지 않습니다(방문 통계만 · 개인정보처리방침 제10조). 의견은 <a href="mailto:contact@telos.it.kr?subject={e(slug)}">contact@telos.it.kr</a> 로 보내 주세요.</p>
+  <p class="note">이 페이지는 아직 준비 중인 서비스에 대해 관심이 있는 분이 얼마나 되는지 알아보는 안내입니다. 결제를 받지 않으며, 이 페이지에서는 이름 · 연락처를 입력받지 않습니다. 방문 통계(구글 애널리틱스)만 쓰며 개인정보처리방침 제10조에 따릅니다. 의견은 <a href="mailto:contact@telos.it.kr?subject={e(slug)}">contact@telos.it.kr</a> 로 보내 주세요.</p>
   {extra}
 </main>
 <script>
