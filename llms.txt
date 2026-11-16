@@ -17,11 +17,12 @@
 - [걷기 상식](https://www.telos.it.kr/blog/category/walking-basics/): 글 13편
 - [뇌 건강](https://www.telos.it.kr/blog/category/brain/): 글 9편
 - [마음 건강](https://www.telos.it.kr/blog/category/mind/): 글 12편
-- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 30편
+- [몸 건강](https://www.telos.it.kr/blog/category/body/): 글 31편
 - [생활 습관](https://www.telos.it.kr/blog/category/habits/): 글 22편
 - [책 이야기](https://www.telos.it.kr/blog/category/books/): 글 1편
 
 ## 글 (최근 순)
+- [80대 부모님 근력 운동, 연세가 많아도 도움이 될까요](https://www.telos.it.kr/blog/strength-training-for-very-elderly-parents/): 80대 부모님 근력 운동이 도움이 될까요? 75세 이상 어르신을 본 연구 22개와 운동 양에 따른 분석 결과를 쉬운 말로 풀어 드려요. (2026-11-16)
 - [부모님 운동과 기대수명, 오래 사는 것보다 건강한 해 늘리기](https://www.telos.it.kr/blog/exercise-and-life-expectancy-for-parents/): 부모님 운동과 기대수명은 어떤 관련이 있을까요? 심폐 체력이 사망과 강하게 관련된 지표라는 연구와 세계보건기구 권고량을 쉬운 말로 풀었어요. (2026-11-14)
 - [부모님 청력과 걷기 운동, 귀가 잘 안 들리실 때 알아둘 점](https://www.telos.it.kr/blog/hearing-loss-and-walking-for-parents/): 부모님 청력과 걷기 운동은 관련이 있을까요? 성인 13편을 모은 2025년 분석에서 운동과 심폐 지구력, 근력이 청력 저하의 낮은 위험과 관련 있었어요. (2026-11-12)
 - [부모님 은퇴 후 운동, 걷기와 여가가 마음에 주는 영향](https://www.telos.it.kr/blog/retired-parents-activity-and-mind/): 부모님 은퇴 후 운동은 마음에 어떤 영향을 줄까요? 은퇴한 분들을 살핀 연구 26편과 세계보건기구 권고를 쉬운 말로 풀어 드려요. (2026-11-10)
