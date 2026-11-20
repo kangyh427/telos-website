@@ -92,7 +92,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <a class="btn primary" id="openApp" href="#">앱에서 연동하기</a>
     <a class="btn secondary" id="install"
-       href="https://play.google.com/store/apps/details?id=com.naoncare.guardian">앱 설치하기</a>
+       href="https://play.google.com/store/apps/details?id=com.naoncare.guardian&amp;referrer=utm_source%3Dtelos_pair%26utm_medium%3Dweb%26utm_campaign%3Dpair_guardian">앱 설치하기</a>
 
     <p class="foot">나이노트 · 주식회사 텔로스</p>
   </div>
@@ -113,7 +113,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     return digits;
   }
 
-  var STORE = "https://play.google.com/store/apps/details?id=com.naoncare.guardian";
+  // ★설치 경로 꼬리표★(2026-11-20 · ND-001) · 어르신이 보낸 연동 링크로 자녀 앱을 깐 사람을 따로 센다.
+  //   자녀 앱 GuardianInstallSource 가 utm 세 칸만 읽어 서버에 한 줄 적는다(연동 번호는 싣지 않는다).
+  var STORE = "https://play.google.com/store/apps/details?id=com.naoncare.guardian" +
+    "&referrer=" + encodeURIComponent("utm_source=telos_pair&utm_medium=web&utm_campaign=pair_guardian");
   var code = codeFromQuery();
 
   var codeEl = document.getElementById("code");
