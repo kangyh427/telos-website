@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+ 파일명: install-parents/index.html
+ 저장소 경로: kangyh427/telos-website/install-parents/index.html  (웹 주소 = /install-parents/)
+ 설명: ★자녀가 부모님 댁에서 이 화면을 띄워 그 자리에서 부모님 폰에 나이노트를 깔아 드리는 한 장★
+ 작성일: 2026-11-23 (hq-nainote-dev · 요청 ND-004 · hq-nainote-growth)
+
+ ─────────────────────────────────────────────────────────────────────────────
+ 설치 경로 꼬리표(이 길로 깐 사람을 따로 센다 · 앱 InstallSource 가 utm 칸만 읽음)
+ ─────────────────────────────────────────────────────────────────────────────
+   · QR(부모님 앱)      utm_source=telos_web · utm_medium=qr  · utm_campaign=install_guide
+   · 부모님 앱 단추     utm_source=telos_web · utm_medium=web · utm_campaign=install_guide
+     (이 화면을 부모님 폰에서 바로 연 경우)
+   · 자녀 앱 단추       utm_source=telos_web · utm_medium=web · utm_campaign=install_guide_g
+   QR 그림(qr-elder.svg)은 위 첫 줄 주소를 그대로 담은 정적 그림이다.
+   주소를 바꾸면 그림도 다시 만든다(만든 법 = 이 폴더 README.md).
+
+ ★넘지 않는 선★
+   · 개인정보 0 · 입력 칸 0 · 값 · 요금 말은 「무료입니다」만(L-523)
+   · 의학 · 효과 장담 문구 없음 · 외부 글꼴 · 스크립트 없음(방문 통계 태그만 다른 장과 같게)
+================================================================================
+-->
+<html lang="ko">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5MKCW6RM');</script>
+<!-- End Google Tag Manager -->
+<!-- Google tag (gtag.js) · 방문 통계만 · 광고 신호 끔(개인정보처리방침 제10조) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXELWTCRMJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-RXELWTCRMJ', {'allow_google_signals': false, 'allow_ad_personalization_signals': false});
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부모님 폰에 나이노트 깔아 드리는 법 | 나이노트</title>
+<meta name="description" content="부모님 댁에서 이 화면을 띄우고, 부모님 폰 카메라로 QR 코드를 비추면 나이노트를 바로 깔아 드릴 수 있습니다. 나이노트는 무료입니다.">
+<link rel="canonical" href="https://www.telos.it.kr/install-parents/">
+<meta property="og:title" content="부모님 폰에 나이노트 깔아 드리는 법">
+<meta property="og:description" content="부모님 폰 카메라로 QR 코드를 비추면 바로 설치 화면이 열립니다. 나이노트는 무료입니다.">
+<meta property="og:url" content="https://www.telos.it.kr/install-parents/">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --ink:#121A26; --muted:#4C5765; --bg:#F2F5F9; --card:#FFFFFF;
+    --accent:#00799C; --accent-ink:#FFFFFF; --line:#E3E9F0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px 16px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;
+    line-height:1.6; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:460px; margin:0 auto;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px 20px; margin-bottom:14px;}
+  h1{font-size:22px; margin:0 0 8px; line-height:1.4;}
+  h2{font-size:18px; margin:0 0 10px;}
+  p{margin:8px 0; color:var(--muted); font-size:16px;}
+  .qr{display:block; width:240px; height:240px; margin:18px auto 6px; image-rendering:pixelated;}
+  .qr-note{text-align:center; font-size:15px; color:var(--muted); margin:0;}
+  ol{margin:0; padding-left:22px; font-size:17px;}
+  ol li{margin:10px 0;}
+  ol li b{color:var(--ink);}
+  a.btn{
+    display:block; text-align:center; text-decoration:none; font-size:17px; font-weight:700;
+    padding:15px 12px; border-radius:10px; margin-top:12px;
+  }
+  a.primary{background:var(--accent); color:var(--accent-ink);}
+  a.secondary{background:#FFFFFF; color:var(--accent); border:1px solid var(--accent);}
+  .free{font-size:16px; color:var(--ink); font-weight:700; text-align:center; margin:14px 0 0;}
+  .foot{margin-top:6px; font-size:13px; color:var(--muted); text-align:center;}
+  .foot a{color:var(--muted);}
+</style>
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MKCW6RM"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div class="wrap">
+
+  <div class="card">
+    <h1>부모님 폰에 나이노트<br>깔아 드리는 법</h1>
+    <p>부모님 댁에서 이 화면을 띄워 두고, 부모님 폰 카메라로 아래 QR 코드를 비춰 주세요.</p>
+    <img class="qr" src="qr-elder.svg" width="240" height="240"
+         alt="부모님 폰에 나이노트를 까는 구글 플레이 QR 코드">
+    <p class="qr-note">부모님 폰 카메라로 비추기</p>
+  </div>
+
+  <div class="card">
+    <h2>세 단계면 끝납니다</h2>
+    <ol>
+      <li><b>부모님 폰 카메라</b>를 켜고 위 QR 코드를 비춥니다. 화면에 뜬 주소를 누릅니다.</li>
+      <li>구글 플레이에서 <b>설치</b>를 누릅니다. 앱을 열고 묻는 권한을 허락해 드립니다.</li>
+      <li><b>내 폰</b>에는 자녀 앱을 깝니다. 부모님 걷기 건강이 자녀 앱 맨 위에 보입니다.</li>
+    </ol>
+    <a class="btn primary"
+       href="https://play.google.com/store/apps/details?id=com.naoncare.guardian&amp;referrer=utm_source%3Dtelos_web%26utm_medium%3Dweb%26utm_campaign%3Dinstall_guide_g"
+       target="_blank" rel="noopener noreferrer">내 폰에 자녀 앱 받기</a>
+    <a class="btn secondary"
+       href="https://play.google.com/store/apps/details?id=com.naoncare&amp;referrer=utm_source%3Dtelos_web%26utm_medium%3Dweb%26utm_campaign%3Dinstall_guide"
+       target="_blank" rel="noopener noreferrer">이 화면이 부모님 폰이라면 여기를 눌러 설치</a>
+    <p class="free">나이노트는 무료입니다.</p>
+  </div>
+
+  <p class="foot"><a href="/">나이노트 · 주식회사 텔로스</a></p>
+</div>
+</body>
+</html>
