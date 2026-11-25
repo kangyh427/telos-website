@@ -24,6 +24,10 @@
      · link_url(누른 주소) · 개인정보 0
    · 단추 자리 이름: install_guardian(자녀 앱) · install_elder(부모님 폰에서 바로 설치)
 
+ 가족 단톡방 공유 단추(2026-11-25 · 요청 ND-007 · /js/family-share.js)
+   · 공유 창(navigator.share) · 없으면 주소 복사 · 이벤트 share_click(link_position=install_share)
+   · 보내는 주소 = /install-parents/?utm_source=kakao_share&utm_medium=social&utm_campaign=v013
+
  ★넘지 않는 선★
    · 개인정보 0 · 입력 칸 0 · 값 · 요금 말은 「무료입니다」만(L-523)
    · 의학 · 효과 장담 문구 없음 · 외부 글꼴 · 스크립트 없음(방문 통계 태그만 다른 장과 같게)
@@ -76,12 +80,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   ol{margin:0; padding-left:22px; font-size:17px;}
   ol li{margin:10px 0;}
   ol li b{color:var(--ink);}
-  a.btn{
+  a.btn, button.btn{
     display:block; text-align:center; text-decoration:none; font-size:17px; font-weight:700;
     padding:15px 12px; border-radius:10px; margin-top:12px;
   }
-  a.primary{background:var(--accent); color:var(--accent-ink);}
-  a.secondary{background:#FFFFFF; color:var(--accent); border:1px solid var(--accent);}
+  button.btn{width:100%; font-family:inherit; line-height:inherit; cursor:pointer; border:0;}
+  a.primary, button.primary{background:var(--accent); color:var(--accent-ink);}
+  a.secondary, button.secondary{background:#FFFFFF; color:var(--accent); border:1px solid var(--accent);}
+  .share-status{text-align:center; font-size:15px; color:var(--ink); min-height:1.6em; word-break:break-all;}
   .free{font-size:16px; color:var(--ink); font-weight:700; text-align:center; margin:14px 0 0;}
   .foot{margin-top:6px; font-size:13px; color:var(--muted); text-align:center;}
   .foot a{color:var(--muted);}
@@ -119,6 +125,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="card">
+    <h2>형제 · 가족에게도 알려 주세요</h2>
+    <p>가족 단톡방에 이 안내를 보내 두면, 다음에 부모님 댁에 가는 사람이 바로 깔아 드릴 수 있습니다.</p>
+    <button type="button" class="btn secondary" data-share-pos="install_share">가족 단톡방에 이 안내 보내기</button>
+    <p class="share-status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
     <h2>부모님 걸음, 몇 보가 맞을까요?</h2>
     <p>만 보를 꼭 채워야 하는지, 평소 기록은 어떻게 보면 좋은지 연구와 공식 안내로 정리했습니다.</p>
     <a class="btn secondary" href="/guide/parents-steps/">70대 하루 걸음 수, 부모님 기준 잡는 법</a>
@@ -143,5 +156,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   });
 })();
 </script>
+<script src="/js/family-share.js" defer></script>
 </body>
 </html>
