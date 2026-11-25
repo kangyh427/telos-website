@@ -16,6 +16,14 @@
    QR 그림(qr-elder.svg)은 위 첫 줄 주소를 그대로 담은 정적 그림이다.
    주소를 바꾸면 그림도 다시 만든다(만든 법 = 이 폴더 README.md).
 
+ ─────────────────────────────────────────────────────────────────────────────
+ 앱 받기 누름 세기(2026-11-25 · 요청 ND-006 · 맨 아래 짧은 스크립트)
+ ─────────────────────────────────────────────────────────────────────────────
+   · data-click-pos 가 붙은 단추를 누르면 애널리틱스 이벤트 app_store_click 하나를 보낸다
+   · 보내는 값 = link_position(단추 자리) · utm_content · page_utm_campaign(이 쪽 주소의 꼬리표 그대로)
+     · link_url(누른 주소) · 개인정보 0
+   · 단추 자리 이름: install_guardian(자녀 앱) · install_elder(부모님 폰에서 바로 설치)
+
  ★넘지 않는 선★
    · 개인정보 0 · 입력 칸 0 · 값 · 요금 말은 「무료입니다」만(L-523)
    · 의학 · 효과 장담 문구 없음 · 외부 글꼴 · 스크립트 없음(방문 통계 태그만 다른 장과 같게)
@@ -101,10 +109,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <li>구글 플레이에서 <b>설치</b>를 누릅니다. 앱을 열고 묻는 권한을 허락해 드립니다.</li>
       <li><b>내 폰</b>에는 자녀 앱을 깝니다. 부모님 걷기 건강이 자녀 앱 맨 위에 보입니다.</li>
     </ol>
-    <a class="btn primary"
+    <a class="btn primary" data-click-pos="install_guardian"
        href="https://play.google.com/store/apps/details?id=com.naoncare.guardian&amp;referrer=utm_source%3Dtelos_web%26utm_medium%3Dweb%26utm_campaign%3Dinstall_guide_g"
        target="_blank" rel="noopener noreferrer">내 폰에 자녀 앱 받기</a>
-    <a class="btn secondary"
+    <a class="btn secondary" data-click-pos="install_elder"
        href="https://play.google.com/store/apps/details?id=com.naoncare&amp;referrer=utm_source%3Dtelos_web%26utm_medium%3Dweb%26utm_campaign%3Dinstall_guide"
        target="_blank" rel="noopener noreferrer">이 화면이 부모님 폰이라면 여기를 눌러 설치</a>
     <p class="free">나이노트는 무료입니다.</p>
@@ -117,5 +125,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <p class="foot"><a href="/">나이노트 · 주식회사 텔로스</a></p>
 </div>
+<script>
+/* ND-006 · 앱 받기 누름 세기 · 이벤트 app_store_click · 개인정보 0 */
+(function () {
+  var q = new URLSearchParams(location.search);
+  function tag(name) { return (q.get(name) || '(none)').slice(0, 100); }
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[data-click-pos]') : null;
+    if (!a || typeof gtag !== 'function') return;
+    gtag('event', 'app_store_click', {
+      link_position: a.getAttribute('data-click-pos'),
+      utm_content: tag('utm_content'),
+      page_utm_campaign: tag('utm_campaign'),
+      link_url: a.href,
+      transport_type: 'beacon'
+    });
+  });
+})();
+</script>
 </body>
 </html>
