@@ -45,7 +45,12 @@ CATEGORIES = {
     "몸 건강": "body",
     "생활 습관": "habits",
     "책 이야기": "books",
+    # 텔로스가 만든 다른 앱(콩닥하루 등) 정보 글 · 손으로 쓴 원고만(자동 글 주제 topics.json 에는 없음 · ND-008)
+    "텔로스 앱": "telos-apps",
 }
+# 건강 글(나이노트) 끝에 붙는 기본 안내 · 원고에 "note" 가 있으면 그 글로 바꾸고, "app": false 면 나이노트 받기 상자를 뺀다
+HEALTH_NOTE = ("이 글은 걷기와 건강에 관한 연구와 책을 쉽게 풀어 쓴 건강 정보입니다. "
+               "개인의 진료나 처방을 대신하지 않습니다. 운동을 새로 시작하시거나 늘리실 때는 몸 상태에 맞게 의료진과 상의해 주세요.")
 RESERVED = {"page", "category", "images", "_src", "feed.xml"}
 # ★사이트맵에 넣는 회사 페이지★ — 콘솔·인증·기관·연동 페이지는 넣지 않는다(검색에 보일 까닭이 없다).
 STATIC_PAGES = ["/", "/install-parents/", "/guide/parents-steps/", "/lab/gamnamu/", "/privacy.html", "/terms.html", "/location-terms.html", "/notice.html", "/opensource.html"]
@@ -331,7 +336,9 @@ def build_post(p: dict, posts: list[dict], idx: int) -> None:
 
     same = [q for q in posts if q is not p and q["category"] == p["category"]][:3]
     if len(same) < 3:
-        same += [q for q in posts if q is not p and q not in same][: 3 - len(same)]
+        # 건강 글의 「함께 읽으면 좋은 글」을 채울 때 다른 앱(텔로스 앱) 글은 넣지 않는다(ND-008)
+        same += [q for q in posts if q is not p and q not in same
+                 and (q["category"] != "텔로스 앱" or p["category"] == "텔로스 앱")][: 3 - len(same)]
     newer = posts[idx - 1] if idx > 0 else None
     older = posts[idx + 1] if idx + 1 < len(posts) else None
 
@@ -372,12 +379,13 @@ def build_post(p: dict, posts: list[dict], idx: int) -> None:
           f' · 읽는 데 {reading_minutes(p["body_markdown"])}분</p></header>'
         + f'<figure class="post-figure"><img src="/blog/{p["image"]}" alt="{e(p["image_alt"])}" width="1200" height="675"></figure>'
         + f'<div class="post-body">{render_body(p["body_markdown"])}</div>'
-        + f'<section class="post-refs" aria-label="참고한 자료"><h2>참고한 자료</h2><ol>{"".join(refs)}</ol></section>'
-        + '<aside class="post-note">이 글은 걷기와 건강에 관한 연구와 책을 쉽게 풀어 쓴 건강 정보입니다. '
-          "개인의 진료나 처방을 대신하지 않습니다. 운동을 새로 시작하시거나 늘리실 때는 몸 상태에 맞게 의료진과 상의해 주세요.</aside>"
-        + '<aside class="post-app"><div><p class="post-app-title">부모님의 오늘 걸음, 자녀 폰에서 함께 보세요</p>'
-          '<p>나이노트는 부모님이 걸으신 기록을 자녀가 함께 보는 앱입니다. 산책을 시작하고 마치시면 알림이 옵니다.</p></div>'
-          f'<a class="btn btn-primary" href="{play_link("blog_post", p["slug"])}" rel="noopener">나이노트 받기</a></aside>'
+        + (f'<section class="post-refs" aria-label="참고한 자료"><h2>참고한 자료</h2><ol>{"".join(refs)}</ol></section>'
+           if refs else "")
+        + f'<aside class="post-note">{e(p.get("note") or HEALTH_NOTE)}</aside>'
+        + ('<aside class="post-app"><div><p class="post-app-title">부모님의 오늘 걸음, 자녀 폰에서 함께 보세요</p>'
+           '<p>나이노트는 부모님이 걸으신 기록을 자녀가 함께 보는 앱입니다. 산책을 시작하고 마치시면 알림이 옵니다.</p></div>'
+           f'<a class="btn btn-primary" href="{play_link("blog_post", p["slug"])}" rel="noopener">나이노트 받기</a></aside>'
+           if p.get("app", True) else "")
         + "</article>"
         + (f'<nav class="post-nav" aria-label="이전·다음 글">{"".join(nav)}</nav>' if nav else "")
         + ('<section class="post-related"><h2>함께 읽으면 좋은 글</h2><div class="post-grid">'
