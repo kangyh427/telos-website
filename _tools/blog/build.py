@@ -53,7 +53,16 @@ HEALTH_NOTE = ("이 글은 걷기와 건강에 관한 연구와 책을 쉽게 �
                "개인의 진료나 처방을 대신하지 않습니다. 운동을 새로 시작하시거나 늘리실 때는 몸 상태에 맞게 의료진과 상의해 주세요.")
 RESERVED = {"page", "category", "images", "_src", "feed.xml"}
 # ★사이트맵에 넣는 회사 페이지★ — 콘솔·인증·기관·연동 페이지는 넣지 않는다(검색에 보일 까닭이 없다).
-STATIC_PAGES = ["/", "/install-parents/", "/guide/parents-steps/", "/lab/gamnamu/", "/privacy.html", "/terms.html", "/location-terms.html", "/notice.html", "/opensource.html"]
+STATIC_PAGES = ["/", "/install-parents/", "/guide/parents-steps/", "/lab/gamnamu/", "/privacy.html", "/terms.html", "/location-terms.html", "/notice.html", "/opensource.html",
+                # 텔로스 다른 앱 소개 쪽 · 처리방침(ND-012 · 2026-11-26 · 구글에서 앱 이름으로 찾으면 나오게) · /lab/maumpet/ 은 noindex 라 넣지 않음
+                "/apps/kongdak-haru/", "/apps/police-fitness/", "/privacy/maumpet/", "/privacy/policefit/"]
+# 분류 목록 쪽 맨 위에 붙는 안내(ND-012) · 분류 이름 → html
+CATEGORY_INTRO = {
+    "텔로스 앱": ('<aside class="cat-intro" style="margin:0 0 24px;padding:16px 20px;border-radius:14px;background:#e1f3ee;line-height:1.7">'
+               '<b>텔로스가 만든 앱</b><br>'
+               '<a href="/apps/kongdak-haru/">콩닥하루</a> · 펫과 작은 할 일, 기분 기록<br>'
+               '<a href="/apps/police-fitness/">순환체력 코치</a> · 경찰 순환식 체력검사 대비 훈련</aside>'),
+}
 KST = dt.timezone(dt.timedelta(hours=9))
 
 e = html.escape
@@ -265,6 +274,7 @@ def build_lists(posts: list[dict], base: str, title: str, desc: str, active_cat:
             + "\n" + HEADER.replace("{play}", play_link("blog_header", "list"))
             + f'\n<main class="blog-main"><div class="container">'
             f'<header class="blog-hero"><p class="blog-kicker">나이노트 블로그</p><h1>{e(title)}</h1><p>{e(desc)}</p></header>'
+            + (CATEGORY_INTRO.get(active_cat, "") if active_cat else "")
             + category_nav(active_cat)
             + ('<div class="post-grid">' + "".join(card(p) for p in chunk) + "</div>" if chunk
                else '<p class="blog-empty">곧 첫 글이 올라옵니다.</p>')
