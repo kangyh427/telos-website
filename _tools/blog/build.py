@@ -55,7 +55,7 @@ RESERVED = {"page", "category", "images", "_src", "feed.xml"}
 # ★사이트맵에 넣는 회사 페이지★ — 콘솔·인증·기관·연동 페이지는 넣지 않는다(검색에 보일 까닭이 없다).
 STATIC_PAGES = ["/", "/install-parents/", "/guide/parents-steps/", "/lab/gamnamu/", "/privacy.html", "/terms.html", "/location-terms.html", "/notice.html", "/opensource.html",
                 # 텔로스 다른 앱 소개 쪽 · 처리방침(ND-012 · 2026-11-26 · 구글에서 앱 이름으로 찾으면 나오게) · /lab/maumpet/ 은 noindex 라 넣지 않음
-                "/apps/kongdak-haru/", "/apps/police-fitness/", "/privacy/maumpet/", "/privacy/policefit/"]
+                "/apps/kongdak-haru/", "/apps/police-fitness/", "/privacy/maumpet/", "/privacy/policefit/", "/privacy/kongdak-toss/"]
 # 분류 목록 쪽 맨 위에 붙는 안내(ND-012) · 분류 이름 → html
 CATEGORY_INTRO = {
     "텔로스 앱": ('<aside class="cat-intro" style="margin:0 0 24px;padding:16px 20px;border-radius:14px;background:#e1f3ee;line-height:1.7">'
